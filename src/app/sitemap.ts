@@ -1,6 +1,6 @@
 export default function sitemap() {
   const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://www.next-template-v1.app";
+    process.env.NEXT_PUBLIC_SITE_URL || "https://www.mapanytime-market-web.app";
 
   return [
     {

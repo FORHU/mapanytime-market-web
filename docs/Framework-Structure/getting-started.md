@@ -28,10 +28,10 @@ git --version     # git version 2.x.x
 
 ```bash
 # Clone the repository
-git clone https://github.com/rmValdez/next-template-v1.git
+git clone https://github.com/FORHU/mapanytime-market-web.git
 
 # Enter the project directory
-cd next-template-v1
+cd mapanytime-market-web
 ```
 
 ---
