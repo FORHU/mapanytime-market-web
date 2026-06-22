@@ -54,7 +54,7 @@ export default function SignInPage() {
       </form>
 
       <p className="text-sm text-text-tertiary text-center font-medium">
-        Don't have an account?{" "}
+        Do not have an account?{" "}
         <Link
           href="/register"
           className="text-brand-light hover:underline font-bold"
