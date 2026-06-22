@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL || "https://boilerplate-2026.vercel.app",
   ),
   openGraph: {
-    title: "Boilerplate 2026 | Premium Starter",
+    title: "Marketplace | Premium Starter",
     description:
       "Experience the next generation of development with Boilerplate 2026.",
     url: "https://boilerplate-2026.vercel.app",

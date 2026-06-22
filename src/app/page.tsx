@@ -106,7 +106,7 @@ export default function LandingPage() {
               <Sparkles className="text-white w-6 h-6" />
             </div>
             <span className="text-xl font-bold tracking-tight text-gradient-2026">
-              BOILERPLATE 2026
+              Marketplace
             </span>
           </motion.div>
 
@@ -154,12 +154,13 @@ export default function LandingPage() {
             </div>
 
             <h1 className="text-6xl md:text-8xl font-black mb-8 leading-[1.1] tracking-tight">
-              The Future of <br />
-              <span className="text-gradient-2026">Development.</span>
+              Connecting 450M Offline Stores to the World Through a Map, a
+              Photo, and a Pickup. <br />
+              <span className="text-gradient-2026"></span>
             </h1>
             <p className="text-xl text-text-secondary max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
-              A premium Next.js 15 boilerplate crafted for high-performance web
-              applications with an ultra-modern 2026 aesthetic.
+              Discover hyperlocal products from neighborhood stores, markets,
+              and pop-ups pinned live on a map near you.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
