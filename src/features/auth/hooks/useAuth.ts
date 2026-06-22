@@ -25,7 +25,7 @@ export function useAuth() {
     onError: () => {
       setToken(null);
       queryClient.clear();
-    }
+    },
   });
 
   return {
