@@ -4,6 +4,7 @@ import "./globals.css";
 import QueryProvider from "@/shared/lib/providers/query-provider";
 import { Toaster } from "sonner";
 import { AuthListener } from "@/features/auth/components/AuthListener";
+import { ThemeProvider } from "next-themes"; // 👈 1. Import ThemeProvider
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,11 +24,11 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Boilerplate 2026",
-    default: "Boilerplate 2026 | Premium Next.js Starter",
+    template: "%s | Marketplace",
+    default: "Marketplace | Premium Next.js Starter",
   },
   description:
-    "Experience the next generation of development with Boilerplate 2026. A premium high-performance ecosystem.",
+    "Connecting 450M Offline Stores to the World Through a Map, a Photo, and a Pickup.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || "https://boilerplate-2026.vercel.app",
   ),
@@ -71,9 +72,17 @@ export default function RootLayout({
         className={`${poppins.variable} ${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background-primary text-text-primary`}
       >
         <QueryProvider>
-          {children}
-          <Toaster position="top-right" theme="system" richColors />
-          <AuthListener />
+          {/* 2. Wrap your layout tree inside ThemeProvider */}
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster position="top-right" theme="system" richColors />
+            <AuthListener />
+          </ThemeProvider>
         </QueryProvider>
       </body>
     </html>
