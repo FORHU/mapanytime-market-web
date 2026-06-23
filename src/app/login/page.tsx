@@ -18,9 +18,22 @@ export default function UnifiedSignInPage() {
   const [password, setPassword] = useState("");
 
   // Delay rendering form interactive states until client mounting is complete
+  // Auto-bypass login for development/testing
   useEffect(() => {
     setMounted(true);
-  }, []);
+
+    // 🛠️ BYPASS TRIGGER: Instantly logs in as an approved seller
+    const bypassToSellerDashboard = () => {
+      const mockSessionId =
+        "sess_bypass_" + Math.random().toString(36).substring(2, 15);
+      sessionStorage.setItem("sessionId", mockSessionId);
+      localStorage.setItem("userRole", "seller");
+
+      router.push("/seller/dashboard");
+    };
+
+    bypassToSellerDashboard();
+  }, [router]); // ✅ Properly closing the useEffect block here
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,7 +129,7 @@ export default function UnifiedSignInPage() {
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-4 py-3 rounded-xl bg-white/5 border text-sm text-text-primary"
             autoComplete="username"
-            suppressHydrationWarning // Prevents browser extensions autofill attributes from crashing build
+            suppressHydrationWarning
             required
           />
           <input
@@ -125,7 +138,7 @@ export default function UnifiedSignInPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-3 rounded-xl bg-white/5 border text-sm text-text-primary"
-            autoComplete="current-password" // 🔒 Tells modern browser agents to treat this context strictly as masked layout fields
+            autoComplete="current-password"
             suppressHydrationWarning
             required
           />
