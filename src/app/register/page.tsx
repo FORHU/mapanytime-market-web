@@ -296,7 +296,7 @@ export default function UnifiedRegisterPage() {
               {/* DOCUMENT: MAYOR'S PERMIT */}
               <div className="space-y-1.5">
                 <span className="text-xs font-bold text-slate-700 block">
-                  Mayor's Permit Document
+                  {"Mayor's Permit Document"}
                 </span>
                 <div className="w-full bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-2xs">
                   <div className="flex items-center gap-2.5 min-w-0">
