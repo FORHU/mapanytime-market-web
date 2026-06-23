@@ -4,7 +4,7 @@ import "./globals.css";
 import QueryProvider from "@/shared/lib/providers/query-provider";
 import { Toaster } from "sonner";
 import { AuthListener } from "@/features/auth/components/AuthListener";
-import { ThemeProvider } from "next-themes"; // 👈 1. Import ThemeProvider
+import { ThemeProvider } from "next-themes";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,23 +24,23 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Marketplace",
-    default: "Marketplace | Premium Next.js Starter",
+    template: "%s | MapAnytime",
+    default: "MapAnytime | Hyperlocal Commerce Ecosystem",
   },
   description:
     "Connecting 450M Offline Stores to the World Through a Map, a Photo, and a Pickup.",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://boilerplate-2026.vercel.app",
+    process.env.NEXT_PUBLIC_SITE_URL || "https://mapanytime.com", // Swap with your production URL when ready
   ),
   openGraph: {
-    title: "Marketplace | Premium Starter",
+    title: "MapAnytime | Hyperlocal Commerce Ecosystem",
     description:
-      "Experience the next generation of development with Boilerplate 2026.",
-    url: "https://boilerplate-2026.vercel.app",
-    siteName: "Boilerplate 2026",
+      "Connecting 450M Offline Stores to the World Through a Map, a Photo, and a Pickup.",
+    url: "https://mapanytime.com",
+    siteName: "MapAnytime",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image.png", // Make sure to replace this asset with your own mockup later
         width: 1200,
         height: 630,
       },
@@ -50,9 +50,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Boilerplate 2026 | Premium Starter",
+    title: "MapAnytime | Hyperlocal Commerce Ecosystem",
     description:
-      "Experience the next generation of development with Boilerplate 2026.",
+      "Connecting 450M Offline Stores to the World Through a Map, a Photo, and a Pickup.",
     images: ["/og-image.png"],
   },
   icons: {
@@ -72,10 +72,9 @@ export default function RootLayout({
         className={`${poppins.variable} ${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background-primary text-text-primary`}
       >
         <QueryProvider>
-          {/* 2. Wrap your layout tree inside ThemeProvider */}
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
+            defaultTheme="light" // Set to light by default to match your clean, white landing page design
             enableSystem
             disableTransitionOnChange
           >
