@@ -1,4 +1,4 @@
-const BASE_URL = "http://172.30.32.1:3002/api/v1";
+const BASE_URL = "http://172.30.32.1:3002/api/v1/auth/register";
 
 // Helper to append the Authorization header if a token exists
 const getAuthHeaders = () => {

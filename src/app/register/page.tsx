@@ -1,90 +1,383 @@
 "use client";
 
-import React, { useState } from "react";
-import Link from "next/link";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Image as ImageIcon, CheckCircle } from "lucide-react";
-import AuthLayout from "@/shared/components/AuthLayout"; // Import layout
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Image as ImageIcon,
+  CheckCircle,
+  Clock,
+  User,
+  Store,
+  FileText,
+} from "lucide-react";
+import AuthLayout from "@/shared/components/AuthLayout";
 
-export default function VerifyIdentityPage() {
+export default function UnifiedRegisterPage() {
   const router = useRouter();
-  const [fileName, setFileName] = useState(
-    "6603610c6c20fa2e1ed93c51110bd06a.jpg",
+
+  // Guard state to prevent hydration mismatches from browser extensions
+  const [mounted, setMounted] = useState(false);
+
+  // Step navigation states
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Form registration field states
+  const [role, setRole] = useState<"buyer" | "seller" | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  // Step 2 Document File States
+  const [governmentId, setGovernmentId] = useState<string>("government_id.pdf");
+  const [mayorsPermit, setMayorsPermit] = useState<string>("mayors_permit.jpg");
+  const [dtiCertificate, setDtiCertificate] = useState<string>(
+    "dti_certificate.pdf",
   );
+  const [tinNumber, setTinNumber] = useState<string>("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Handle Step 1 Submit -> Advance to customized Step 2
+  const handleStepOneSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Submitting image documentation...");
-
-    // Redirects to your check-gate middleware route
-    router.push("/auth");
+    if (!role) return alert("Please select an account type.");
+    setCurrentStep(2);
   };
 
-  return (
-    <AuthLayout>
-      <div className="w-full max-w-md mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        {/* Step Info Counter header element */}
-        <div className="flex items-center justify-between">
-          <div>
+  // Handle Step 2 Final Submit (Handles both Buyer & Seller logic)
+  const handleFinalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (role === "seller" && !tinNumber) {
+      alert("Please enter your TIN Number to proceed.");
+      return;
+    }
+
+    console.log("Saving account payload to backend...", {
+      role,
+      name,
+      email,
+      password,
+      documents:
+        role === "seller"
+          ? { governmentId, mayorsPermit, dtiCertificate, tinNumber }
+          : { governmentId },
+    });
+
+    // ==========================================
+    // ROLE-BASED REDIRECTION SPLIT
+    // ==========================================
+    if (role === "buyer") {
+      alert("Registration complete! Please sign in to access the platform.");
+      router.push("/login");
+    } else {
+      // Only sellers get held back for the manual administrative review screen
+      setIsSubmitted(true);
+    }
+  };
+
+  // Prevent flash or hydration error on render jump
+  if (!mounted) return null;
+
+  // ==========================================
+  // VIEW C: POST-SUBMIT REVIEW/SUCCESS SCREEN (Sellers Only)
+  // ==========================================
+  if (isSubmitted) {
+    return (
+      <AuthLayout>
+        <div className="w-full max-w-md mx-auto text-center space-y-6 py-8 animate-in fade-in duration-300">
+          <div className="flex justify-center">
+            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center border border-amber-200/60">
+              <Clock className="w-8 h-8 text-amber-500 animate-pulse" />
+            </div>
+          </div>
+          <div className="space-y-2">
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              Verify Identity
+              Application Under Review
             </h1>
-            <p className="text-xs text-slate-500 mt-1">
-              Upload verification documents for your buyer access.
+            <p className="text-sm text-slate-500 max-w-xs mx-auto">
+              Thank you for registering! Your uploaded documentation is being
+              safely handled by our compliance verification registry.
             </p>
           </div>
-          <span className="text-xs font-bold text-slate-400 whitespace-nowrap">
-            Step 2 of 2
-          </span>
+          <div className="bg-slate-50 border p-4 rounded-2xl text-left text-xs text-slate-600 space-y-2">
+            <p className="font-bold text-slate-700">What happens next?</p>
+            <ul className="list-disc pl-4 space-y-1 text-slate-500">
+              <li>
+                Our administration team verifies document metrics manually.
+              </li>
+              <li>
+                You will receive an email notice regarding your profile approval
+                status.
+              </li>
+            </ul>
+          </div>
+          <button
+            onClick={() => router.push("/login")}
+            className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-2xl transition-all"
+          >
+            Return to Sign In
+          </button>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  // ==========================================
+  // VIEW A: STEP 1 (Unified Profile Details)
+  // ==========================================
+  if (currentStep === 1) {
+    return (
+      <AuthLayout>
+        <div className="w-full max-w-md mx-auto space-y-6 animate-in fade-in duration-300">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-black text-slate-900">
+                Create Account
+              </h1>
+              <p className="text-xs text-slate-500 mt-1">
+                Get started by choosing your user path access layer.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-slate-400">
+              Step 1 of 2
+            </span>
+          </div>
+
+          <form onSubmit={handleStepOneSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setRole("buyer")}
+                className={`p-4 rounded-2xl border text-left transition-all flex flex-col gap-2 ${
+                  role === "buyer"
+                    ? "border-slate-900 bg-slate-50 ring-1 ring-slate-900"
+                    : "border-slate-200 bg-white"
+                }`}
+              >
+                <User className="w-5 h-5 text-slate-700" />
+                <div>
+                  <p className="text-xs font-bold text-slate-900">Buyer</p>
+                  <p className="text-[10px] text-slate-400">
+                    Standard verified consumer
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRole("seller")}
+                className={`p-4 rounded-2xl border text-left transition-all flex flex-col gap-2 ${
+                  role === "seller"
+                    ? "border-slate-900 bg-slate-50 ring-1 ring-slate-900"
+                    : "border-slate-200 bg-white"
+                }`}
+              >
+                <Store className="w-5 h-5 text-slate-700" />
+                <div>
+                  <p className="text-xs font-bold text-slate-900">
+                    Seller Merchant
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    Requires business registration
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Full Name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs"
+              />
+              <input
+                type="email"
+                placeholder="Email Address"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 bg-slate-950 hover:bg-black text-white font-bold text-xs rounded-2xl"
+            >
+              Continue to Documents (Step 2)
+            </button>
+          </form>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  // ==========================================
+  // VIEW B: STEP 2 (Dynamic Document Upload)
+  // ==========================================
+  return (
+    <AuthLayout>
+      <div className="w-full max-w-md mx-auto space-y-6 animate-in fade-in duration-300">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900">
+            Verify Identity
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Upload files{" "}
+            <span className="font-bold text-slate-700">(JPG or PDF)</span> to
+            complete registration fields.
+          </p>
         </div>
 
-        {/* BACK ACTION LINK */}
-        <Link
-          href="/register"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors w-fit group"
+        <button
+          type="button"
+          onClick={() => setCurrentStep(1)}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900"
         >
-          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-          Back to Profile Info
-        </Link>
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to Account Details
+        </button>
 
-        {/* Verification submission container form wrapper */}
-        <form onSubmit={handleSubmit} className="space-y-6 pt-2">
-          <div className="space-y-3">
-            <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
-              REQUIRED IMAGE DOCUMENTS
-            </label>
+        <form onSubmit={handleFinalSubmit} className="space-y-5 pt-2">
+          <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+            REQUIRED DOCUMENT ATTRIBUTES
+          </label>
 
-            <div className="space-y-2">
-              <span className="text-xs font-bold text-slate-700 block">
-                Verify ID (Valid Government ID)
-              </span>
-
-              {/* Custom file item layout strip */}
-              <div className="w-full bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-2xs">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <ImageIcon className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                  <span className="text-xs text-slate-600 font-mono font-medium truncate">
-                    {fileName}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => alert("File uploader trigger point.")}
-                  className="text-xs font-black text-slate-900 hover:text-slate-600 transition-colors flex-shrink-0"
-                >
-                  Replace
-                </button>
+          {/* DOCUMENT: GOVERNMENT ID */}
+          <div className="space-y-1.5">
+            <span className="text-xs font-bold text-slate-700 block">
+              Government Issued ID
+            </span>
+            <div className="w-full bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <ImageIcon className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <span className="text-xs font-mono truncate text-slate-600">
+                  {governmentId}
+                </span>
               </div>
+              <input
+                type="file"
+                id="govIdInput"
+                accept=".jpg,.jpeg,.pdf"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.[0])
+                    setGovernmentId(e.target.files[0].name);
+                }}
+              />
+              <label
+                htmlFor="govIdInput"
+                className="text-xs font-black text-slate-900 hover:text-slate-600 transition-colors cursor-pointer flex-shrink-0"
+              >
+                Replace
+              </label>
             </div>
           </div>
 
-          {/* MAIN SUBMIT ACTION BUTTON */}
+          {/* MERCHANDISING MERCHANT ONLY EXTRA FIELDS */}
+          {role === "seller" && (
+            <div className="space-y-5 pt-2 border-t border-dashed border-slate-200">
+              {/* DOCUMENT: MAYOR'S PERMIT */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-700 block">
+                  Mayor's Permit Document
+                </span>
+                <div className="w-full bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <span className="text-xs font-mono truncate text-slate-600">
+                      {mayorsPermit}
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    id="mayorsInput"
+                    accept=".jpg,.jpeg,.pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.[0])
+                        setMayorsPermit(e.target.files[0].name);
+                    }}
+                  />
+                  <label
+                    htmlFor="mayorsInput"
+                    className="text-xs font-black text-slate-900 hover:text-slate-600 transition-colors cursor-pointer flex-shrink-0"
+                  >
+                    Replace
+                  </label>
+                </div>
+              </div>
+
+              {/* DOCUMENT: DTI CERTIFICATE */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-700 block">
+                  DTI Certificate Submission
+                </span>
+                <div className="w-full bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <span className="text-xs font-mono truncate text-slate-600">
+                      {dtiCertificate}
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    id="dtiInput"
+                    accept=".jpg,.jpeg,.pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.[0])
+                        setDtiCertificate(e.target.files[0].name);
+                    }}
+                  />
+                  <label
+                    htmlFor="dtiInput"
+                    className="text-xs font-black text-slate-900 hover:text-slate-600 transition-colors cursor-pointer flex-shrink-0"
+                  >
+                    Replace
+                  </label>
+                </div>
+              </div>
+
+              {/* TEXT FIELD INPUT: TIN NUMBER */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-700 block">
+                  Taxpayer Identification Number (TIN)
+                </span>
+                <input
+                  type="text"
+                  placeholder="000-000-000-000"
+                  required={role === "seller"}
+                  value={tinNumber}
+                  onChange={(e) => setTinNumber(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs uppercase placeholder-slate-400 focus:outline-none focus:border-slate-900"
+                />
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full py-3 px-4 bg-gradient-to-r from-slate-800 to-slate-950 hover:from-slate-900 hover:to-black text-white font-bold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 group cursor-pointer"
+            className="w-full py-3.5 bg-gradient-to-r from-slate-800 to-slate-950 text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-2 mt-4 cursor-pointer"
           >
-            <span>Submit Registration Layout</span>
-            <CheckCircle className="w-3.5 h-3.5 opacity-80 group-hover:scale-110 transition-transform" />
+            <span>Submit Registration Application</span>
+            <CheckCircle className="w-3.5 h-3.5" />
           </button>
         </form>
       </div>
