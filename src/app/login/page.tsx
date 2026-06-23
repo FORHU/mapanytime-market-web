@@ -115,6 +115,7 @@ export default function UnifiedSignInPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-4 py-3 rounded-xl bg-white/5 border text-sm text-text-primary"
+            autoComplete="username"
             suppressHydrationWarning // Prevents browser extensions autofill attributes from crashing build
             required
           />
@@ -124,6 +125,7 @@ export default function UnifiedSignInPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-3 rounded-xl bg-white/5 border text-sm text-text-primary"
+            autoComplete="current-password" // 🔒 Tells modern browser agents to treat this context strictly as masked layout fields
             suppressHydrationWarning
             required
           />
