@@ -10,14 +10,14 @@ import {
   Loader2,
 } from "lucide-react";
 
-interface ManagedStore {
+interface ManageStore {
   id: string;
   name: string;
   location: string;
   activeOrders: number;
 }
 
-export default function ManagedStoresPage() {
+export default function ManageStoresPage() {
   // Input tracking state (binds instantly to what the user keys in)
   const [searchQuery, setSearchQuery] = useState("");
   // Debounced search state (waits for typing to pause before changing)
@@ -26,7 +26,7 @@ export default function ManagedStoresPage() {
   const [isSearching, setIsSearching] = useState(false);
 
   // Core business branch profile matrix data collection
-  const stores: ManagedStore[] = [
+  const stores: ManageStore[] = [
     {
       id: "STORE-9921",
       name: "Lola Joe's Restaurant",
@@ -80,7 +80,7 @@ export default function ManagedStoresPage() {
       {/* Welcome Greeting Layout Section Header */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-          My Managed Stores
+          My Manage Stores
         </h1>
         <p className="text-xs font-bold text-slate-400 mt-0.5">
           Select a business branch profile below to manage its specific product

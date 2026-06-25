@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Store,
   Settings2,
+  ShoppingCart,
   LogOut,
   Menu,
   X,
@@ -29,11 +30,53 @@ export default function SellerLayout({
   const pathname = usePathname();
   const params = useParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const storeId = params.storeId;
   const hasValidStoreId = typeof storeId === "string" && storeId.trim() !== "";
 
+  // Dedicated function to talk to your backend signout endpoint
+  const handleSignOut = async () => {
+    if (isLoggingOut) return;
+
+    try {
+      setIsLoggingOut(true);
+
+      const response = await fetch("/api/auth/signout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      // Clear layout and forward to the primary root landing page securely
+      if (response.ok) {
+        window.location.href = "/";
+      } else {
+        const errorText = await response
+          .text()
+          .catch(() => "Unknown Server Error");
+        console.error(
+          `Logout API responded with status ${response.status}: ${errorText}`,
+        );
+
+        // Fallback: If your API fails or isn't built yet, still force redirect to landing page
+        window.location.href = "/";
+      }
+    } catch (error) {
+      console.error("Network error during backend signout:", error);
+      // Fallback redirect on network failure
+      window.location.href = "/";
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   const navigation = [
+    {
+      name: "Manage Stores",
+      href: "/seller/store",
+      icon: Store,
+      requiresStore: false,
+    },
     {
       name: "Dashboard",
       subPath: "/dashboard",
@@ -65,6 +108,12 @@ export default function SellerLayout({
       requiresStore: true,
     },
     {
+      name: "Checkout",
+      subPath: "/checkout",
+      icon: ShoppingCart,
+      requiresStore: true,
+    },
+    {
       name: "Analytics",
       subPath: "/analytics",
       icon: BarChart3,
@@ -87,12 +136,6 @@ export default function SellerLayout({
       subPath: "/settings",
       icon: Settings2,
       requiresStore: true,
-    },
-    {
-      name: "Managed Stores",
-      href: "/seller/store",
-      icon: Store,
-      requiresStore: false,
     },
   ];
 
@@ -195,20 +238,25 @@ export default function SellerLayout({
           })}
         </nav>
 
+        {/* ── FOOTER BACKEND ACTIONS ── */}
         <div className="p-3 border-t border-slate-100 space-y-0.5">
           <Link
-            href="/"
+            href="/seller/store"
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all"
           >
             <Store className="w-4 h-4 text-slate-400" />
-            Back to Home
+            Back to Manage Store
           </Link>
           <button
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all text-left"
+            onClick={handleSignOut}
+            disabled={isLoggingOut}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all text-left ${
+              isLoggingOut ? "opacity-50 cursor-not-allowed" : ""
+            }`}
             suppressHydrationWarning
           >
             <LogOut className="w-4 h-4 text-slate-400 group-hover:text-rose-500" />
-            Sign Out
+            {isLoggingOut ? "Signing Out..." : "Sign Out"}
           </button>
         </div>
       </aside>
