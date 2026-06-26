@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   description:
     "Connecting 450M Offline Stores to the World Through a Map, a Photo, and a Pickup.",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://mapanytime.com", // Swap with your production URL when ready
+    process.env.NEXT_PUBLIC_SITE_URL || "https://mapanytime.com",
   ),
   openGraph: {
     title: "MapAnytime | Hyperlocal Commerce Ecosystem",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     siteName: "MapAnytime",
     images: [
       {
-        url: "/og-image.png", // Make sure to replace this asset with your own mockup later
+        url: "/og-image.png",
         width: 1200,
         height: 630,
       },
@@ -69,20 +69,21 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${poppins.variable} ${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background-primary text-text-primary`}
+        className={`${poppins.variable} ${geistSans.variable} ${geistMono.variable} font-[family-name:var(--font-poppins)] antialiased bg-background-primary text-text-primary`}
       >
-        <QueryProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light" // Set to light by default to match your clean, white landing page design
-            enableSystem
-            disableTransitionOnChange
-          >
+        {/* FIXED: ThemeProvider is moved to the top-level shell to manage initial attribute injections safely without breaking child query hydration trees */}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <QueryProvider>
             {children}
             <Toaster position="top-right" theme="system" richColors />
             <AuthListener />
-          </ThemeProvider>
-        </QueryProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

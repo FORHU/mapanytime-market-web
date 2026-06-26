@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, AlertCircle } from "lucide-react";
+import { ArrowRight, AlertCircle, ShieldAlert } from "lucide-react";
 import AuthLayout from "@/shared/components/AuthLayout";
 
 export default function UnifiedSignInPage() {
@@ -17,23 +17,23 @@ export default function UnifiedSignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Delay rendering form interactive states until client mounting is complete
-  // Auto-bypass login for development/testing
   useEffect(() => {
     setMounted(true);
+  }, []);
 
-    // 🛠️ BYPASS TRIGGER: Instantly logs in as an approved seller
-    const bypassToSellerDashboard = () => {
-      const mockSessionId =
-        "sess_bypass_" + Math.random().toString(36).substring(2, 15);
-      sessionStorage.setItem("sessionId", mockSessionId);
-      localStorage.setItem("userRole", "seller");
+  // ── DEVELOPMENT PROFILE AUTO-BYPASS ACCELERATION ──
+  const handleDevBypass = () => {
+    const mockSessionId =
+      "sess_bypass_" + Math.random().toString(36).substring(2, 15);
 
-      router.push("/seller/dashboard");
-    };
+    sessionStorage.setItem("sessionId", mockSessionId);
+    localStorage.setItem("userRole", "seller");
 
-    bypassToSellerDashboard();
-  }, [router]); // ✅ Properly closing the useEffect block here
+    // FIXED: Now safely directs developers to the main Managed Stores route path
+    setTimeout(() => {
+      router.push("/seller/store");
+    }, 0);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,9 +74,14 @@ export default function UnifiedSignInPage() {
       localStorage.setItem("userRole", userAccount.role);
 
       if (userAccount.role === "seller") {
-        router.push("/seller/dashboard");
+        // FIXED: Realigned real production form sign-ins to route to the main Managed Stores layout route
+        setTimeout(() => {
+          router.push("/seller/store");
+        }, 0);
       } else {
-        router.push("/dashboard");
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 0);
       }
     } catch (err) {
       setErrorMessage("Authentication pipeline failure. Try again.");
@@ -84,8 +89,6 @@ export default function UnifiedSignInPage() {
     }
   };
 
-  // If not mounted yet, render a matching visual skeleton or return null
-  // to let the client smoothly take over without hydration clashes
   if (!mounted) {
     return (
       <AuthLayout>
@@ -127,9 +130,8 @@ export default function UnifiedSignInPage() {
             placeholder="name@company.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-white/5 border text-sm text-text-primary"
+            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-sm text-text-primary focus:outline-none focus:border-white/20 transition-colors"
             autoComplete="username"
-            suppressHydrationWarning
             required
           />
           <input
@@ -137,16 +139,14 @@ export default function UnifiedSignInPage() {
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-white/5 border text-sm text-text-primary"
+            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-sm text-text-primary focus:outline-none focus:border-white/20 transition-colors"
             autoComplete="current-password"
-            suppressHydrationWarning
             required
           />
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3.5 rounded-xl font-bold bg-gradient-to-r from-brand-core to-brand-vibrant text-white flex items-center justify-center gap-2 cursor-pointer"
-            suppressHydrationWarning
+            className="w-full py-3.5 rounded-xl font-bold bg-gradient-to-r from-brand-core to-brand-vibrant text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span>{isLoading ? "Checking Access..." : "Sign In"}</span>
             {!isLoading && <ArrowRight className="w-4 h-4" />}
@@ -162,6 +162,20 @@ export default function UnifiedSignInPage() {
             Get Started
           </Link>
         </p>
+
+        {/* DEVELOPMENT ENV ACCELERATION CONTROL ELEMENT */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="pt-4 border-t border-dashed border-white/10">
+            <button
+              type="button"
+              onClick={handleDevBypass}
+              className="w-full py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono text-[11px] font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>Dev Auto-Bypass: Fast Track Managed Stores</span>
+            </button>
+          </div>
+        )}
       </div>
     </AuthLayout>
   );
