@@ -27,7 +27,7 @@ export default function UnifiedRegisterPage() {
             name: fullName.trim(),
             email: email.trim(),
             password,
-            roleName: "SELLER", // ◄ Perfectly matches your Joi string requirement
+            roleName: "SELLER", // Matches Joi string requirements
           }),
         },
       );
@@ -38,21 +38,18 @@ export default function UnifiedRegisterPage() {
         throw new Error(dbData?.message || `Server Error: ${response.status}`);
       }
 
-      // ── 🔒 NEW AUTOMATED SELLER PATH ACCELERATOR ──
-      // Captures the updated 'data' payload returned by your backend change
-      const token = dbData?.data?.accessToken || dbData?.data?.token;
+      // ── 🔒 ENFORCED SECURITY GATE: REGISTRATION CLEARANCE ONLY ──
+      // Clean out any stale/previous JWT local tracking data to secure the next login pass
+      localStorage.removeItem("token");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("latest_onboarded_store");
 
-      if (token) {
-        localStorage.setItem("token", token);
-        localStorage.setItem("userRole", "seller");
-        alert(
-          "Registration successful! Authorized token captured. Proceeding straight to onboarding.",
-        );
-        router.push("/seller/onboarding");
-      } else {
-        alert("Account generated! Proceeding to the merchant login portal.");
-        router.push("/login");
-      }
+      alert(
+        "Account generated successfully! Redirecting to the merchant login portal.",
+      );
+
+      // Strict routing push to your login verification page
+      router.push("/login");
     } catch (err: any) {
       console.error(err);
       alert(`Registration System Alert: ${err.message}`);
@@ -78,7 +75,7 @@ export default function UnifiedRegisterPage() {
           placeholder="Full Name"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          className="w-full border p-3 rounded-xl text-xs font-bold"
+          className="w-full border p-3 rounded-xl text-xs font-bold bg-white focus:outline-hidden"
           required
         />
         <input
@@ -86,7 +83,7 @@ export default function UnifiedRegisterPage() {
           placeholder="Merchant Email Address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full border p-3 rounded-xl text-xs font-bold"
+          className="w-full border p-3 rounded-xl text-xs font-bold bg-white focus:outline-hidden"
           required
         />
         <input
@@ -94,13 +91,13 @@ export default function UnifiedRegisterPage() {
           placeholder="Password (Min 6 Characters)"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full border p-3 rounded-xl text-xs font-bold"
+          className="w-full border p-3 rounded-xl text-xs font-bold bg-white focus:outline-hidden"
           required
         />
 
         <button
           type="submit"
-          className="w-full py-3.5 bg-slate-900 text-white font-bold text-xs rounded-xl transition-all"
+          className="w-full py-3.5 bg-slate-900 text-white font-bold text-xs rounded-xl hover:bg-slate-800 transition-all cursor-pointer"
         >
           Create Merchant Account
         </button>

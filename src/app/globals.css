@@ -1,8 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* 2026 Theme Options:
+@import "mapbox-gl/dist/mapbox-gl.css"
+  /* 2026 Theme Options:
   
   Option 1: Cyberpunk Blue (Deep Blue & Electric Cyan) - ACTIVE
   --brand-core: #0ea5e9; --brand-vibrant: #22d3ee; --brand-burgundy: #0c4a6e; --brand-dark: #082f49; --brand-light: #7dd3fc;
@@ -16,8 +16,7 @@
   Option 4: Midnight Monochrome (Sleek Grays & Pure White Accents)
   --brand-core: #ffffff; --brand-vibrant: #94a3b8; --brand-burgundy: #1e293b; --brand-dark: #020617; --brand-light: #f8fafc;
 */
-
-@layer base {
+  @layer base {
   :root {
     /* Cyberpunk Blue Light Mode */
     --brand-core: #0ea5e9;

@@ -2,21 +2,26 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Store, FileText, Loader2 } from "lucide-react";
+import { Store, Loader2, FileText, CheckCircle } from "lucide-react";
 import AuthLayout from "@/shared/components/AuthLayout";
+import StorePickerMap from "@/shared/components/StorePickerMap";
 
 export default function SellerOnboardingPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Store Configuration Attributes States
   const [storeName, setStoreName] = useState("");
   const [storeLocation, setStoreLocation] = useState("");
+
+  // 🟢 FIXED: Extracted cleanly from the string into standalone operational states
+  const [latitude, setLatitude] = useState<number>(16.4023);
+  const [longitude, setLongitude] = useState<number>(120.596);
+
   const [operatingHours, setOperatingHours] = useState("");
 
-  // Branch Compliance Document File States
+  // Compliance Document States (Must be explicitly filled by the user)
   const [governmentIdFile, setGovernmentIdFile] = useState<File | null>(null);
   const [mayorsPermitFile, setMayorsPermitFile] = useState<File | null>(null);
   const [dtiCertificateFile, setDtiCertificateFile] = useState<File | null>(
@@ -28,33 +33,42 @@ export default function SellerOnboardingPage() {
     setMounted(true);
   }, []);
 
+  // 🟢 Location Callback to receive draggable values from Mapbox canvas
+  const handleLocationSelect = (lat: number, lng: number, address: string) => {
+    setStoreLocation(address);
+    setLatitude(lat);
+    setLongitude(lng);
+  };
+
   const handleOnboardingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // ── 🔒 STRICT FILE VERIFICATION GATEWAY ──
     if (
       !governmentIdFile ||
       !mayorsPermitFile ||
       !dtiCertificateFile ||
       !tinFile
     ) {
-      return alert(
-        "Please upload all required compliance documents to proceed.",
+      alert(
+        "❌ Submission Blocked: Please upload all required compliance documents to proceed.",
       );
+      return;
     }
 
     setIsSubmitting(true);
 
-    // ── 📦 BUILD MULTIPART FORM-DATA ENVELOPE TO MATCH POSTMAN EXACTLY ──
+    // ── 📦 RE-ASSEMBLE MULTIPART FORM-DATA FOR THE BACKEND MULTER KEYS ──
     const formData = new FormData();
 
-    // 1. Core Store Data Object Wrapper
+    // 1. Core Store Data Object
     const storeData = {
       storeName: storeName.trim(),
       description: "Local Merchant Storefront Layout",
     };
     formData.append("storeData", JSON.stringify(storeData));
 
-    // 2. Location Object Wrapper (Defaults assigned to prevent map rendering drops)
+    // 2. Location Context Mapping
     const locationData = {
       currentAddress: storeLocation.trim(),
       homeAddress: storeLocation.trim(),
@@ -62,12 +76,12 @@ export default function SellerOnboardingPage() {
       province: "Benguet",
       zipCode: "2600",
       country: "PH",
-      latitude: 16.4023,
-      longitude: 120.596,
+      latitude: latitude, // 🟢 LIVE COORDINATE STATE INPUTS
+      longitude: longitude, // 🟢 LIVE COORDINATE STATE INPUTS
     };
     formData.append("locationData", JSON.stringify(locationData));
 
-    // 3. Operating Hours Array Wrapper (Splits string values safely e.g., "7:00-6:00")
+    // 3. Operating Time Schedule Array Mapping
     const hourSplits = operatingHours.split("-");
     const hoursData = [
       {
@@ -79,32 +93,51 @@ export default function SellerOnboardingPage() {
     ];
     formData.append("hoursData", JSON.stringify(hoursData));
 
-    // 4. File Fields Mapped Directly to Backend Keys
+    // 4. Append the verified user files straight to the form map
     formData.append("mayorsPermit", mayorsPermitFile);
-    formData.append("tinId", tinFile); // 🟢 Matched to "tinId"
-    formData.append("dtiCertificate", dtiCertificateFile); // 🟢 Matched to "dtiCertificate"
-    formData.append("govId", governmentIdFile); // 🟢 Matched to "govId"
+    formData.append("tinId", tinFile);
+    formData.append("dtiCertificate", dtiCertificateFile);
+    formData.append("govId", governmentIdFile);
 
     try {
-      const token = localStorage.getItem("token");
+      // Toggle to false when your partner deploys the root GET handler in store.route.ts
+      const isSandboxTestingMode = false;
+      const computedMockId =
+        "store_" + Math.random().toString(36).substring(2, 9);
 
-      const response = await fetch("http://192.168.1.176:3002/api/v1/stores", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`, // Route verification checks
-        },
-        body: formData, // Browser dynamically writes multi-part boundary string details
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || "Failed to submit storefront application.",
+      if (isSandboxTestingMode) {
+        // Cache data payload locally so your dashboard fallback reads it immediately
+        const mockStoreCache = {
+          id: computedMockId,
+          name: storeName.trim(),
+          location: storeLocation.trim(),
+        };
+        localStorage.setItem(
+          "latest_onboarded_store",
+          JSON.stringify(mockStoreCache),
         );
-      }
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      } else {
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          "http://192.168.1.176:3002/api/v1/stores",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          },
+        );
 
-      const dbData = await response.json();
-      const newStoreId = dbData?.id || dbData?.data?.id || "STORE-DEV-MOCK";
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.message ||
+              `Server returned error code: ${response.status}`,
+          );
+        }
+      }
 
       alert(
         "Onboarding transmitted successfully! Loading your merchant store layout workspace.",
@@ -120,35 +153,6 @@ export default function SellerOnboardingPage() {
 
   if (!mounted) return null;
 
-  if (isSubmitted) {
-    return (
-      <AuthLayout>
-        <div className="w-full max-w-md mx-auto text-center space-y-6 py-8 animate-in fade-in duration-300">
-          <div className="flex justify-center">
-            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center border border-amber-200">
-              <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              Application Under Review
-            </h1>
-            <p className="text-sm text-slate-500 max-w-xs mx-auto">
-              Your store configuration and compliance files have been
-              successfully transmitted.
-            </p>
-          </div>
-          <button
-            onClick={() => router.push("/login")}
-            className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-2xl transition-all"
-          >
-            Return to Sign In
-          </button>
-        </div>
-      </AuthLayout>
-    );
-  }
-
   return (
     <AuthLayout>
       <div className="w-full max-w-md mx-auto space-y-6 animate-in fade-in duration-300">
@@ -157,8 +161,8 @@ export default function SellerOnboardingPage() {
             <Store className="w-6 h-6 text-emerald-600" /> Setup Your Store
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Configure your initial store location branch and upload corporate
-            verification fields.
+            Configure your store profile details. All compliance uploads are
+            strictly required.
           </p>
         </div>
 
@@ -170,29 +174,42 @@ export default function SellerOnboardingPage() {
               required
               value={storeName}
               onChange={(e) => setStoreName(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500"
+              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-hidden focus:border-emerald-500"
             />
+
             <input
               type="text"
               placeholder="Physical Store Address (e.g. Session Road, Baguio)"
               required
               value={storeLocation}
               onChange={(e) => setStoreLocation(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500"
+              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-hidden focus:border-emerald-500"
             />
+
+            {/* 🟢 NEW: Integrated interactive map element block to update spatial states dynamically */}
+            <div className="space-y-1.5 pt-0.5">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                Visual Location Pin Selector
+              </label>
+              <StorePickerMap
+                onLocationSelect={handleLocationSelect}
+                searchAddress={storeLocation}
+              />
+            </div>
+
             <input
               type="text"
               placeholder="Operating Hours (e.g. 07:00 - 22:00)"
               required
               value={operatingHours}
               onChange={(e) => setOperatingHours(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500"
+              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-hidden focus:border-emerald-500"
             />
           </div>
 
           <div className="pt-2 border-t border-dashed border-slate-200 space-y-3">
             <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
-              Required Compliance Documents
+              Required Compliance Document Uploads
             </label>
 
             {[
@@ -262,7 +279,7 @@ export default function SellerOnboardingPage() {
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Transmitting Branch Configurations...</span>
+                <span>Verifying Form Requirements...</span>
               </>
             ) : (
               <span>Submit Storefront Profile</span>
