@@ -4,10 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import {
   Search,
-  Plus,
   SlidersHorizontal,
   AlertTriangle,
-  CheckCircle2,
   Package,
   RefreshCw,
   Edit3,
@@ -26,152 +24,70 @@ interface InventoryItem {
 
 export default function InventoryPage() {
   const params = useParams();
-  const storeId = (params.storeId as string) || "STORE-9921";
+  const storeId = Array.isArray(params?.storeId)
+    ? params.storeId[0]
+    : params?.storeId || "";
 
   const [searchQuery, setSearchQuery] = useState("");
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Simulated multi-store database index for stock items
+  const fetchLiveWarehouseLedger = async () => {
+    if (!storeId) return;
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+
+      // Hit her exact verified schema route passing the dynamic parameter filter
+      const response = await fetch(
+        `http://localhost:3002/api/v1/products?storeId=${storeId}`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (!response.ok) throw new Error("Inventory drop rejected.");
+      const dbData = await response.json();
+      const productArray = Array.isArray(dbData)
+        ? dbData
+        : dbData.products || [];
+
+      // Normalization block mapping raw data schemas into standard UI states
+      setItems(
+        productArray.map((item: any) => ({
+          id: item.id || item._id,
+          sku: item.sku || `SKU-${item.name?.substring(0, 3).toUpperCase()}`,
+          name: item.name,
+          category: item.category?.name || "General Menu",
+          price: item.price,
+          stock: item.stock ?? 10,
+          status:
+            item.stock === 0
+              ? "Out of Stock"
+              : item.stock <= 5
+                ? "Low Stock"
+                : "In Stock",
+        })),
+      );
+    } catch (error) {
+      console.error("Live inventory sync failed:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const mockDbInventory: Record<string, InventoryItem[]> = {
-      "STORE-9921": [
-        {
-          id: "INV-1001",
-          sku: "LJR-BUL-FAM",
-          name: "Bulalo Family Size",
-          category: "Soups",
-          price: 450,
-          stock: 15,
-          status: "In Stock",
-        },
-        {
-          id: "INV-1002",
-          sku: "LJR-SIS-REG",
-          name: "Sizzling Sisig",
-          category: "Sizzling",
-          price: 220,
-          stock: 4,
-          status: "Low Stock",
-        },
-        {
-          id: "INV-1003",
-          sku: "LJR-LEK-KAW",
-          name: "Lechon Kawali",
-          category: "Mains",
-          price: 280,
-          stock: 22,
-          status: "In Stock",
-        },
-        {
-          id: "INV-1004",
-          sku: "LJR-PIN-BET",
-          name: "Pinakbet",
-          category: "Vegetables",
-          price: 150,
-          stock: 0,
-          status: "Out of Stock",
-        },
-      ],
-      "STORE-4401": [
-        {
-          id: "INV-2001",
-          sku: "SWC-COK-PIT",
-          name: "Beachside Cocktail Pitcher",
-          category: "Beverages",
-          price: 650,
-          stock: 40,
-          status: "In Stock",
-        },
-        {
-          id: "INV-2002",
-          sku: "SWC-SEA-PLT",
-          name: "Grilled Seafood Platter",
-          category: "Mains",
-          price: 1200,
-          stock: 5,
-          status: "Low Stock",
-        },
-        {
-          id: "INV-2003",
-          sku: "SWC-CAL-BSK",
-          name: "Crispy Calamari Basket",
-          category: "Starters",
-          price: 320,
-          stock: 18,
-          status: "In Stock",
-        },
-      ],
-      "STORE-1120": [
-        {
-          id: "INV-3001",
-          sku: "CS-MCH-KEY",
-          name: "Mechanical Gaming Keyboard",
-          category: "Peripherals",
-          price: 2450,
-          stock: 8,
-          status: "In Stock",
-        },
-        {
-          id: "INV-3002",
-          sku: "CS-ERG-MSE",
-          name: "Ergonomic Vertical Mouse",
-          category: "Peripherals",
-          price: 1500,
-          stock: 2,
-          status: "Low Stock",
-        },
-        {
-          id: "INV-3003",
-          sku: "CS-RGB-MAT",
-          name: "RGB Desk Mat Extra Large",
-          category: "Accessories",
-          price: 600,
-          stock: 25,
-          status: "In Stock",
-        },
-      ],
-      "STORE-8873": [
-        {
-          id: "INV-4001",
-          sku: "DG-JAS-RCE",
-          name: "Premium Jasmine Rice 25kg",
-          category: "Grains",
-          price: 1450,
-          stock: 45,
-          status: "In Stock",
-        },
-        {
-          id: "INV-4002",
-          sku: "DG-BAG-STR",
-          name: "Fresh Baguio Strawberries 1kg",
-          category: "Produce",
-          price: 350,
-          stock: 0,
-          status: "Out of Stock",
-        },
-        {
-          id: "INV-4003",
-          sku: "DG-BEN-COF",
-          name: "Native Benguet Coffee Beans",
-          category: "Beverages",
-          price: 200,
-          stock: 60,
-          status: "In Stock",
-        },
-      ],
-    };
+    fetchLiveWarehouseLedger();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    setItems(mockDbInventory[storeId] || []);
-  }, [storeId]);
-
-  // Compute stock counters dynamically
   const totalItems = items.length;
   const lowStockCount = items.filter((i) => i.status === "Low Stock").length;
   const outOfStockCount = items.filter(
     (i) => i.status === "Out of Stock",
   ).length;
 
-  // Filter items matching the current text search query criteria
   const filteredItems = items.filter(
     (item) =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -180,24 +96,19 @@ export default function InventoryPage() {
   );
 
   return (
-    <div className="space-y-6 max-w-[1600px] animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {/* ── HEADER ACTIONS SECTION ── */}
+    <div className="space-y-6 max-w-[1600px] animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
             Stock Inventory
           </h1>
           <p className="text-xs font-bold text-slate-400 mt-0.5">
-            Monitor stock thresholds, manage catalogs, and update SKU
-            variations.
+            Monitor stock thresholds, manage catalogs, and track SKU variations.
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all w-fit">
-          <Plus className="w-4 h-4" /> Add Inventory Item
-        </button>
       </div>
 
-      {/* ── STOCK METRICS OVERVIEW RIBBON ── */}
+      {/* Metrics Ribbon */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-xs flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500">
@@ -212,7 +123,6 @@ export default function InventoryPage() {
             </p>
           </div>
         </div>
-
         <div className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-xs flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
             <AlertTriangle className="w-5 h-5" />
@@ -226,7 +136,6 @@ export default function InventoryPage() {
             </p>
           </div>
         </div>
-
         <div className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-xs flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
             <AlertTriangle className="w-5 h-5" />
@@ -242,7 +151,7 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* ── FILTER FILTER SEARCH PANEL LAYER ── */}
+      {/* Query Control Board */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="relative w-full md:max-w-md flex items-center">
           <Search className="w-4 h-4 text-slate-400 absolute left-4 pointer-events-none" />
@@ -251,21 +160,24 @@ export default function InventoryPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by title, category, or item SKU..."
-            className="w-full bg-slate-50/50 border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-emerald-500 focus:bg-white transition-all"
+            className="w-full bg-slate-50/50 border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-emerald-500 focus:bg-white transition-all"
           />
         </div>
-
         <div className="flex gap-2 w-full md:w-auto justify-end">
-          <button className="inline-flex items-center gap-2 px-3 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 transition-all">
-            <SlidersHorizontal className="w-3.5 h-3.5" /> Filters
-          </button>
-          <button className="inline-flex items-center gap-2 px-3 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 transition-all">
-            <RefreshCw className="w-3.5 h-3.5" /> Sync
+          <button
+            // 🟢 FIXED: Pass the function reference directly instead of an arrow function wrapper
+            onClick={fetchLiveWarehouseLedger}
+            className="inline-flex items-center gap-2 px-3 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 transition-all cursor-pointer"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`}
+            />
+            Sync Data
           </button>
         </div>
       </div>
 
-      {/* ── INVENTORY CONTROL MATRIX DATA TABLE ── */}
+      {/* Main Grid View Table */}
       <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
@@ -281,71 +193,67 @@ export default function InventoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-bold text-slate-700">
-              {filteredItems.map((item) => (
-                <tr
-                  key={item.id}
-                  className="hover:bg-slate-50/30 transition-colors"
-                >
-                  <td className="py-4 px-6">
-                    <span className="text-slate-900 font-black tracking-tight block text-sm">
-                      {item.name}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">
-                      {item.id}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 font-mono text-slate-600 text-xs">
-                    {item.sku}
-                  </td>
-                  <td className="py-4 px-4 font-semibold text-slate-500">
-                    {item.category}
-                  </td>
-                  <td className="py-4 px-4 font-extrabold text-slate-900 font-mono text-sm">
-                    ₱{item.price.toLocaleString()}
-                  </td>
-                  <td className="py-4 px-4 font-mono text-slate-700">
-                    {item.stock} units
-                  </td>
-                  <td className="py-4 px-4">
-                    <span
-                      className={`inline-flex px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide border ${
-                        item.status === "In Stock"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                          : item.status === "Low Stock"
-                            ? "bg-amber-50 text-amber-700 border-amber-100"
-                            : "bg-rose-50 text-rose-700 border-rose-100"
-                      }`}
-                    >
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-all"
-                        title="Edit Item"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                        title="Delete Item"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                    Querying warehousing tables over cluster context...
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredItems.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="hover:bg-slate-50/30 transition-colors"
+                  >
+                    <td className="py-4 px-6">
+                      <span className="text-slate-900 font-black tracking-tight block text-sm">
+                        {item.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">
+                        {item.id}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 font-mono text-slate-600 text-xs">
+                      {item.sku}
+                    </td>
+                    <td className="py-4 px-4 font-semibold text-slate-500">
+                      {item.category}
+                    </td>
+                    <td className="py-4 px-4 font-extrabold text-slate-900 font-mono text-sm">
+                      ₱{item.price.toLocaleString()}
+                    </td>
+                    <td className="py-4 px-4 font-mono text-slate-700">
+                      {item.stock} units
+                    </td>
+                    <td className="py-4 px-4">
+                      <span
+                        className={`inline-flex px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide border ${
+                          item.status === "In Stock"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                            : item.status === "Low Stock"
+                              ? "bg-amber-50 text-amber-700 border-amber-100"
+                              : "bg-rose-50 text-rose-700 border-rose-100"
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button className="p-1.5 text-slate-400 hover:text-slate-700">
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button className="p-1.5 text-slate-400 hover:text-rose-600">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-
-        {filteredItems.length === 0 && (
-          <div className="py-12 text-center text-xs font-bold text-slate-400 italic bg-white">
-            No matching inventory records found for this branch selection.
-          </div>
-        )}
       </div>
     </div>
   );

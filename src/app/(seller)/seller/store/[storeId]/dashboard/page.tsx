@@ -11,7 +11,6 @@ import {
   Users,
   ArrowRight,
 } from "lucide-react";
-// Import Recharts core sub-components safely
 import {
   AreaChart,
   Area,
@@ -21,7 +20,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// ── 1. EMBEDDED SUB-COMPONENT: TOP PRODUCTS SIDEBAR CARD ──
 interface ProductItem {
   rank: number;
   name: string;
@@ -30,395 +28,107 @@ interface ProductItem {
   sold: number;
 }
 
-function TopProductsCard({ storeId }: { storeId: string }) {
-  const [products, setProducts] = useState<ProductItem[]>([]);
-
-  useEffect(() => {
-    const mockDbProducts: Record<string, ProductItem[]> = {
-      "STORE-9921": [
-        {
-          rank: 1,
-          name: "Bulalo Family Size",
-          revenue: 4200,
-          width: "w-full",
-          sold: 84,
-        },
-        {
-          rank: 2,
-          name: "Sizzling Sisig",
-          revenue: 2440,
-          width: "w-[58%]",
-          sold: 61,
-        },
-        {
-          rank: 3,
-          name: "Lechon Kawali",
-          revenue: 1800,
-          width: "w-[42%]",
-          sold: 36,
-        },
-      ],
-      "STORE-4401": [
-        {
-          rank: 1,
-          name: "Beachside Cocktail Pitcher",
-          revenue: 6500,
-          width: "w-full",
-          sold: 130,
-        },
-        {
-          rank: 2,
-          name: "Grilled Seafood Platter",
-          revenue: 4800,
-          width: "w-[73%]",
-          sold: 24,
-        },
-        {
-          rank: 3,
-          name: "Crispy Calamari Basket",
-          revenue: 3200,
-          width: "w-[49%]",
-          sold: 64,
-        },
-      ],
-      "STORE-1120": [
-        {
-          rank: 1,
-          name: "Mechanical Gaming Keyboard",
-          revenue: 8900,
-          width: "w-full",
-          sold: 4,
-        },
-        {
-          rank: 2,
-          name: "Ergonomic Vertical Mouse",
-          revenue: 4500,
-          width: "w-[50%]",
-          sold: 9,
-        },
-        {
-          rank: 3,
-          name: "RGB Desk Mat Extra Large",
-          revenue: 1200,
-          width: "w-[13%]",
-          sold: 12,
-        },
-      ],
-      "STORE-8873": [
-        {
-          rank: 1,
-          name: "Premium Jasmine Rice 25kg",
-          revenue: 14500,
-          width: "w-full",
-          sold: 10,
-        },
-        {
-          rank: 2,
-          name: "Fresh Baguio Strawberries 1kg",
-          revenue: 7200,
-          width: "w-[49%]",
-          sold: 24,
-        },
-        {
-          rank: 3,
-          name: "Native Benguet Coffee Beans",
-          revenue: 3800,
-          width: "w-[26%]",
-          sold: 19,
-        },
-      ],
-    };
-
-    const fallbackProducts = [
-      {
-        rank: 1,
-        name: "Standard Retail Bundle",
-        revenue: 1200,
-        width: "w-full",
-        sold: 40,
-      },
-    ];
-
-    setProducts(mockDbProducts[storeId] || fallbackProducts);
-  }, [storeId]);
-
-  return (
-    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-5 w-full">
-      <div className="flex items-center justify-between">
-        <h4 className="text-xs font-black text-slate-900 tracking-tight">
-          Top Products
-        </h4>
-        <Link
-          href={`/seller/store/${storeId}/analytics`}
-          className="text-[10px] font-bold text-slate-400 hover:text-slate-600"
-        >
-          Analytics &gt;
-        </Link>
-      </div>
-
-      <div className="space-y-5">
-        {products.map((product) => (
-          <div
-            key={product.rank}
-            className="flex items-start gap-4 text-xs font-bold"
-          >
-            <span className="text-slate-300 font-black text-center w-4 mt-0.5 flex-shrink-0">
-              {product.rank}
-            </span>
-
-            <div className="flex-1 space-y-1.5 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <div className="truncate pr-2">
-                  <span className="text-slate-800 truncate tracking-tight font-bold block">
-                    {product.name}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-bold block mt-0.5">
-                    {product.sold} sold
-                  </span>
-                </div>
-                <span className="text-slate-900 font-extrabold flex-shrink-0 font-mono">
-                  ₱{product.revenue.toLocaleString()}
-                </span>
-              </div>
-
-              <div className="w-full bg-slate-50 h-1.5 rounded-full overflow-hidden">
-                <div
-                  className={`h-full bg-emerald-500 rounded-full ${product.width}`}
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+interface OrderItem {
+  id: string;
+  buyer: string;
+  item: string;
+  amount: string;
+  status: string;
+  time: string;
 }
 
-// ── 2. MAIN HUB DASHBOARD FRAMEWORK PAGE ──
+interface MetricCard {
+  label: string;
+  value: string;
+  change: string;
+  icon: any;
+}
+
 export default function SellerDashboardPage() {
   const params = useParams();
-  const storeId = (params.storeId as string) || "STORE-9921";
+  const storeId = Array.isArray(params?.storeId)
+    ? params.storeId[0]
+    : params?.storeId || "";
 
-  const storeNames: Record<string, string> = {
-    "STORE-9921": "Lola Joe's Restaurant",
-    "STORE-4401": "Sea Waves Chalet Beach Resort",
-    "STORE-1120": "Cordillera Sentinel Tech Shop",
-    "STORE-8873": "Downtown Grocers",
-  };
-  const activeStoreName = storeNames[storeId] || "Alpha Branch Profile";
+  const [storeName, setStoreName] = useState("Loading Store Profile...");
+  const [metrics, setMetrics] = useState<MetricCard[]>([]);
+  const [chartData, setChartData] = useState([]);
+  const [topProducts, setTopProducts] = useState<ProductItem[]>([]);
+  const [recentOrders, setRecentOrders] = useState<OrderItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const storeMetrics: Record<
-    string,
-    { label: string; value: string; change: string; icon: any }[]
-  > = {
-    "STORE-9921": [
-      { label: "Total Sales", value: "₱8,420", change: "+12%", icon: Coins },
-      {
-        label: "Orders Today",
-        value: "5",
-        change: "+2 new",
-        icon: ShoppingBag,
-      },
-      {
-        label: "Products Listed",
-        value: "42",
-        change: "Menu Active",
-        icon: Store,
-      },
-      {
-        label: "Pending Pickups",
-        value: "3",
-        change: "Table Queue",
-        icon: Users,
-      },
-    ],
-    "STORE-4401": [
-      { label: "Total Sales", value: "₱14,500", change: "+18%", icon: Coins },
-      {
-        label: "Orders Today",
-        value: "2",
-        change: "Peak Hour",
-        icon: ShoppingBag,
-      },
-      {
-        label: "Products Listed",
-        value: "18",
-        change: "Resort Active",
-        icon: Store,
-      },
-      {
-        label: "Pending Pickups",
-        value: "1",
-        change: "Cabana Delivery",
-        icon: Users,
-      },
-    ],
-    "STORE-1120": [
-      { label: "Total Sales", value: "₱32,400", change: "+5%", icon: Coins },
-      {
-        label: "Orders Today",
-        value: "0",
-        change: "Restocking",
-        icon: ShoppingBag,
-      },
-      {
-        label: "Products Listed",
-        value: "156",
-        change: "In Stock",
-        icon: Store,
-      },
-      {
-        label: "Pending Pickups",
-        value: "0",
-        change: "Clean Queue",
-        icon: Users,
-      },
-    ],
-    "STORE-8873": [
-      { label: "Total Sales", value: "₱58,910", change: "+24%", icon: Coins },
-      {
-        label: "Orders Today",
-        value: "12",
-        change: "+4 pending",
-        icon: ShoppingBag,
-      },
-      {
-        label: "Products Listed",
-        value: "840",
-        change: "Bulk Inventory",
-        icon: Store,
-      },
-      {
-        label: "Pending Pickups",
-        value: "9",
-        change: "Loading Dock",
-        icon: Users,
-      },
-    ],
-  };
+  useEffect(() => {
+    if (!storeId) return;
 
-  const metaCards = storeMetrics[storeId] || storeMetrics["STORE-9921"];
+    const fetchDashboardAggregation = async () => {
+      setIsLoading(true);
+      try {
+        const token = localStorage.getItem("token");
 
-  const storeOrders: Record<
-    string,
-    {
-      id: string;
-      buyer: string;
-      item: string;
-      amount: string;
-      status: string;
-      time: string;
-    }[]
-  > = {
-    "STORE-9921": [
-      {
-        id: "ORD-8900",
-        buyer: "Mark Tan",
-        item: "Bulalo Family Size × 1",
-        amount: "₱450",
-        status: "Pending",
-        time: "5m ago",
-      },
-      {
-        id: "ORD-8895",
-        buyer: "Siti Rahayu",
-        item: "Sizzling Sisig × 1",
-        amount: "₱220",
-        status: "Preparing",
-        time: "18m ago",
-      },
-    ],
-    "STORE-4401": [
-      {
-        id: "ORD-4401",
-        buyer: "Alice Villa",
-        item: "Beachside Cocktail Pitcher × 2",
-        amount: "₱1,300",
-        status: "Pending",
-        time: "12m ago",
-      },
-      {
-        id: "ORD-4402",
-        buyer: "John Doe",
-        item: "Grilled Seafood Platter × 1",
-        amount: "₱4,800",
-        status: "Preparing",
-        time: "45m ago",
-      },
-    ],
-    "STORE-1120": [
-      {
-        id: "ORD-1101",
-        buyer: "Dave Agpaoa",
-        item: "Mechanical Gaming Keyboard × 1",
-        amount: "₱2,450",
-        status: "Preparing",
-        time: "2h ago",
-      },
-    ],
-    "STORE-8873": [
-      {
-        id: "ORD-8801",
-        buyer: "Maria Luisa",
-        item: "Premium Jasmine Rice 25kg × 2",
-        amount: "₱2,900",
-        status: "Pending",
-        time: "1m ago",
-      },
-      {
-        id: "ORD-8802",
-        buyer: "Kevin Reyes",
-        item: "Native Benguet Coffee Beans × 3",
-        amount: "₱600",
-        status: "Pending",
-        time: "4m ago",
-      },
-    ],
-  };
+        // Dynamic fetch hitting the consolidated dashboard data endpoint
+        const response = await fetch(
+          `http://localhost:3002/api/v1/stores/${storeId}/dashboard`,
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
 
-  const recentOrders = storeOrders[storeId] || storeOrders["STORE-9921"];
+        if (!response.ok) throw new Error("Dashboard metrics unreachable.");
+        const dbData = await response.json();
 
-  // 4. Dynamic Multi-Store Graph Dataset Matrix
-  const chartDatasets: Record<string, { date: string; revenue: number }[]> = {
-    "STORE-9921": [
-      { date: "Jun 3", revenue: 1200 },
-      { date: "Jun 6", revenue: 2400 },
-      { date: "Jun 9", revenue: 1800 },
-      { date: "Jun 12", revenue: 4900 },
-      { date: "Jun 15", revenue: 6200 },
-      { date: "Jun 17", revenue: 8420 },
-    ],
-    "STORE-4401": [
-      { date: "Jun 3", revenue: 3100 },
-      { date: "Jun 6", revenue: 5800 },
-      { date: "Jun 9", revenue: 4200 },
-      { date: "Jun 12", revenue: 9400 },
-      { date: "Jun 15", revenue: 11200 },
-      { date: "Jun 17", revenue: 14500 },
-    ],
-    "STORE-1120": [
-      { date: "Jun 3", revenue: 14000 },
-      { date: "Jun 6", revenue: 19500 },
-      { date: "Jun 9", revenue: 12000 },
-      { date: "Jun 12", revenue: 26000 },
-      { date: "Jun 15", revenue: 29000 },
-      { date: "Jun 17", revenue: 32400 },
-    ],
-    "STORE-8873": [
-      { date: "Jun 3", revenue: 22000 },
-      { date: "Jun 6", revenue: 35000 },
-      { date: "Jun 9", revenue: 28000 },
-      { date: "Jun 12", revenue: 44000 },
-      { date: "Jun 15", revenue: 51000 },
-      { date: "Jun 17", revenue: 58910 },
-    ],
-  };
+        setStoreName(dbData?.storeName || "Active Branch Profile");
+        setChartData(dbData?.revenueChart || []);
+        setTopProducts(dbData?.topProducts || []);
+        setRecentOrders(dbData?.recentOrders || []);
 
-  const activeChartData = chartDatasets[storeId] || chartDatasets["STORE-9921"];
+        // Format incoming database counts into structural metric objects
+        setMetrics([
+          {
+            label: "Total Sales",
+            value: `₱${dbData?.metrics?.totalSales?.toLocaleString() || 0}`,
+            change: dbData?.metrics?.salesChange || "Stable",
+            icon: Coins,
+          },
+          {
+            label: "Orders Today",
+            value: String(dbData?.metrics?.ordersToday || 0),
+            change: dbData?.metrics?.ordersChange || "Live",
+            icon: ShoppingBag,
+          },
+          {
+            label: "Products Listed",
+            value: String(dbData?.metrics?.productsCount || 0),
+            change: "Catalog Active",
+            icon: Store,
+          },
+          {
+            label: "Pending Pickups",
+            value: String(dbData?.metrics?.pendingPickups || 0),
+            change: "Queue Active",
+            icon: Users,
+          },
+        ]);
+      } catch (error) {
+        console.error("Dashboard error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardAggregation();
+  }, [storeId]);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center text-xs font-bold text-slate-400">
+        Loading aggregate business ledger summary...
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 max-w-[1600px] animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {/* Dynamic Header Frame Area */}
+    <div className="space-y-6 max-w-[1600px] animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
@@ -426,9 +136,7 @@ export default function SellerDashboardPage() {
           </h1>
           <p className="text-xs font-bold text-slate-400 mt-0.5">
             Active Store Context:{" "}
-            <span className="text-emerald-600 font-extrabold">
-              {activeStoreName}
-            </span>{" "}
+            <span className="text-emerald-600 font-extrabold">{storeName}</span>{" "}
             · ID:{" "}
             <span className="font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
               {storeId}
@@ -436,16 +144,16 @@ export default function SellerDashboardPage() {
           </p>
         </div>
         <Link
-          href={`/seller/store/${storeId}/upload`}
+          href={`/seller/store/${storeId}/products`}
           className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all w-fit"
         >
-          <Plus className="w-4 h-4" /> New Product
+          <Plus className="w-4 h-4" /> Manage Catalog
         </Link>
       </div>
 
-      {/* 4 Stat Cards Summary Ribbon row */}
+      {/* Metrics Cards Grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metaCards.map((card, i) => (
+        {metrics.map((card, i) => (
           <div
             key={i}
             className="p-5 bg-white border border-slate-200/80 rounded-2xl shadow-xs space-y-3"
@@ -468,28 +176,16 @@ export default function SellerDashboardPage() {
         ))}
       </div>
 
-      {/* Split Component Mid-Grid layer */}
       <div className="grid lg:grid-cols-5 gap-6 items-start">
-        {/* Left Column Stack: Timeline Tracker Graphic Element Container */}
+        {/* Chart Canvas Area */}
         <div className="lg:col-span-3 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-black text-slate-900 tracking-tight">
-              Revenue Overview
-            </h4>
-            <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold text-slate-500">
-              <button className="px-2.5 py-1">7D</button>
-              <button className="px-2.5 py-1 bg-white text-slate-900 rounded shadow-2xs">
-                30D
-              </button>
-              <button className="px-2.5 py-1">90D</button>
-            </div>
-          </div>
-
-          {/* Live High-Fidelity Area Vector Graph Rendering Interface Canvas */}
+          <h4 className="text-xs font-black text-slate-900 tracking-tight">
+            Revenue Overview
+          </h4>
           <div className="h-48 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={activeChartData}
+                data={chartData}
                 margin={{ top: 10, right: 5, left: -25, bottom: 0 }}
               >
                 <defs>
@@ -508,32 +204,14 @@ export default function SellerDashboardPage() {
                   dataKey="date"
                   tickLine={false}
                   axisLine={false}
-                  tick={{
-                    fill: "#94a3b8",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    fontFamily: "monospace",
-                  }}
+                  tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }}
                 />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
-                  tick={{
-                    fill: "#94a3b8",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    fontFamily: "monospace",
-                  }}
+                  tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }}
                 />
                 <Tooltip
-                  contentStyle={{
-                    background: "#0f172a",
-                    borderRadius: "12px",
-                    border: "none",
-                    fontSize: "11px",
-                    fontWeight: "bold",
-                    color: "#fff",
-                  }}
                   formatter={(value) => [
                     `₱${Number(value).toLocaleString()}`,
                     "Revenue",
@@ -552,36 +230,59 @@ export default function SellerDashboardPage() {
           </div>
         </div>
 
-        {/* Right Column Stack: Scaled Revenue perform parameters sidebar card */}
-        <div className="lg:col-span-2">
-          <TopProductsCard storeId={storeId} />
+        {/* Top Selling Products List Card */}
+        <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-5">
+          <h4 className="text-xs font-black text-slate-900 tracking-tight">
+            Top Products
+          </h4>
+          <div className="space-y-5">
+            {topProducts.map((product) => (
+              <div
+                key={product.rank}
+                className="flex items-start gap-4 text-xs font-bold"
+              >
+                <span className="text-slate-300 font-black text-center w-4 mt-0.5 flex-shrink-0">
+                  {product.rank}
+                </span>
+                <div className="flex-1 space-y-1.5 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="truncate">
+                      <span className="text-slate-800 tracking-tight block">
+                        {product.name}
+                      </span>
+                    </div>
+                    <span className="text-slate-900 font-extrabold flex-shrink-0">
+                      ₱{product.revenue.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-50 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 rounded-full"
+                      style={{ width: product.width }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Base Layer Table Block: Recent Orders tracking metrics history queue */}
+      {/* Dynamic Data Table Area */}
       <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-5 border-b border-slate-100">
           <h4 className="text-xs font-black text-slate-900 tracking-tight">
             Recent Orders Queue
           </h4>
-          <Link
-            href={`/seller/store/${storeId}/orders`}
-            className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-all group"
-          >
-            View all{" "}
-            <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
         </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                 <th className="py-3 px-6">Order ID</th>
                 <th className="py-3 px-4">Buyer</th>
-                <th className="py-3 px-4">Product</th>
+                <th className="py-3 px-4">Product Details</th>
                 <th className="py-3 px-4">Amount</th>
-                <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-6 text-right">Time</th>
               </tr>
             </thead>
@@ -591,7 +292,7 @@ export default function SellerDashboardPage() {
                   key={order.id}
                   className="hover:bg-slate-50/40 transition-colors"
                 >
-                  <td className="py-3.5 px-6 font-black text-slate-900">
+                  <td className="py-3.5 px-6 text-slate-900 font-black">
                     {order.id}
                   </td>
                   <td className="py-3.5 px-4 font-semibold text-slate-600">
@@ -600,21 +301,10 @@ export default function SellerDashboardPage() {
                   <td className="py-3.5 px-4 font-medium text-slate-500">
                     {order.item}
                   </td>
-                  <td className="py-3.5 px-4 font-extrabold text-emerald-600 font-mono">
+                  <td className="py-3.5 px-4 text-emerald-600 font-mono">
                     {order.amount}
                   </td>
-                  <td className="py-3.5 px-4">
-                    <span
-                      className={`inline-flex px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide ${
-                        order.status === "Pending"
-                          ? "bg-amber-50 text-amber-700 border border-amber-100/70"
-                          : "bg-blue-50 text-blue-700 border border-blue-100/70"
-                      }`}
-                    >
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-6 text-right text-slate-400 font-mono font-medium">
+                  <td className="py-3.5 px-6 text-right text-slate-400 font-mono">
                     {order.time}
                   </td>
                 </tr>

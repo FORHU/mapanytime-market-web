@@ -6,21 +6,22 @@ import {
   Sparkles,
   UploadCloud,
   CheckCircle,
-  FileText,
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
 
 export default function AIProductUploadPage() {
   const params = useParams();
-  const storeId = (params.storeId as string) || "STORE-9921";
+  const storeId = Array.isArray(params?.storeId)
+    ? params.storeId[0]
+    : params?.storeId || "";
 
-  // Form State Management (Task #167)
+  // Form State Management
   const [productName, setProductName] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("Mains");
 
-  // File & Pipeline UI States (Task #166)
+  // File & Pipeline UI States
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
@@ -28,7 +29,7 @@ export default function AIProductUploadPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Simulate AI parsing data from an uploaded menu image or barcode invoice (Task #166)
+  // Simulate AI parsing data from an uploaded menu image or photography
   const handleFileChange = (file: File) => {
     setSelectedFile(file);
     setIsProcessing(true);
@@ -39,20 +40,10 @@ export default function AIProductUploadPage() {
       setIsProcessing(false);
       setAnalyzed(true);
 
-      // Auto-populate the form inputs mock data based on store context
-      if (storeId === "STORE-9921") {
-        setProductName("Special Crispy Pata");
-        setPrice("580.00");
-        setCategory("Mains");
-      } else if (storeId === "STORE-1120") {
-        setProductName("Wireless Ergonomic Mouse v2");
-        setPrice("1850.00");
-        setCategory("Peripherals");
-      } else {
-        setProductName("AI Parsed Marketplace Goods");
-        setPrice("250.00");
-        setCategory("Mains");
-      }
+      // Auto-populate the form inputs mock data based on store context during testing
+      setProductName("Special Crispy Pata");
+      setPrice("580.00");
+      setCategory("Mains");
     }, 1800);
   };
 
@@ -63,47 +54,54 @@ export default function AIProductUploadPage() {
     }
   };
 
-  // Format form parameters into target Express database payloads (Task #167 / #168)
+  // Format form parameters into target backend payloads
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    const token = localStorage.getItem("token");
+
     const productPayload = {
       storeId: storeId,
-      name: productName,
+      categoryId: category, // In production, this should map to a valid UUID categoryId
+      name: productName.trim(),
       price: parseFloat(price) || 0,
-      category: category,
-      status: "Active",
-      imageFileName: selectedFile ? selectedFile.name : "manual-override.png",
+      isActive: true,
     };
 
     try {
-      // Connects to Express endpoint (Task #168)
-      const response = await fetch("/api/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(productPayload),
-      });
-
-      if (!response.ok) throw new Error("API Connection broken");
-      alert("Product successfully cataloged!");
-    } catch (error) {
-      console.log("Mock Payload Compiled Successfully:", productPayload);
-      alert(
-        `Success! Compiled JSON payload for Express:\n\n${JSON.stringify(productPayload, null, 2)}`,
+      // Connected straight to the synchronized backend IP gate on port 3002
+      const response = await fetch(
+        "http://192.168.1.101:3002/api/v1/products",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(productPayload),
+        },
       );
-    } finally {
-      setIsSubmitting(false);
+
+      if (!response.ok)
+        throw new Error("API validation rejected request parameters.");
+      alert("Product successfully cataloged!");
+
       // Reset State
       setSelectedFile(null);
       setProductName("");
       setPrice("");
       setAnalyzed(false);
+    } catch (error) {
+      console.error("Transmission Failure:", error);
+      alert("Failed to sync listing with the server.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="space-y-6 max-w-[1400px] mx-auto animate-in fade-in duration-300 p-6">
       {/* Page Branding Header */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight inline-flex items-center gap-2">
@@ -116,10 +114,10 @@ export default function AIProductUploadPage() {
         </p>
       </div>
 
-      {/* Main Form Split Layout Layer (Task #166) */}
+      {/* Main Form Split Layout Layer */}
       <div className="grid lg:grid-cols-5 gap-6 items-start">
         {/* LEFT COLUMN: Image Ingestion Dropzone Panel */}
-        <div className="lg:col-span-3 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-5">
+        <div className="lg:col-span-3 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-5">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">
             Image Dropzone Target
           </h3>
@@ -148,15 +146,15 @@ export default function AIProductUploadPage() {
               <p className="text-xs font-black text-slate-800">
                 {selectedFile
                   ? selectedFile.name
-                  : "Drop menu/product photography here"}
+                  : "Drop menu or product photography here"}
               </p>
               <p className="text-[10px] font-bold text-slate-400 mt-0.5">
-                Supports standard matrix formats (PNG, JPG, JPEG) up to 10MB
+                Supports standard formats (PNG, JPG, JPEG) up to 10MB
               </p>
             </div>
           </div>
 
-          {/* AI Status Notification Banner Blocks */}
+          {/* Status Notifications */}
           {isProcessing && (
             <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 text-xs font-bold text-blue-800 animate-pulse">
               <RefreshCw className="w-4 h-4 text-blue-600 animate-spin flex-shrink-0" />
@@ -173,7 +171,7 @@ export default function AIProductUploadPage() {
                 <p>OCR Text Extraction Complete</p>
                 <p className="text-[10px] text-emerald-600 font-normal mt-0.5">
                   Parameters extracted with high confidence. Inspect fields in
-                  the manual block before publishing.
+                  the manual attributes panel before publishing.
                 </p>
               </div>
             </div>
@@ -188,10 +186,10 @@ export default function AIProductUploadPage() {
           )}
         </div>
 
-        {/* RIGHT COLUMN: Parameters Form Overrides (Task #167) */}
+        {/* RIGHT COLUMN: Parameters Form Overrides */}
         <form
           onSubmit={handleProductSubmit}
-          className="lg:col-span-2 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4"
+          className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4"
         >
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">
             Product Attributes Panel
@@ -206,7 +204,7 @@ export default function AIProductUploadPage() {
               value={productName}
               onChange={(e) => setProductName(e.target.value)}
               placeholder="e.g., Organic Veg Bundle"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-emerald-500 focus:bg-white transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
               required
             />
           </div>
@@ -221,36 +219,31 @@ export default function AIProductUploadPage() {
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="0.00"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-emerald-500 focus:bg-white transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
               required
             />
           </div>
 
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-slate-500">
-              Catalog Category
+              Catalog Category UUID
             </label>
-            <select
+            <input
+              type="text"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-emerald-500 focus:bg-white transition-all"
-            >
-              <option value="Mains">Mains / Core Dishes</option>
-              <option value="Soups">Soups &amp; Stews</option>
-              <option value="Beverages">Beverages &amp; Drinks</option>
-              <option value="Peripherals">Hardware Peripherals</option>
-              <option value="Grains">Bulk Grains</option>
-            </select>
+              placeholder="Paste category layout ID from Swagger"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+              required
+            />
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting || isProcessing}
-            className="w-full mt-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs disabled:bg-slate-100 disabled:text-slate-400"
+            className="w-full mt-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm disabled:bg-slate-100 disabled:text-slate-400 cursor-pointer"
           >
-            {isSubmitting
-              ? "Compiling JSON Payload..."
-              : "Publish Product Listing"}
+            {isSubmitting ? "Publishing Listing..." : "Publish Product Listing"}
           </button>
         </form>
       </div>
