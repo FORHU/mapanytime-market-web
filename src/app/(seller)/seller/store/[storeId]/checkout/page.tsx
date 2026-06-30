@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
+import { createOrder, getOrderStatus } from "@/features/orders/api/orders.api";
 import {
   ShoppingBag,
   QrCode,
@@ -65,20 +66,7 @@ export default function SellerCheckout() {
     }
 
     try {
-      const token = localStorage.getItem("token");
-
-      // Connected straight to her synchronized server core cluster port
-      const response = await fetch("http://localhost:3002/api/v1/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ storeId, items: cart, totalAmount }),
-      });
-
-      if (!response.ok) throw new Error("Order parameters rejected.");
-      const data = await response.json();
+      const data = await createOrder({ storeId, items: cart, totalAmount });
 
       setOrderId(data.orderId || data.id);
       setQrString(data.qrDataString || data.qrCode);
@@ -99,14 +87,7 @@ export default function SellerCheckout() {
     // Long pooling execution loop tracking live webhook states on her server
     const statusInterval = setInterval(async () => {
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(
-          `http://localhost:3002/api/v1/orders/${orderId}/status`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
-        const data = await response.json();
+        const data = await getOrderStatus(orderId);
 
         if (data.status === "SUCCESS" || data.status === "PAID") {
           setPaymentStatus("SUCCESS");

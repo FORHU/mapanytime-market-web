@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getMyStores } from "@/features/seller/api/stores.api";
 import {
   Search,
   MapPin,
@@ -35,29 +36,8 @@ export default function MyManageStoresPage() {
     const fetchMerchantTenantStores = async () => {
       try {
         setIsLoading(true);
-        const token = localStorage.getItem("token");
 
-        // 🟢 ALIGNED ENDPOINT: Targets the exact new live path your partner deployed
-        const response = await fetch(
-          "http://192.168.1.176:3002/api/v1/stores/my-stores",
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          },
-        );
-
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => ({}));
-          throw new Error(
-            errorBody?.message ||
-              `Server returned status code: ${response.status}`,
-          );
-        }
-
-        const dbData = await response.json();
+        const dbData = await getMyStores();
 
         // Robust extraction layer matching standard multi-tenant payloads or top-level arrays
         const rawStoreArray = Array.isArray(dbData)

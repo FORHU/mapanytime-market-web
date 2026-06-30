@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { register as apiRegister } from "@/features/auth/api/auth.api";
 
 export default function UnifiedRegisterPage() {
   const router = useRouter();
@@ -18,25 +19,7 @@ export default function UnifiedRegisterPage() {
     e.preventDefault();
 
     try {
-      const response = await fetch(
-        "http://192.168.1.176:3002/api/v1/auth/register",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: fullName.trim(),
-            email: email.trim(),
-            password,
-            roleName: "SELLER", // Matches Joi string requirements
-          }),
-        },
-      );
-
-      const dbData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(dbData?.message || `Server Error: ${response.status}`);
-      }
+      await apiRegister(fullName, email, password);
 
       // ── 🔒 ENFORCED SECURITY GATE: REGISTRATION CLEARANCE ONLY ──
       // Clean out any stale/previous JWT local tracking data to secure the next login pass

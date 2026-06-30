@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { getProducts } from "@/features/products/api/products.api";
 import {
   Search,
   SlidersHorizontal,
@@ -36,19 +37,7 @@ export default function InventoryPage() {
     if (!storeId) return;
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("token");
-
-      // Hit her exact verified schema route passing the dynamic parameter filter
-      const response = await fetch(
-        `http://localhost:3002/api/v1/products?storeId=${storeId}`,
-        {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      if (!response.ok) throw new Error("Inventory drop rejected.");
-      const dbData = await response.json();
+      const dbData = await getProducts(storeId);
       const productArray = Array.isArray(dbData)
         ? dbData
         : dbData.products || [];

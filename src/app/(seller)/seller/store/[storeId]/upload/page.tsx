@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useParams } from "next/navigation";
+import { createProduct } from "@/features/products/api/products.api";
 import {
   Sparkles,
   UploadCloud,
@@ -59,32 +60,16 @@ export default function AIProductUploadPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const token = localStorage.getItem("token");
-
     const productPayload = {
       storeId: storeId,
-      categoryId: category, // In production, this should map to a valid UUID categoryId
+      categoryId: category,
       name: productName.trim(),
       price: parseFloat(price) || 0,
       isActive: true,
     };
 
     try {
-      // Connected straight to the synchronized backend IP gate on port 3002
-      const response = await fetch(
-        "http://192.168.1.101:3002/api/v1/products",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(productPayload),
-        },
-      );
-
-      if (!response.ok)
-        throw new Error("API validation rejected request parameters.");
+      await createProduct(productPayload);
       alert("Product successfully cataloged!");
 
       // Reset State

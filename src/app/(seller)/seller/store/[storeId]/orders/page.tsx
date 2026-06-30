@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Clock, ShoppingBag, Truck } from "lucide-react";
+import { getOrders } from "@/features/orders/api/orders.api";
 
 interface Order {
   id: string;
@@ -22,12 +23,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     if (storeId) {
-      const token = localStorage.getItem("token");
-      fetch(`http://localhost:3002/api/v1/orders?storeId=${storeId}`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => res.json())
+      getOrders(storeId)
         .then((data) => setOrders(data?.orders || data || []))
         .catch((err) => console.error(err));
     }

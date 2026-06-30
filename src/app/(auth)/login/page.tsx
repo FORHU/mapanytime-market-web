@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, AlertCircle } from "lucide-react";
 import AuthLayout from "@/shared/components/AuthLayout";
+import { login as apiLogin } from "@/features/auth/api/auth.api";
 
 export default function UnifiedSignInPage() {
   const router = useRouter();
@@ -24,20 +25,8 @@ export default function UnifiedSignInPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-        "http://192.168.1.176:3002/api/v1/auth/login",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim(), password }),
-        },
-      );
-
-      const dbData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(dbData?.message || "Invalid account credentials.");
-      }
+      // Utilizing the streamlined feature-driven auth client wrapper
+      const dbData = await apiLogin(email, password);
 
       // Extract token envelope block parameter strictly
       const sessionToken = dbData?.data?.accessToken;
@@ -52,7 +41,7 @@ export default function UnifiedSignInPage() {
       localStorage.setItem("token", sessionToken);
       localStorage.setItem("userRole", "seller"); // ◄ forced hardcoded seller local override
 
-      // 🛑 BYPASS ALL PAYLOAD VALS AND FORCE MERCH ONBOARDING TARGET DIRECTLY
+      // BYPASS ALL PAYLOAD VALS AND FORCE MERCH ONBOARDING TARGET DIRECTLY
       alert(
         "Authentication Success! Loading your Store Onboarding portal view.",
       );
@@ -92,7 +81,7 @@ export default function UnifiedSignInPage() {
             placeholder="merchant@company.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-sm text-text-primary focus:outline-none"
+            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-sm text-text-primary focus:outline-none focus:border-brand-core transition-colors"
             required
           />
           <input
@@ -100,13 +89,13 @@ export default function UnifiedSignInPage() {
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-sm text-text-primary focus:outline-none"
+            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-sm text-text-primary focus:outline-none focus:border-brand-core transition-colors"
             required
           />
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3.5 rounded-xl font-bold bg-gradient-to-r from-brand-core to-brand-vibrant text-white flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-3.5 rounded-xl font-bold bg-gradient-to-r from-brand-core to-brand-vibrant text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
           >
             <span>
               {isLoading ? "Authenticating Session..." : "Secure Sign In"}

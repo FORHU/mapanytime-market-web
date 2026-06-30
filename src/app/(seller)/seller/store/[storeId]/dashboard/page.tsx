@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { getDashboard } from "@/features/dashboard/api/dashboard.api";
 import {
   Plus,
   Coins,
@@ -63,19 +64,7 @@ export default function SellerDashboardPage() {
     const fetchDashboardAggregation = async () => {
       setIsLoading(true);
       try {
-        const token = localStorage.getItem("token");
-
-        // Dynamic fetch hitting the consolidated dashboard data endpoint
-        const response = await fetch(
-          `http://localhost:3002/api/v1/stores/${storeId}/dashboard`,
-          {
-            method: "GET",
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
-
-        if (!response.ok) throw new Error("Dashboard metrics unreachable.");
-        const dbData = await response.json();
+        const dbData = await getDashboard(storeId);
 
         setStoreName(dbData?.storeName || "Active Branch Profile");
         setChartData(dbData?.revenueChart || []);

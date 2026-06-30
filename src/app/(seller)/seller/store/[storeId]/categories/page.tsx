@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, FolderPlus, Loader2, ArrowRight } from "lucide-react";
 import AuthLayout from "@/shared/components/AuthLayout";
+import { createCategory } from "@/features/products/api/categories.api";
 
 export default function CreateCategoryPage() {
   const router = useRouter();
@@ -30,29 +31,7 @@ export default function CreateCategoryPage() {
     };
 
     try {
-      const secureToken = localStorage.getItem("token");
-
-      // 💥 Connecting straight to your teammate's categories router endpoint
-      const response = await fetch(
-        "http://192.168.1.176:3002/api/v1/categories",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${secureToken}`,
-          },
-          body: JSON.stringify(categoryPayload),
-        },
-      );
-
-      const dbData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          dbData?.message ||
-            `Category initialization failed with code: ${response.status}`,
-        );
-      }
+      const dbData = await createCategory(categoryPayload);
 
       // Capture the generated relational primary key out of your success envelope response data map
       const generatedCategoryId =

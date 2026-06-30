@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { getAnalytics } from "@/features/dashboard/api/analytics.api";
 import {
   AreaChart,
   Area,
@@ -21,12 +22,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (!storeId) return;
-    const token = localStorage.getItem("token");
-    fetch(`http://localhost:3002/api/v1/stores/${storeId}/analytics`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
+    getAnalytics(storeId)
       .then((dbData) => setData(dbData?.revenueStreams || dbData || []))
       .catch((err) => console.error(err));
   }, [storeId]);

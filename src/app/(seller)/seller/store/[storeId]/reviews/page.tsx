@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Star, Send } from "lucide-react";
+import { getReviews, postReviewReply } from "@/features/orders/api/reviews.api";
 
 interface Review {
   id: string;
@@ -25,35 +26,18 @@ export default function ReviewsPage() {
 
   useEffect(() => {
     if (storeId) {
-      const token = localStorage.getItem("token");
-      fetch(`http://localhost:3002/api/v1/reviews?storeId=${storeId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => res.json())
+      getReviews(storeId)
         .then((data) => setReviews(data || []))
         .catch(console.error);
     }
   }, [storeId]);
 
   const handlePostReply = async (reviewId: string) => {
-    const token = localStorage.getItem("token");
     try {
-      const response = await fetch(
-        `http://localhost:3002/api/v1/reviews/${reviewId}/reply`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ comment: replyText.trim() }),
-        },
-      );
-      if (response.ok) {
-        setReplies((prev) => ({ ...prev, [reviewId]: replyText.trim() }));
-        setActiveReplyId(null);
-        setReplyText("");
-      }
+      await postReviewReply(reviewId, replyText);
+      setReplies((prev) => ({ ...prev, [reviewId]: replyText.trim() }));
+      setActiveReplyId(null);
+      setReplyText("");
     } catch (err) {
       console.error(err);
     }

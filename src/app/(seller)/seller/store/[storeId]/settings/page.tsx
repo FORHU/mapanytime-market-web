@@ -3,6 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import {
+  getSettings,
+  updateSettings,
+} from "@/features/seller/api/settings.api";
+import {
   Bell,
   Zap,
   MapPin,
@@ -61,18 +65,7 @@ export default function SettingsPage() {
     const fetchStorePreferences = async () => {
       setIsLoading(true);
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(
-          `http://192.168.1.101:3002/api/v1/stores/${storeId}/settings`,
-          {
-            method: "GET",
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
-
-        if (!response.ok)
-          throw new Error("Could not retrieve preference records.");
-        const dbData = await response.json();
+        const dbData = await getSettings(storeId);
         const config = dbData?.data || dbData;
 
         // Populate local states with live backend configurations if defined
@@ -95,20 +88,7 @@ export default function SettingsPage() {
     updatedPayload: object,
   ) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `http://192.168.1.101:3002/api/v1/stores/${storeId}/settings`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ [section]: updatedPayload }),
-        },
-      );
-
-      if (!response.ok) throw new Error("Server rejected state mutation.");
+      await updateSettings(storeId, section, updatedPayload);
       setToast({
         message: "Preferences synchronized instantly!",
         type: "success",

@@ -3,6 +3,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Search, Plus, Filter, Edit3, Trash2, X, Loader2 } from "lucide-react";
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+} from "@/features/products/api/products.api";
 
 interface Product {
   id: string;
@@ -49,19 +54,7 @@ export default function ProductManagementPage() {
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(
-        `http://192.168.1.176:3002/api/v1/products?storeId=${storeId}`,
-        {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      if (!response.ok)
-        throw new Error("Failed to retrieve catalog data from remote host.");
-      const dbData = await response.json();
+      const dbData = await getProducts(storeId);
 
       const productArray = Array.isArray(dbData)
         ? dbData
@@ -97,7 +90,6 @@ export default function ProductManagementPage() {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const token = localStorage.getItem("token");
 
     const payload = {
       name: formState.name.trim(),
@@ -108,25 +100,10 @@ export default function ProductManagementPage() {
     };
 
     try {
-      const url = editingProduct
-        ? `http://192.168.1.176:3002/api/v1/products/${editingProduct.id}`
-        : `http://192.168.1.176:3002/api/v1/products`;
-
-      const response = await fetch(url, {
-        method: editingProduct ? "PATCH" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(
-          errorBody?.message ||
-            "Catalog mutation rejected by validation rules.",
-        );
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, payload);
+      } else {
+        await createProduct(payload);
       }
 
       setToast({

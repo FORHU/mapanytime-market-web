@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { getStoreProfile } from "@/features/seller/api/stores.api";
 import {
   MapPin,
   Phone,
@@ -44,22 +45,7 @@ export default function StoreProfile() {
     const fetchStoreProfile = async () => {
       setIsLoading(true);
       try {
-        const token = localStorage.getItem("token"); //
-
-        // Connected straight to your localized backend gateway IP gate
-        const response = await fetch(
-          `http://192.168.1.101:3002/api/v1/stores/${storeId}`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`, //
-            },
-          },
-        );
-
-        if (!response.ok)
-          throw new Error("Failed to parse branch configuration properties.");
-        const dbData = await response.json();
+        const dbData = await getStoreProfile(storeId);
 
         // Handle database wrapper schema parsing safely
         const innerData = dbData?.data || dbData;

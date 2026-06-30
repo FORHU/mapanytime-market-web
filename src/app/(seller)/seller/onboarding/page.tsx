@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Store, Loader2, FileText, CheckCircle } from "lucide-react";
 import AuthLayout from "@/shared/components/AuthLayout";
 import StorePickerMap from "@/shared/components/StorePickerMap";
+import { createStore } from "@/features/seller/api/stores.api";
 
 export default function SellerOnboardingPage() {
   const router = useRouter();
@@ -118,25 +119,7 @@ export default function SellerOnboardingPage() {
         );
         await new Promise((resolve) => setTimeout(resolve, 600));
       } else {
-        const token = localStorage.getItem("token");
-        const response = await fetch(
-          "http://192.168.1.176:3002/api/v1/stores",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          },
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(
-            errorData.message ||
-              `Server returned error code: ${response.status}`,
-          );
-        }
+        await createStore(formData);
       }
 
       alert(
