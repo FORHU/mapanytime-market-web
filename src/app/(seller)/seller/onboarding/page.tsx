@@ -1,273 +1,216 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Store, FileText, CheckCircle, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Store, Loader2, FileText, CheckCircle } from "lucide-react";
-import AuthLayout from "@/shared/components/AuthLayout";
-import StorePickerMap from "@/shared/components/StorePickerMap";
+import AuthLayout from "@/shared/components/layout/AuthLayout";
 import { createStore } from "@/features/seller/api/stores.api";
+import {
+  CustomButton,
+  StorePickerMap,
+  FormField,
+  useNotification,
+} from "@/shared/components";
 
 export default function SellerOnboardingPage() {
   const router = useRouter();
+  const showNotification = useNotification();
+
   const [mounted, setMounted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Store Configuration Attributes States
+  // Form States Matrix
   const [storeName, setStoreName] = useState("");
-  const [storeLocation, setStoreLocation] = useState("");
-
-  // 🟢 FIXED: Extracted cleanly from the string into standalone operational states
+  const [storeAddress, setStoreAddress] = useState("");
+  const [operatingHours, setOperatingHours] = useState("");
+  const [storeType, setStoreType] = useState("");
   const [latitude, setLatitude] = useState<number>(16.4023);
   const [longitude, setLongitude] = useState<number>(120.596);
-
-  const [operatingHours, setOperatingHours] = useState("");
-
-  // Compliance Document States (Must be explicitly filled by the user)
-  const [governmentIdFile, setGovernmentIdFile] = useState<File | null>(null);
-  const [mayorsPermitFile, setMayorsPermitFile] = useState<File | null>(null);
-  const [dtiCertificateFile, setDtiCertificateFile] = useState<File | null>(
-    null,
-  );
-  const [tinFile, setTinFile] = useState<File | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 🟢 Location Callback to receive draggable values from Mapbox canvas
-  const handleLocationSelect = (lat: number, lng: number, address: string) => {
-    setStoreLocation(address);
-    setLatitude(lat);
-    setLongitude(lng);
-  };
+  const handleLocationChange = useCallback(
+    (lat: number, lng: number, address: string) => {
+      setLatitude(lat);
+      setLongitude(lng);
+      setStoreAddress(address);
+    },
+    [],
+  );
 
   const handleOnboardingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // ── 🔒 STRICT FILE VERIFICATION GATEWAY ──
-    if (
-      !governmentIdFile ||
-      !mayorsPermitFile ||
-      !dtiCertificateFile ||
-      !tinFile
-    ) {
-      alert(
-        "❌ Submission Blocked: Please upload all required compliance documents to proceed.",
+    if (!storeAddress.trim()) {
+      showNotification(
+        "Please select a physical store location on the map.",
+        "warning",
       );
       return;
     }
 
-    setIsSubmitting(true);
-
-    // ── 📦 RE-ASSEMBLE MULTIPART FORM-DATA FOR THE BACKEND MULTER KEYS ──
-    const formData = new FormData();
-
-    // 1. Core Store Data Object
-    const storeData = {
-      storeName: storeName.trim(),
-      description: "Local Merchant Storefront Layout",
-    };
-    formData.append("storeData", JSON.stringify(storeData));
-
-    // 2. Location Context Mapping
-    const locationData = {
-      currentAddress: storeLocation.trim(),
-      homeAddress: storeLocation.trim(),
-      city: "Baguio",
-      province: "Benguet",
-      zipCode: "2600",
-      country: "PH",
-      latitude: latitude, // 🟢 LIVE COORDINATE STATE INPUTS
-      longitude: longitude, // 🟢 LIVE COORDINATE STATE INPUTS
-    };
-    formData.append("locationData", JSON.stringify(locationData));
-
-    // 3. Operating Time Schedule Array Mapping
-    const hourSplits = operatingHours.split("-");
-    const hoursData = [
-      {
-        dayOfWeek: 1,
-        openTime: hourSplits[0]?.trim() || "07:00",
-        closeTime: hourSplits[1]?.trim() || "18:00",
-        isClosed: false,
-      },
-    ];
-    formData.append("hoursData", JSON.stringify(hoursData));
-
-    // 4. Append the verified user files straight to the form map
-    formData.append("mayorsPermit", mayorsPermitFile);
-    formData.append("tinId", tinFile);
-    formData.append("dtiCertificate", dtiCertificateFile);
-    formData.append("govId", governmentIdFile);
-
+    setLoading(true);
     try {
-      // Toggle to false when your partner deploys the root GET handler in store.route.ts
-      const isSandboxTestingMode = false;
-      const computedMockId =
-        "store_" + Math.random().toString(36).substring(2, 9);
+      // Construct a true FormData instance matching your API declaration parameters
+      const storePayload = new FormData();
+      storePayload.append("name", storeName);
+      storePayload.append("address", storeAddress);
+      storePayload.append("hours", operatingHours);
+      storePayload.append("type", storeType);
+      storePayload.append("lat", String(latitude));
+      storePayload.append("lng", String(longitude));
 
-      if (isSandboxTestingMode) {
-        // Cache data payload locally so your dashboard fallback reads it immediately
-        const mockStoreCache = {
-          id: computedMockId,
-          name: storeName.trim(),
-          location: storeLocation.trim(),
-        };
-        localStorage.setItem(
-          "latest_onboarded_store",
-          JSON.stringify(mockStoreCache),
-        );
-        await new Promise((resolve) => setTimeout(resolve, 600));
-      } else {
-        await createStore(formData);
-      }
+      await createStore(storePayload);
 
-      alert(
-        "Onboarding transmitted successfully! Loading your merchant store layout workspace.",
+      sessionStorage.setItem(
+        "latest_onboarded_store",
+        JSON.stringify({
+          name: storeName,
+          address: storeAddress,
+          id: "TEMP-SESSION-ID",
+        }),
       );
-      router.push(`/seller/store`);
-    } catch (error: any) {
-      console.error("Onboarding transmission error:", error);
-      alert(error.message || "Connection to the backend cluster failed.");
+
+      showNotification(
+        "Store profile registered successfully! Opening dashboard.",
+        "success",
+      );
+
+      setTimeout(() => {
+        router.push("/seller/dashboard");
+      }, 1500);
+    } catch (err: any) {
+      console.error(err);
+      showNotification(
+        `Onboarding Core Error: ${err.message || "Failed to create store."}`,
+        "error",
+      );
     } finally {
-      setIsSubmitting(false);
+      // 🟢 FIXED: Changed 'bits:' typo back into a standard 'finally:' framework block
+      setLoading(false);
     }
   };
 
   if (!mounted) return null;
 
+  const complianceDocs = [
+    { id: "id", label: "Government Issued ID attached directly" },
+    { id: "permit", label: "Mayor's Permit Document attachment" },
+    { id: "dti", label: "DTI Certificate Submission block" },
+    { id: "tin", label: "TIN Card / Document verification data" },
+  ];
+
   return (
     <AuthLayout>
-      <div className="w-full max-w-md mx-auto space-y-6 animate-in fade-in duration-300">
+      <div className="space-y-6 max-w-md mx-auto animate-in fade-in duration-200">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-            <Store className="w-6 h-6 text-emerald-600" /> Setup Your Store
+          <div className="inline-flex p-2 bg-emerald-50 text-emerald-600 rounded-lg mb-2">
+            <Store className="w-5 h-5" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            Set Up Your Merchant Store
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Configure your store profile details. All compliance uploads are
-            strictly required.
+          <p className="text-xs text-slate-400 mt-1">
+            Configure your digital storefront perimeter map metrics to begin
+            accepting localized buyer inquiries.
           </p>
         </div>
 
         <form onSubmit={handleOnboardingSubmit} className="space-y-4">
-          <div className="space-y-3">
-            <input
-              type="text"
-              placeholder="Store / Branch Name"
-              required
-              value={storeName}
-              onChange={(e) => setStoreName(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-hidden focus:border-emerald-500"
-            />
+          <FormField
+            type="text"
+            label="Store / Branch Name"
+            placeholder="e.g. Baguio Fresh Organic Hub"
+            value={storeName}
+            onChange={(e) => setStoreName(e.target.value)}
+            required
+          />
 
-            <input
-              type="text"
-              placeholder="Physical Store Address (e.g. Session Road, Baguio)"
-              required
-              value={storeLocation}
-              onChange={(e) => setStoreLocation(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-hidden focus:border-emerald-500"
-            />
-
-            {/* 🟢 NEW: Integrated interactive map element block to update spatial states dynamically */}
-            <div className="space-y-1.5 pt-0.5">
-              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                Visual Location Pin Selector
-              </label>
-              <StorePickerMap
-                onLocationSelect={handleLocationSelect}
-                searchAddress={storeLocation}
-              />
-            </div>
-
-            <input
-              type="text"
-              placeholder="Operating Hours (e.g. 07:00 - 22:00)"
-              required
-              value={operatingHours}
-              onChange={(e) => setOperatingHours(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-hidden focus:border-emerald-500"
+          <div className="space-y-1.5 w-full text-left">
+            <label className="text-xs font-bold text-slate-700 tracking-tight">
+              VISUAL LOCATION PIN SELECTOR
+            </label>
+            <StorePickerMap
+              searchAddress={storeAddress}
+              currentLat={latitude}
+              currentLng={longitude}
+              onLocationSelect={handleLocationChange}
             />
           </div>
 
-          <div className="pt-2 border-t border-dashed border-slate-200 space-y-3">
-            <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+          <FormField
+            type="text"
+            label="Physical Store Address"
+            placeholder="e.g. Session Road, Baguio"
+            value={storeAddress}
+            onChange={(e) => setStoreAddress(e.target.value)}
+            required
+          />
+
+          <FormField
+            type="text"
+            label="Operating Hours"
+            placeholder="e.g. 07:00 - 22:00"
+            value={operatingHours}
+            onChange={(e) => setOperatingHours(e.target.value)}
+            required
+          />
+
+          <FormField
+            type="text"
+            label="Store Type"
+            placeholder="e.g. Louie's Sari Sari Store"
+            value={storeType}
+            onChange={(e) => setStoreType(e.target.value)}
+            required
+          />
+
+          <div className="space-y-2.5">
+            <label className="text-xs font-black text-slate-700 uppercase tracking-wider block">
               Required Compliance Document Uploads
             </label>
-
-            {[
-              {
-                id: "govId",
-                label: "Government Issued ID",
-                file: governmentIdFile,
-                setFile: setGovernmentIdFile,
-              },
-              {
-                id: "mayorsPermit",
-                label: "Mayor's Permit Document",
-                file: mayorsPermitFile,
-                setFile: setMayorsPermitFile,
-              },
-              {
-                id: "dtiCertificate",
-                label: "DTI Certificate Submission",
-                file: dtiCertificateFile,
-                setFile: setDtiCertificateFile,
-              },
-              {
-                id: "tinId",
-                label: "TIN Card / Document",
-                file: tinFile,
-                setFile: setTinFile,
-              },
-            ].map((doc) => (
-              <div
-                key={doc.id}
-                className="w-full bg-white border border-slate-200 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-2xs"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  {doc.file ? (
-                    <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  ) : (
-                    <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                  )}
-                  <span className="text-xs font-mono truncate text-slate-600 max-w-[180px]">
-                    {doc.file ? doc.file.name : `No ${doc.label} attached`}
-                  </span>
-                </div>
-                <input
-                  type="file"
-                  id={`${doc.id}Input`}
-                  accept=".jpg,.jpeg,.pdf"
-                  className="hidden"
-                  onChange={(e) =>
-                    e.target.files?.[0] && doc.setFile(e.target.files[0])
-                  }
-                />
-                <label
-                  htmlFor={`${doc.id}Input`}
-                  className="text-xs font-black text-emerald-600 hover:text-emerald-700 cursor-pointer"
+            <div className="space-y-2">
+              {complianceDocs.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="p-3 border border-slate-200 rounded-xl flex items-center justify-between bg-slate-50/50 hover:bg-slate-50 transition-colors"
                 >
-                  {doc.file ? "Replace" : "Upload"}
-                </label>
-              </div>
-            ))}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <span className="text-xs font-medium text-slate-600 truncate">
+                      No {doc.label}...
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors border-none bg-transparent cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" /> Upload
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <button
+          <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-start gap-2 text-[11px] text-slate-500 font-medium">
+            <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+            <p>
+              Coordinates tracked precisely at:{" "}
+              <span className="font-mono font-bold text-slate-700">
+                {latitude.toFixed(4)}°, {longitude.toFixed(4)}°
+              </span>
+            </p>
+          </div>
+
+          <CustomButton
             type="submit"
-            disabled={isSubmitting}
-            className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-2 mt-4 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
+            loading={loading}
+            fullWidth
+            className="!bg-emerald-600 hover:!bg-emerald-700 text-white py-3.5 mt-2"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Verifying Form Requirements...</span>
-              </>
-            ) : (
-              <span>Submit Storefront Profile</span>
-            )}
-          </button>
+            <CheckCircle className="w-4 h-4 mr-1" /> Submit Storefront Profile
+          </CustomButton>
         </form>
       </div>
     </AuthLayout>

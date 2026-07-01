@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { getStoreProfile } from "@/features/seller/api/stores.api";
+import { Card, Badge } from "@/shared/components";
 import {
   MapPin,
   Phone,
@@ -46,8 +47,6 @@ export default function StoreProfile() {
       setIsLoading(true);
       try {
         const dbData = await getStoreProfile(storeId);
-
-        // Handle database wrapper schema parsing safely
         const innerData = dbData?.data || dbData;
 
         setStoreProfile({
@@ -73,7 +72,8 @@ export default function StoreProfile() {
         });
       } catch (err) {
         console.error("Profile synchronization failure:", err);
-      } finally {
+      }
+      bits: {
         setIsLoading(false);
       }
     };
@@ -90,22 +90,12 @@ export default function StoreProfile() {
     );
   }
 
-  if (!profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-xs font-bold text-slate-400 italic bg-[#FAFAFA]">
-        Could not construct store profile template context for identifier code:{" "}
-        {storeId}
-      </div>
-    );
-  }
-
-  // Get initials for custom profile avatar thumbnail placeholder
+  if (!profile) return null;
   const avatarInitials = profile.name.substring(0, 2).toUpperCase();
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-4 md:p-8 font-sans antialiased text-[#111111] animate-in fade-in duration-300">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Top Header Row */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[#0F172A]">
@@ -115,21 +105,19 @@ export default function StoreProfile() {
               How buyers see your store on the map
             </p>
           </div>
-          <button className="flex items-center gap-2 bg-[#0F172A] hover:bg-[#1E293B] text-white text-sm font-semibold py-2.5 px-4 rounded-xl transition-colors shadow-sm cursor-pointer">
-            <PenTool className="w-4 h-4" />
-            Edit Profile
+          <button className="flex items-center gap-2 bg-[#0F172A] hover:bg-[#1E293B] text-white text-sm font-semibold py-2.5 px-4 rounded-xl shadow-sm cursor-pointer border-none">
+            <PenTool className="w-4 h-4" /> Edit Profile
           </button>
         </div>
 
-        {/* Hero Banner Card */}
-        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-          {/* Gradient Banner */}
+        <Card
+          variant="outlined"
+          padding="none"
+          className="!rounded-2xl overflow-hidden bg-white"
+        >
           <div className="h-44 bg-gradient-to-r from-[#112240] via-[#1F4056] to-[#10B981]" />
-
-          {/* Profile Details Bar */}
           <div className="px-6 pb-6 relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div className="flex items-end gap-4 -mt-8 sm:-mt-10">
-              {/* Avatar Badge */}
               <div className="w-20 h-20 bg-[#10B981] border-4 border-white text-white font-bold text-2xl flex items-center justify-center rounded-2xl shadow-sm z-10 font-mono">
                 {avatarInitials}
               </div>
@@ -143,22 +131,23 @@ export default function StoreProfile() {
               </div>
             </div>
 
-            {/* Verification Status Tags */}
             <div className="flex items-center gap-2 mb-1">
-              <span className="bg-[#ECFDF5] text-[#10B981] text-xs font-semibold px-3 py-1.5 rounded-full border border-[#D1FAE5]">
+              <Badge variant="success" size="sm">
                 Verified ✓
-              </span>
-              <span className="bg-[#ECFDF5] text-[#10B981] text-xs font-semibold px-3 py-1.5 rounded-full border border-[#D1FAE5]">
+              </Badge>
+              <Badge variant="success" size="sm">
                 Live on Map
-              </span>
+              </Badge>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* 4-Column Live Metrics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Products Count */}
-          <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center gap-4">
+          <Card
+            variant="outlined"
+            padding="md"
+            className="flex items-center gap-4 !rounded-2xl"
+          >
             <div className="p-3 bg-[#EEFDF6] text-[#10B981] rounded-xl">
               <Package className="w-5 h-5" />
             </div>
@@ -168,10 +157,12 @@ export default function StoreProfile() {
               </p>
               <p className="text-xs font-medium text-[#94A3B8]">Products</p>
             </div>
-          </div>
-
-          {/* Total Customers */}
-          <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center gap-4">
+          </Card>
+          <Card
+            variant="outlined"
+            padding="md"
+            className="flex items-center gap-4 !rounded-2xl"
+          >
             <div className="p-3 bg-[#EFF6FF] text-[#3B82F6] rounded-xl">
               <Users className="w-5 h-5" />
             </div>
@@ -183,10 +174,12 @@ export default function StoreProfile() {
                 Total Customers
               </p>
             </div>
-          </div>
-
-          {/* Rating */}
-          <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center gap-4">
+          </Card>
+          <Card
+            variant="outlined"
+            padding="md"
+            className="flex items-center gap-4 !rounded-2xl"
+          >
             <div className="p-3 bg-[#FFFBEB] text-[#F59E0B] rounded-xl">
               <Star className="w-5 h-5 fill-current" />
             </div>
@@ -196,10 +189,12 @@ export default function StoreProfile() {
               </p>
               <p className="text-xs font-medium text-[#94A3B8]">Rating</p>
             </div>
-          </div>
-
-          {/* Local Proximity Metric */}
-          <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-sm flex items-center gap-4">
+          </Card>
+          <Card
+            variant="outlined"
+            padding="md"
+            className="flex items-center gap-4 !rounded-2xl"
+          >
             <div className="p-3 bg-[#FFF7ED] text-[#F97316] rounded-xl">
               <MapPin className="w-5 h-5" />
             </div>
@@ -211,17 +206,18 @@ export default function StoreProfile() {
                 Location Proximity
               </p>
             </div>
-          </div>
+          </Card>
         </div>
 
-        {/* Two-Column Details Layout Block */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Block: Store Details */}
-          <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-5">
+          <Card
+            variant="outlined"
+            padding="md"
+            className="!rounded-2xl space-y-5"
+          >
             <h3 className="text-base font-bold text-[#0F172A]">
               Store Details
             </h3>
-
             <div className="space-y-4">
               <div>
                 <span className="text-[11px] font-bold tracking-wider text-[#94A3B8] uppercase block mb-1">
@@ -231,7 +227,6 @@ export default function StoreProfile() {
                   {profile.tagline}
                 </p>
               </div>
-
               <div>
                 <span className="text-[11px] font-bold tracking-wider text-[#94A3B8] uppercase block mb-1">
                   Address Mapping
@@ -241,7 +236,6 @@ export default function StoreProfile() {
                   <span>{profile.address}</span>
                 </div>
               </div>
-
               <div>
                 <span className="text-[11px] font-bold tracking-wider text-[#94A3B8] uppercase block mb-1">
                   Contact Phone
@@ -251,7 +245,6 @@ export default function StoreProfile() {
                   <span>{profile.phone}</span>
                 </div>
               </div>
-
               <div>
                 <span className="text-[11px] font-bold tracking-wider text-[#94A3B8] uppercase block mb-1">
                   Operating Timeline
@@ -262,10 +255,13 @@ export default function StoreProfile() {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
-          {/* Right Block: About & Hyperlocal Pin Layout Preview */}
-          <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-6">
+          <Card
+            variant="outlined"
+            padding="md"
+            className="!rounded-2xl space-y-6"
+          >
             <div>
               <h3 className="text-base font-bold text-[#0F172A] mb-3">
                 About the Store
@@ -274,22 +270,18 @@ export default function StoreProfile() {
                 {profile.about}
               </p>
             </div>
-
             <div className="space-y-3">
               <h3 className="text-base font-bold text-[#0F172A]">
                 Map Location Preview
               </h3>
-
-              {/* Canvas Layout Simulation Container */}
               <div className="bg-[#172237] rounded-xl h-40 flex items-center justify-center relative overflow-hidden">
-                {/* Dynamic Floating Visual Pin */}
                 <div className="flex items-center gap-1.5 bg-[#10B981] text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg border border-[#34D399] animate-bounce">
                   <MapPin className="w-3.5 h-3.5 fill-current" />
                   <span>{profile.name}</span>
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

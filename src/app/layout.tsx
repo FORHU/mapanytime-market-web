@@ -5,6 +5,7 @@ import QueryProvider from "@/shared/lib/providers/query-provider";
 import { Toaster } from "sonner";
 import { AuthListener } from "@/features/auth/components/AuthListener";
 import { ThemeProvider } from "next-themes";
+import { NotificationProvider } from "@/shared/components"; // 👈 ADD THIS IMPORT
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -71,7 +72,6 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} ${geistSans.variable} ${geistMono.variable} font-[family-name:var(--font-poppins)] antialiased bg-background-primary text-text-primary`}
       >
-        {/* FIXED: ThemeProvider is moved to the top-level shell to manage initial attribute injections safely without breaking child query hydration trees */}
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -79,7 +79,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-            {children}
+            {/* 👈 WRAP YOUR CHILDREN IN THE NOTIFICATION PROVIDER */}
+            <NotificationProvider>{children}</NotificationProvider>
+
             <Toaster position="top-right" theme="system" richColors />
             <AuthListener />
           </QueryProvider>

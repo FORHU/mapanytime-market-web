@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { getProducts } from "@/features/products/api/products.api";
+import { Card, Badge } from "@/shared/components";
 import {
   Search,
-  SlidersHorizontal,
   AlertTriangle,
   Package,
   RefreshCw,
@@ -33,7 +33,8 @@ export default function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchLiveWarehouseLedger = async () => {
+  // 🟢 FIXED: Wrapped method execution footprint inside a memoized callback instance
+  const fetchLiveWarehouseLedger = useCallback(async () => {
     if (!storeId) return;
     setIsLoading(true);
     try {
@@ -42,34 +43,36 @@ export default function InventoryPage() {
         ? dbData
         : dbData.products || [];
 
-      // Normalization block mapping raw data schemas into standard UI states
       setItems(
-        productArray.map((item: any) => ({
-          id: item.id || item._id,
-          sku: item.sku || `SKU-${item.name?.substring(0, 3).toUpperCase()}`,
-          name: item.name,
-          category: item.category?.name || "General Menu",
-          price: item.price,
-          stock: item.stock ?? 10,
-          status:
+        productArray.map((item: any) => {
+          const status =
             item.stock === 0
               ? "Out of Stock"
               : item.stock <= 5
                 ? "Low Stock"
-                : "In Stock",
-        })),
+                : "In Stock";
+          return {
+            id: item.id || item._id,
+            sku: item.sku || `SKU-${item.name?.substring(0, 3).toUpperCase()}`,
+            name: item.name,
+            category: item.category?.name || "General Menu",
+            price: item.price,
+            stock: item.stock ?? 10,
+            status,
+          };
+        }),
       );
     } catch (error) {
       console.error("Live inventory sync failed:", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [storeId]);
 
+  // 🟢 FIXED: Included dependency token safely to prevent re-render loops
   useEffect(() => {
     fetchLiveWarehouseLedger();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchLiveWarehouseLedger]);
 
   const totalItems = items.length;
   const lowStockCount = items.filter((i) => i.status === "Low Stock").length;
@@ -86,20 +89,21 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6 max-w-[1600px] animate-in fade-in duration-300">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Stock Inventory
-          </h1>
-          <p className="text-xs font-bold text-slate-400 mt-0.5">
-            Monitor stock thresholds, manage catalogs, and track SKU variations.
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+          Stock Inventory
+        </h1>
+        <p className="text-xs font-bold text-slate-400 mt-0.5">
+          Monitor stock thresholds, manage catalogs, and track SKU variations.
+        </p>
       </div>
 
-      {/* Metrics Ribbon */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-xs flex items-center gap-4">
+        <Card
+          variant="outlined"
+          padding="sm"
+          className="!rounded-2xl flex items-center gap-4"
+        >
           <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500">
             <Package className="w-5 h-5" />
           </div>
@@ -111,8 +115,12 @@ export default function InventoryPage() {
               Total Unique SKUs
             </p>
           </div>
-        </div>
-        <div className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-xs flex items-center gap-4">
+        </Card>
+        <Card
+          variant="outlined"
+          padding="sm"
+          className="!rounded-2xl flex items-center gap-4"
+        >
           <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
             <AlertTriangle className="w-5 h-5" />
           </div>
@@ -124,8 +132,12 @@ export default function InventoryPage() {
               Low Stock Warnings
             </p>
           </div>
-        </div>
-        <div className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-xs flex items-center gap-4">
+        </Card>
+        <Card
+          variant="outlined"
+          padding="sm"
+          className="!rounded-2xl flex items-center gap-4"
+        >
           <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
             <AlertTriangle className="w-5 h-5" />
           </div>
@@ -137,11 +149,14 @@ export default function InventoryPage() {
               Out of Stock Items
             </p>
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Query Control Board */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row gap-3 items-center justify-between">
+      <Card
+        variant="outlined"
+        padding="sm"
+        className="!rounded-2xl flex flex-col md:flex-row gap-3 items-center justify-between"
+      >
         <div className="relative w-full md:max-w-md flex items-center">
           <Search className="w-4 h-4 text-slate-400 absolute left-4 pointer-events-none" />
           <input
@@ -149,25 +164,25 @@ export default function InventoryPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by title, category, or item SKU..."
-            className="w-full bg-slate-50/50 border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-emerald-500 focus:bg-white transition-all"
+            className="w-full bg-slate-50/50 border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
           />
         </div>
-        <div className="flex gap-2 w-full md:w-auto justify-end">
-          <button
-            // 🟢 FIXED: Pass the function reference directly instead of an arrow function wrapper
-            onClick={fetchLiveWarehouseLedger}
-            className="inline-flex items-center gap-2 px-3 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 transition-all cursor-pointer"
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`}
-            />
-            Sync Data
-          </button>
-        </div>
-      </div>
+        <button
+          onClick={fetchLiveWarehouseLedger}
+          className="inline-flex items-center gap-2 px-3 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 transition-all cursor-pointer"
+        >
+          <RefreshCw
+            className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`}
+          />{" "}
+          Sync Data
+        </button>
+      </Card>
 
-      {/* Main Grid View Table */}
-      <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xs overflow-hidden">
+      <Card
+        variant="outlined"
+        padding="none"
+        className="!rounded-3xl overflow-hidden"
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -215,24 +230,25 @@ export default function InventoryPage() {
                       {item.stock} units
                     </td>
                     <td className="py-4 px-4">
-                      <span
-                        className={`inline-flex px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide border ${
+                      <Badge
+                        variant={
                           item.status === "In Stock"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                            ? "success"
                             : item.status === "Low Stock"
-                              ? "bg-amber-50 text-amber-700 border-amber-100"
-                              : "bg-rose-50 text-rose-700 border-rose-100"
-                        }`}
+                              ? "warning"
+                              : "error"
+                        }
+                        size="sm"
                       >
                         {item.status}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button className="p-1.5 text-slate-400 hover:text-slate-700">
+                        <button className="p-1.5 text-slate-400 hover:text-slate-700 cursor-pointer">
                           <Edit3 className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-slate-400 hover:text-rose-600">
+                        <button className="p-1.5 text-slate-400 hover:text-rose-600 cursor-pointer">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -243,7 +259,7 @@ export default function InventoryPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

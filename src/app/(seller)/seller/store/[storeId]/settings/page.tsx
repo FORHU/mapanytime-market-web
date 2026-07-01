@@ -6,6 +6,7 @@ import {
   getSettings,
   updateSettings,
 } from "@/features/seller/api/settings.api";
+import { Card, Snackbar } from "@/shared/components";
 import {
   Bell,
   Zap,
@@ -15,6 +16,7 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react";
+import { AlertColor } from "@mui/material";
 
 export default function SettingsPage() {
   const params = useParams();
@@ -23,26 +25,24 @@ export default function SettingsPage() {
     : params?.storeId || "";
 
   const [isLoading, setIsLoading] = useState(true);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
+  const [toast, setToast] = useState({
+    open: false,
+    message: "",
+    severity: "success" as AlertColor,
+  });
 
-  // Core Account Preferences States Matrix
   const [notifications, setNotifications] = useState({
     newOrders: true,
     lowStock: true,
     reviews: true,
     promotional: false,
   });
-
   const [aiSettings, setAiSettings] = useState({
     autoPublish: false,
     removeBg: true,
     ocrDetection: true,
     priceSuggestions: false,
   });
-
   const [mapVisibility, setMapVisibility] = useState({
     showStore: true,
     livePins: true,
@@ -50,39 +50,26 @@ export default function SettingsPage() {
     showHours: true,
   });
 
-  // Auto-clear toast notifications
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 3500);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
-
-  // --- 1. GET: Fetch active store preference values ---
   useEffect(() => {
     if (!storeId) return;
-
     const fetchStorePreferences = async () => {
       setIsLoading(true);
       try {
         const dbData = await getSettings(storeId);
         const config = dbData?.data || dbData;
-
-        // Populate local states with live backend configurations if defined
         if (config.notifications) setNotifications(config.notifications);
         if (config.aiSettings) setAiSettings(config.aiSettings);
         if (config.mapVisibility) setMapVisibility(config.mapVisibility);
       } catch (error) {
         console.error("Failed to parse settings:", error);
-      } finally {
+      }
+      bits: {
         setIsLoading(false);
       }
     };
-
     fetchStorePreferences();
   }, [storeId]);
 
-  // --- 2. PATCH: Update preferences asynchronously on change mutation ---
   const updatePreferenceMutation = async (
     section: string,
     updatedPayload: object,
@@ -90,13 +77,15 @@ export default function SettingsPage() {
     try {
       await updateSettings(storeId, section, updatedPayload);
       setToast({
+        open: true,
         message: "Preferences synchronized instantly!",
-        type: "success",
+        severity: "success",
       });
     } catch (error: any) {
       setToast({
+        open: true,
         message: error.message || "Failed to sync configurations.",
-        type: "error",
+        severity: "error",
       });
     }
   };
@@ -112,35 +101,23 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-4 md:p-8 font-sans antialiased text-[#111111] animate-in fade-in duration-300 relative">
-      {/* Dynamic Toast Feedback Notification Panel */}
-      {toast && (
-        <div
-          className={`fixed top-5 right-5 z-50 p-4 rounded-xl border text-xs font-bold shadow-lg transition-all ${
-            toast.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-              : "bg-rose-50 text-rose-800 border-rose-200"
-          }`}
-        >
-          {toast.message}
-        </div>
-      )}
-
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Settings Title Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight text-[#0F172A]">
             Settings
           </h1>
           <p className="text-sm text-[#64748B] mt-0.5">
-            Manage your seller account preferences across branch:{" "}
+            Manage your preferences across branch:{" "}
             <span className="font-mono text-emerald-600">{storeId}</span>
           </p>
         </div>
 
-        {/* ROW 1: Notifications & AI Upload Settings */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Notifications Card */}
-          <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-5">
+          <Card
+            variant="outlined"
+            padding="md"
+            className="!rounded-2xl space-y-5"
+          >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-[#FFF7ED] text-[#F97316] rounded-xl">
                 <Bell className="w-5 h-5" />
@@ -149,7 +126,6 @@ export default function SettingsPage() {
                 Notifications
               </h2>
             </div>
-
             <div className="space-y-4 pt-2">
               {[
                 { key: "newOrders", label: "New order alerts" },
@@ -178,10 +154,13 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
-          {/* AI Upload Settings Card */}
-          <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-5">
+          <Card
+            variant="outlined"
+            padding="md"
+            className="!rounded-2xl space-y-5"
+          >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-[#E6FBF3] text-[#10B981] rounded-xl">
                 <Zap className="w-5 h-5 fill-current" />
@@ -190,7 +169,6 @@ export default function SettingsPage() {
                 AI Upload Settings
               </h2>
             </div>
-
             <div className="space-y-4 pt-2">
               {[
                 { key: "autoPublish", label: "Auto-publish after AI review" },
@@ -222,13 +200,15 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
 
-        {/* ROW 2: Map Visibility & Payout Settings */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Map Visibility Card */}
-          <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-5">
+          <Card
+            variant="outlined"
+            padding="md"
+            className="!rounded-2xl space-y-5"
+          >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-[#EFF6FF] text-[#3B82F6] rounded-xl">
                 <MapPin className="w-5 h-5" />
@@ -237,7 +217,6 @@ export default function SettingsPage() {
                 Map Visibility
               </h2>
             </div>
-
             <div className="space-y-4 pt-2">
               {[
                 { key: "showStore", label: "Show store on public map" },
@@ -269,10 +248,13 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
-          {/* Payout Settings Card (Static Layout Shell) */}
-          <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-4">
+          <Card
+            variant="outlined"
+            padding="md"
+            className="!rounded-2xl space-y-4"
+          >
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-[#F5F3FF] text-[#7C3AED] rounded-xl">
                 <CreditCard className="w-5 h-5" />
@@ -281,7 +263,6 @@ export default function SettingsPage() {
                 Payout Settings
               </h2>
             </div>
-
             <div className="divide-y divide-[#F1F5F9]">
               <div className="flex items-center justify-between py-3">
                 <div>
@@ -290,11 +271,10 @@ export default function SettingsPage() {
                   </p>
                   <p className="text-xs font-medium text-[#94A3B8]">••••4892</p>
                 </div>
-                <button className="text-sm font-semibold text-[#10B981] hover:text-[#0D9488] flex items-center gap-0.5 cursor-pointer">
+                <button className="text-sm font-semibold text-[#10B981] hover:text-[#0D9488] flex items-center gap-0.5 cursor-pointer border-none bg-transparent">
                   Change <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
-
               <div className="flex items-center justify-between py-3">
                 <div>
                   <p className="text-sm font-semibold text-[#1E293B]">
@@ -304,59 +284,20 @@ export default function SettingsPage() {
                     Weekly · Every Monday
                   </p>
                 </div>
-                <button className="text-sm font-semibold text-[#10B981] hover:text-[#0D9488] flex items-center gap-0.5 cursor-pointer">
-                  Edit <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <p className="text-sm font-semibold text-[#1E293B]">
-                    Minimum Payout
-                  </p>
-                  <p className="text-xs font-medium text-[#94A3B8]">
-                    ₱1,000.00
-                  </p>
-                </div>
-                <button className="text-sm font-semibold text-[#10B981] hover:text-[#0D9488] flex items-center gap-0.5 cursor-pointer">
+                <button className="text-sm font-semibold text-[#10B981] hover:text-[#0D9488] flex items-center gap-0.5 cursor-pointer border-none bg-transparent">
                   Edit <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* ROW 3: Account & Security Block */}
-        <div className="max-w-full bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-[#FEF2F2] text-[#EF4444] rounded-xl">
-              <Shield className="w-5 h-5" />
-            </div>
-            <h2 className="text-base font-bold text-[#0F172A]">
-              Account & Security
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2">
-            <ActionRow
-              title="Change Password"
-              subtitle="Last changed 45 days ago"
-            />
-            <ActionRow
-              title="Two-Factor Auth"
-              subtitle="Enabled via Authenticator App"
-            />
-            <ActionRow
-              title="Download My Data"
-              subtitle="Export all store data"
-            />
-            <ActionRow
-              title="Pause Store"
-              subtitle="Temporarily hide from map"
-            />
-          </div>
+          </Card>
         </div>
       </div>
+      <Snackbar
+        open={toast.open}
+        message={toast.message}
+        severity={toast.severity}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+      />
     </div>
   );
 }
@@ -371,29 +312,11 @@ function ToggleButton({
   return (
     <button
       onClick={onChange}
-      className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out focus:outline-none cursor-pointer ${
-        checked ? "bg-[#10B981]" : "bg-[#E2E8F0]"
-      }`}
+      className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out focus:outline-none cursor-pointer border-none ${checked ? "bg-[#10B981]" : "bg-[#E2E8F0]"}`}
     >
       <div
-        className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
-          checked ? "translate-x-5" : "translate-x-0"
-        }`}
+        className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${checked ? "translate-x-5" : "translate-x-0"}`}
       />
     </button>
-  );
-}
-
-function ActionRow({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <div className="group flex items-center justify-between p-4 bg-white hover:bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl cursor-pointer transition-colors">
-      <div>
-        <p className="text-sm font-semibold text-[#1E293B] group-hover:text-[#0F172A]">
-          {title}
-        </p>
-        <p className="text-xs font-medium text-[#94A3B8] mt-0.5">{subtitle}</p>
-      </div>
-      <ChevronRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#64748B]" />
-    </div>
   );
 }

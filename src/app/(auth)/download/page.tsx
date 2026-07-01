@@ -3,16 +3,20 @@
 import React from "react";
 import { Smartphone, Download, ShieldCheck, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { Card } from "@/shared/components/ui/Card";
+import { Badge } from "@/shared/components/ui/Badge";
 
 export default function MobileRedirectPage() {
-  // Replace this placeholder link string with your actual cloud deployment storage bucket link (S3, Firebase Storage, etc.)
   const APK_DOWNLOAD_URL =
     "https://storage.mapanytime.com/releases/mapanytime-buyer-latest.apk";
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 antialiased font-sans">
-      <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-8 shadow-xs space-y-6 text-center animate-in fade-in slide-in-from-bottom-3 duration-300">
-        {/* Branding Icon Grid Display Container */}
+      <Card
+        variant="outlined"
+        padding="lg"
+        className="max-w-md w-full text-center space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300 !rounded-3xl"
+      >
         <div className="mx-auto w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
           <Smartphone className="w-8 h-8" />
         </div>
@@ -28,7 +32,6 @@ export default function MobileRedirectPage() {
           </p>
         </div>
 
-        {/* High-Fidelity Call-To-Action Execution Widget Link Block */}
         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center space-y-4">
           <a
             href={APK_DOWNLOAD_URL}
@@ -38,13 +41,17 @@ export default function MobileRedirectPage() {
             <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
             Get MapAnytime Android Build (.APK)
           </a>
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider inline-flex items-center gap-1">
+
+          <Badge
+            variant="success"
+            size="sm"
+            className="uppercase tracking-wider font-black gap-1 !bg-transparent !p-0 !text-slate-400"
+          >
             <ShieldCheck className="w-3 h-3 text-emerald-500" /> Secure Package
             Verification Signed
-          </span>
+          </Badge>
         </div>
 
-        {/* Back navigation link footer path parameters adjustment */}
         <div className="pt-2 border-t border-slate-100">
           <Link
             href="/login"
@@ -54,7 +61,7 @@ export default function MobileRedirectPage() {
             portal
           </Link>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

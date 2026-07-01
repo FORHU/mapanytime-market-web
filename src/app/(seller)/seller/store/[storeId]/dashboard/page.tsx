@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { getDashboard } from "@/features/dashboard/api/dashboard.api";
+import { Card, Badge } from "@/shared/components";
 import {
   Plus,
   Coins,
@@ -28,7 +29,6 @@ interface ProductItem {
   width: string;
   sold: number;
 }
-
 interface OrderItem {
   id: string;
   buyer: string;
@@ -37,7 +37,6 @@ interface OrderItem {
   status: string;
   time: string;
 }
-
 interface MetricCard {
   label: string;
   value: string;
@@ -65,13 +64,11 @@ export default function SellerDashboardPage() {
       setIsLoading(true);
       try {
         const dbData = await getDashboard(storeId);
-
         setStoreName(dbData?.storeName || "Active Branch Profile");
         setChartData(dbData?.revenueChart || []);
         setTopProducts(dbData?.topProducts || []);
         setRecentOrders(dbData?.recentOrders || []);
 
-        // Format incoming database counts into structural metric objects
         setMetrics([
           {
             label: "Total Sales",
@@ -100,7 +97,8 @@ export default function SellerDashboardPage() {
         ]);
       } catch (error) {
         console.error("Dashboard error:", error);
-      } finally {
+      }
+      bits: {
         setIsLoading(false);
       }
     };
@@ -140,17 +138,22 @@ export default function SellerDashboardPage() {
         </Link>
       </div>
 
-      {/* Metrics Cards Grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((card, i) => (
-          <div
+          <Card
             key={i}
-            className="p-5 bg-white border border-slate-200/80 rounded-2xl shadow-xs space-y-3"
+            variant="outlined"
+            padding="md"
+            className="!rounded-2xl space-y-3"
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-50 text-emerald-600">
+              <Badge
+                variant="success"
+                size="sm"
+                className="!bg-emerald-50 !text-emerald-600 font-extrabold"
+              >
                 {card.change}
-              </span>
+              </Badge>
               <card.icon className="w-4 h-4 text-slate-400" />
             </div>
             <div>
@@ -161,13 +164,16 @@ export default function SellerDashboardPage() {
                 {card.label}
               </p>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
 
       <div className="grid lg:grid-cols-5 gap-6 items-start">
-        {/* Chart Canvas Area */}
-        <div className="lg:col-span-3 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4">
+        <Card
+          variant="outlined"
+          padding="md"
+          className="lg:col-span-3 !rounded-3xl space-y-4"
+        >
           <h4 className="text-xs font-black text-slate-900 tracking-tight">
             Revenue Overview
           </h4>
@@ -217,10 +223,13 @@ export default function SellerDashboardPage() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </Card>
 
-        {/* Top Selling Products List Card */}
-        <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-5">
+        <Card
+          variant="outlined"
+          padding="md"
+          className="lg:col-span-2 !rounded-3xl space-y-5"
+        >
           <h4 className="text-xs font-black text-slate-900 tracking-tight">
             Top Products
           </h4>
@@ -230,7 +239,7 @@ export default function SellerDashboardPage() {
                 key={product.rank}
                 className="flex items-start gap-4 text-xs font-bold"
               >
-                <span className="text-slate-300 font-black text-center w-4 mt-0.5 flex-shrink-0">
+                <span className="text-slate-300 font-black text-center w-4 mt-0.5 shrink-0">
                   {product.rank}
                 </span>
                 <div className="flex-1 space-y-1.5 min-w-0">
@@ -240,7 +249,7 @@ export default function SellerDashboardPage() {
                         {product.name}
                       </span>
                     </div>
-                    <span className="text-slate-900 font-extrabold flex-shrink-0">
+                    <span className="text-slate-900 font-extrabold shrink-0">
                       ₱{product.revenue.toLocaleString()}
                     </span>
                   </div>
@@ -254,11 +263,14 @@ export default function SellerDashboardPage() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Dynamic Data Table Area */}
-      <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xs overflow-hidden">
+      <Card
+        variant="outlined"
+        padding="none"
+        className="!rounded-3xl overflow-hidden"
+      >
         <div className="p-5 border-b border-slate-100">
           <h4 className="text-xs font-black text-slate-900 tracking-tight">
             Recent Orders Queue
@@ -301,7 +313,7 @@ export default function SellerDashboardPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
