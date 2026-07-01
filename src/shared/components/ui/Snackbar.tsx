@@ -1,44 +1,44 @@
 "use client";
 
 import React from "react";
-import { Snackbar as MuiSnackbar, Alert, AlertColor } from "@mui/material";
+import { X } from "lucide-react";
 
 interface SnackbarProps {
   open: boolean;
   message: string;
-  severity?: AlertColor; // 'success' | 'error' | 'warning' | 'info'
+  severity: "success" | "error" | "info" | "warning";
   onClose: () => void;
-  autoHideDuration?: number;
 }
 
 export const Snackbar: React.FC<SnackbarProps> = ({
   open,
   message,
-  severity = "success",
+  severity,
   onClose,
-  autoHideDuration = 4000,
 }) => {
-  const handleClose = (_?: React.SyntheticEvent | Event, reason?: string) => {
-    // Avoid closing if user clicks outside accidentally
-    if (reason === "clickaway") return;
-    onClose();
+  if (!open) return null;
+
+  const severityStyles = {
+    success: "bg-emerald-600 text-white",
+    error: "bg-rose-600 text-white",
+    info: "bg-blue-600 text-white",
+    warning: "bg-amber-500 text-black",
   };
 
   return (
-    <MuiSnackbar
-      open={open}
-      autoHideDuration={autoHideDuration}
-      onClose={handleClose}
-      anchorOrigin={{ vertical: "bottom", horizontal: "right" }} // Uniform positioning
-    >
-      <Alert
-        onClose={handleClose}
-        severity={severity}
-        variant="filled"
-        sx={{ width: "100%", fontWeight: 600, borderRadius: "12px" }}
+    <div className="fixed bottom-5 right-5 z-50 animate-bounce-in">
+      <div
+        className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg font-semibold text-sm tracking-wide ${severityStyles[severity]}`}
       >
-        {message}
-      </Alert>
-    </MuiSnackbar>
+        <span>{message}</span>
+        <button
+          onClick={onClose}
+          className="hover:bg-black/10 p-1 rounded-md transition-colors"
+          aria-label="Close notification"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
   );
 };
