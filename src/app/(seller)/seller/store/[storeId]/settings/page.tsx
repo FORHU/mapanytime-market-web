@@ -1,6 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import {
+  getSettings,
+  updateSettings,
+} from "@/features/seller/api/settings.api";
 import {
   Bell,
   Zap,
@@ -8,10 +13,22 @@ import {
   CreditCard,
   Shield,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 
 export default function SettingsPage() {
-  // Toggle states
+  const params = useParams();
+  const storeId = Array.isArray(params?.storeId)
+    ? params.storeId[0]
+    : params?.storeId || "";
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
+  // Core Account Preferences States Matrix
   const [notifications, setNotifications] = useState({
     newOrders: true,
     lowStock: true,
@@ -33,8 +50,81 @@ export default function SettingsPage() {
     showHours: true,
   });
 
+  // Auto-clear toast notifications
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  // --- 1. GET: Fetch active store preference values ---
+  useEffect(() => {
+    if (!storeId) return;
+
+    const fetchStorePreferences = async () => {
+      setIsLoading(true);
+      try {
+        const dbData = await getSettings(storeId);
+        const config = dbData?.data || dbData;
+
+        // Populate local states with live backend configurations if defined
+        if (config.notifications) setNotifications(config.notifications);
+        if (config.aiSettings) setAiSettings(config.aiSettings);
+        if (config.mapVisibility) setMapVisibility(config.mapVisibility);
+      } catch (error) {
+        console.error("Failed to parse settings:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStorePreferences();
+  }, [storeId]);
+
+  // --- 2. PATCH: Update preferences asynchronously on change mutation ---
+  const updatePreferenceMutation = async (
+    section: string,
+    updatedPayload: object,
+  ) => {
+    try {
+      await updateSettings(storeId, section, updatedPayload);
+      setToast({
+        message: "Preferences synchronized instantly!",
+        type: "success",
+      });
+    } catch (error: any) {
+      setToast({
+        message: error.message || "Failed to sync configurations.",
+        type: "error",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-xs font-bold text-slate-400 gap-2 bg-[#FAFAFA]">
+        <Loader2 className="w-5 h-5 animate-spin text-emerald-500" />
+        <span>Parsing merchant preferences catalog...</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#FAFAFA] p-4 md:p-8 font-sans antialiased text-[#111111]">
+    <div className="min-h-screen bg-[#FAFAFA] p-4 md:p-8 font-sans antialiased text-[#111111] animate-in fade-in duration-300 relative">
+      {/* Dynamic Toast Feedback Notification Panel */}
+      {toast && (
+        <div
+          className={`fixed top-5 right-5 z-50 p-4 rounded-xl border text-xs font-bold shadow-lg transition-all ${
+            toast.type === "success"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+              : "bg-rose-50 text-rose-800 border-rose-200"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Settings Title Header */}
         <div className="mb-8">
@@ -42,7 +132,8 @@ export default function SettingsPage() {
             Settings
           </h1>
           <p className="text-sm text-[#64748B] mt-0.5">
-            Manage your seller account preferences
+            Manage your seller account preferences across branch:{" "}
+            <span className="font-mono text-emerald-600">{storeId}</span>
           </p>
         </div>
 
@@ -60,62 +151,32 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#334155] font-medium">
-                  New order alerts
-                </span>
-                <ToggleButton
-                  checked={notifications.newOrders}
-                  onChange={() =>
-                    setNotifications({
-                      ...notifications,
-                      newOrders: !notifications.newOrders,
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#334155] font-medium">
-                  Low stock warnings
-                </span>
-                <ToggleButton
-                  checked={notifications.lowStock}
-                  onChange={() =>
-                    setNotifications({
-                      ...notifications,
-                      lowStock: !notifications.lowStock,
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#334155] font-medium">
-                  Customer reviews
-                </span>
-                <ToggleButton
-                  checked={notifications.reviews}
-                  onChange={() =>
-                    setNotifications({
-                      ...notifications,
-                      reviews: !notifications.reviews,
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#334155] font-medium">
-                  Promotional updates
-                </span>
-                <ToggleButton
-                  checked={notifications.promotional}
-                  onChange={() =>
-                    setNotifications({
-                      ...notifications,
-                      promotional: !notifications.promotional,
-                    })
-                  }
-                />
-              </div>
+              {[
+                { key: "newOrders", label: "New order alerts" },
+                { key: "lowStock", label: "Low stock warnings" },
+                { key: "reviews", label: "Customer reviews" },
+                { key: "promotional", label: "Promotional updates" },
+              ].map((item) => (
+                <div
+                  key={item.key}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="text-[#334155] font-medium">
+                    {item.label}
+                  </span>
+                  <ToggleButton
+                    checked={(notifications as any)[item.key]}
+                    onChange={() => {
+                      const nextState = {
+                        ...notifications,
+                        [item.key]: !(notifications as any)[item.key],
+                      };
+                      setNotifications(nextState);
+                      updatePreferenceMutation("notifications", nextState);
+                    }}
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
@@ -131,62 +192,35 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#334155] font-medium">
-                  Auto-publish after AI review
-                </span>
-                <ToggleButton
-                  checked={aiSettings.autoPublish}
-                  onChange={() =>
-                    setAiSettings({
-                      ...aiSettings,
-                      autoPublish: !aiSettings.autoPublish,
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#334155] font-medium">
-                  Auto-remove background
-                </span>
-                <ToggleButton
-                  checked={aiSettings.removeBg}
-                  onChange={() =>
-                    setAiSettings({
-                      ...aiSettings,
-                      removeBg: !aiSettings.removeBg,
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#334155] font-medium">
-                  OCR product name detection
-                </span>
-                <ToggleButton
-                  checked={aiSettings.ocrDetection}
-                  onChange={() =>
-                    setAiSettings({
-                      ...aiSettings,
-                      ocrDetection: !aiSettings.ocrDetection,
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#334155] font-medium">
-                  Auto-generate price suggestions
-                </span>
-                <ToggleButton
-                  checked={aiSettings.priceSuggestions}
-                  onChange={() =>
-                    setAiSettings({
-                      ...aiSettings,
-                      priceSuggestions: !aiSettings.priceSuggestions,
-                    })
-                  }
-                />
-              </div>
+              {[
+                { key: "autoPublish", label: "Auto-publish after AI review" },
+                { key: "removeBg", label: "Auto-remove background" },
+                { key: "ocrDetection", label: "OCR product name detection" },
+                {
+                  key: "priceSuggestions",
+                  label: "Auto-generate price suggestions",
+                },
+              ].map((item) => (
+                <div
+                  key={item.key}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="text-[#334155] font-medium">
+                    {item.label}
+                  </span>
+                  <ToggleButton
+                    checked={(aiSettings as any)[item.key]}
+                    onChange={() => {
+                      const nextState = {
+                        ...aiSettings,
+                        [item.key]: !(aiSettings as any)[item.key],
+                      };
+                      setAiSettings(nextState);
+                      updatePreferenceMutation("aiSettings", nextState);
+                    }}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -205,66 +239,39 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#334155] font-medium">
-                  Show store on public map
-                </span>
-                <ToggleButton
-                  checked={mapVisibility.showStore}
-                  onChange={() =>
-                    setMapVisibility({
-                      ...mapVisibility,
-                      showStore: !mapVisibility.showStore,
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#334155] font-medium">
-                  Show live product pins
-                </span>
-                <ToggleButton
-                  checked={mapVisibility.livePins}
-                  onChange={() =>
-                    setMapVisibility({
-                      ...mapVisibility,
-                      livePins: !mapVisibility.livePins,
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#334155] font-medium">
-                  Enable discovery by new buyers
-                </span>
-                <ToggleButton
-                  checked={mapVisibility.enableDiscovery}
-                  onChange={() =>
-                    setMapVisibility({
-                      ...mapVisibility,
-                      enableDiscovery: !mapVisibility.enableDiscovery,
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#334155] font-medium">
-                  Show operating hours on pin
-                </span>
-                <ToggleButton
-                  checked={mapVisibility.showHours}
-                  onChange={() =>
-                    setMapVisibility({
-                      ...mapVisibility,
-                      showHours: !mapVisibility.showHours,
-                    })
-                  }
-                />
-              </div>
+              {[
+                { key: "showStore", label: "Show store on public map" },
+                { key: "livePins", label: "Show live product pins" },
+                {
+                  key: "enableDiscovery",
+                  label: "Enable discovery by new buyers",
+                },
+                { key: "showHours", label: "Show operating hours on pin" },
+              ].map((item) => (
+                <div
+                  key={item.key}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="text-[#334155] font-medium">
+                    {item.label}
+                  </span>
+                  <ToggleButton
+                    checked={(mapVisibility as any)[item.key]}
+                    onChange={() => {
+                      const nextState = {
+                        ...mapVisibility,
+                        [item.key]: !(mapVisibility as any)[item.key],
+                      };
+                      setMapVisibility(nextState);
+                      updatePreferenceMutation("mapVisibility", nextState);
+                    }}
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Payout Settings Card */}
+          {/* Payout Settings Card (Static Layout Shell) */}
           <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-4">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-[#F5F3FF] text-[#7C3AED] rounded-xl">
@@ -276,7 +283,6 @@ export default function SettingsPage() {
             </div>
 
             <div className="divide-y divide-[#F1F5F9]">
-              {/* Bank Account */}
               <div className="flex items-center justify-between py-3">
                 <div>
                   <p className="text-sm font-semibold text-[#1E293B]">
@@ -284,12 +290,11 @@ export default function SettingsPage() {
                   </p>
                   <p className="text-xs font-medium text-[#94A3B8]">••••4892</p>
                 </div>
-                <button className="text-sm font-semibold text-[#10B981] hover:text-[#0D9488] flex items-center gap-0.5">
+                <button className="text-sm font-semibold text-[#10B981] hover:text-[#0D9488] flex items-center gap-0.5 cursor-pointer">
                   Change <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Payout Schedule */}
               <div className="flex items-center justify-between py-3">
                 <div>
                   <p className="text-sm font-semibold text-[#1E293B]">
@@ -299,20 +304,21 @@ export default function SettingsPage() {
                     Weekly · Every Monday
                   </p>
                 </div>
-                <button className="text-sm font-semibold text-[#10B981] hover:text-[#0D9488] flex items-center gap-0.5">
+                <button className="text-sm font-semibold text-[#10B981] hover:text-[#0D9488] flex items-center gap-0.5 cursor-pointer">
                   Edit <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Minimum Payout */}
               <div className="flex items-center justify-between py-3">
                 <div>
                   <p className="text-sm font-semibold text-[#1E293B]">
                     Minimum Payout
                   </p>
-                  <p className="text-xs font-medium text-[#94A3B8]">$20.00</p>
+                  <p className="text-xs font-medium text-[#94A3B8]">
+                    ₱1,000.00
+                  </p>
                 </div>
-                <button className="text-sm font-semibold text-[#10B981] hover:text-[#0D9488] flex items-center gap-0.5">
+                <button className="text-sm font-semibold text-[#10B981] hover:text-[#0D9488] flex items-center gap-0.5 cursor-pointer">
                   Edit <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -332,7 +338,6 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-2">
-            {/* Action Row Component used here */}
             <ActionRow
               title="Change Password"
               subtitle="Last changed 45 days ago"
@@ -356,8 +361,6 @@ export default function SettingsPage() {
   );
 }
 
-/* reusable internal components for modular code structure */
-
 function ToggleButton({
   checked,
   onChange,
@@ -368,7 +371,7 @@ function ToggleButton({
   return (
     <button
       onClick={onChange}
-      className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out focus:outline-none ${
+      className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out focus:outline-none cursor-pointer ${
         checked ? "bg-[#10B981]" : "bg-[#E2E8F0]"
       }`}
     >
