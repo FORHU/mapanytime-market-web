@@ -25,7 +25,8 @@ export default function UnifiedSignInPage() {
     setIsLoading(true);
 
     try {
-      const dbData = await apiLogin(email, password);
+      // Pass parameters matched to unified credential object layer
+      const dbData = await apiLogin({ email: email.trim(), password });
       const sessionToken = dbData?.data?.accessToken;
 
       if (!sessionToken) {
@@ -77,7 +78,7 @@ export default function UnifiedSignInPage() {
             required
           />
           <FormField
-            type="password" // 🟢 SECURE: Obfuscated password input field renders cleanly now!
+            type="password"
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}

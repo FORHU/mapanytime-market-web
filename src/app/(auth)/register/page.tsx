@@ -25,9 +25,14 @@ export default function UnifiedRegisterPage() {
     setLoading(true);
 
     try {
-      await apiRegister(fullName, email, password);
+      // 🟢 Pass payload as a unified object mapped to backend property keys
+      await apiRegister({
+        name: fullName.trim(),
+        email: email.trim(),
+        password,
+      });
 
-      // 🟢 CLEANUP: Purge old credential fragments out of sessionStorage upon fresh generation
+      // Purge old credential fragments out of sessionStorage upon fresh generation
       sessionStorage.removeItem("token");
       sessionStorage.removeItem("userRole");
       sessionStorage.removeItem("latest_onboarded_store");
@@ -43,7 +48,7 @@ export default function UnifiedRegisterPage() {
     } catch (err: any) {
       console.error(err);
       showNotification(`Registration System Alert: ${err.message}`, "error");
-      setLoading(false); // ◄ Turn off loading spinner state on failure parameters
+      setLoading(false); // Turn off loading spinner state on failure parameters
     }
   };
 
