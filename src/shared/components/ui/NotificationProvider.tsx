@@ -1,7 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState } from "react";
-import { Snackbar as MuiSnackbar, Alert, AlertColor } from "@mui/material";
+import { AlertColor } from "@mui/material";
+import { Snackbar } from "./Snackbar";
 
 type NotificationContextType = (message: string, severity?: AlertColor) => void;
 
@@ -22,29 +23,16 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     setOpen(true);
   };
 
-  const handleClose = (_?: React.SyntheticEvent | Event, reason?: string) => {
-    if (reason === "clickaway") return;
-    setOpen(false);
-  };
-
   return (
     <NotificationContext.Provider value={showNotification}>
       {children}
-      <MuiSnackbar
+      {/* Single source of truth: the provider renders the shared Snackbar primitive */}
+      <Snackbar
         open={open}
-        autoHideDuration={4000}
-        onClose={handleClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      >
-        <Alert
-          onClose={handleClose}
-          severity={severity}
-          variant="filled"
-          sx={{ width: "100%", fontWeight: 600, borderRadius: "12px" }}
-        >
-          {message}
-        </Alert>
-      </MuiSnackbar>
+        message={message}
+        severity={severity}
+        onClose={() => setOpen(false)}
+      />
     </NotificationContext.Provider>
   );
 };

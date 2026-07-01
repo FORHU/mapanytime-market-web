@@ -3,7 +3,12 @@
 import React, { useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { createProduct } from "@/features/products/api/products.api";
-import { Card, FormField, CustomButton, Snackbar } from "@/shared/components";
+import {
+  Card,
+  FormField,
+  CustomButton,
+  useNotification,
+} from "@/shared/components";
 import {
   Sparkles,
   UploadCloud,
@@ -11,10 +16,10 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
-import { AlertColor } from "@mui/material";
 
 export default function AIProductUploadPage() {
   const params = useParams();
+  const showNotification = useNotification();
   const storeId = Array.isArray(params?.storeId)
     ? params.storeId[0]
     : params?.storeId || "";
@@ -29,13 +34,6 @@ export default function AIProductUploadPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Reusable Material UI Toast Wrapper State Primitives
-  const [toast, setToast] = useState({
-    open: false,
-    message: "",
-    severity: "success" as AlertColor,
-  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -78,25 +76,23 @@ export default function AIProductUploadPage() {
     try {
       await createProduct(productPayload);
 
-      // 🟢 OPTIMIZED: Replaced destructive browser popups with clean feedback snackbars
-      setToast({
-        open: true,
-        message: "Product successfully cataloged into system records!",
-        severity: "success",
-      });
+      showNotification(
+        "Product successfully cataloged into system records!",
+        "success",
+      );
 
       // Reset State
       setSelectedFile(null);
       setProductName("");
       setPrice("");
       setAnalyzed(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Transmission Failure:", error);
-      setToast({
-        open: true,
-        message: error.message || "Failed to sync listing with the server.",
-        severity: "error",
-      });
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to sync listing with the server.";
+      showNotification(message, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -247,14 +243,6 @@ export default function AIProductUploadPage() {
           </CustomButton>
         </form>
       </div>
-
-      {/* Toast Alert Delivery Node */}
-      <Snackbar
-        open={toast.open}
-        message={toast.message}
-        severity={toast.severity}
-        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
-      />
     </div>
   );
 }

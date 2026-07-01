@@ -6,7 +6,7 @@ import {
   getSettings,
   updateSettings,
 } from "@/features/seller/api/settings.api";
-import { Card, Snackbar } from "@/shared/components";
+import { Card, useNotification } from "@/shared/components";
 import {
   Bell,
   Zap,
@@ -16,34 +16,31 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react";
-import { AlertColor } from "@mui/material";
+
+type Prefs = Record<string, boolean>;
 
 export default function SettingsPage() {
   const params = useParams();
+  const showNotification = useNotification();
   const storeId = Array.isArray(params?.storeId)
     ? params.storeId[0]
     : params?.storeId || "";
 
   const [isLoading, setIsLoading] = useState(true);
-  const [toast, setToast] = useState({
-    open: false,
-    message: "",
-    severity: "success" as AlertColor,
-  });
 
-  const [notifications, setNotifications] = useState({
+  const [notifications, setNotifications] = useState<Prefs>({
     newOrders: true,
     lowStock: true,
     reviews: true,
     promotional: false,
   });
-  const [aiSettings, setAiSettings] = useState({
+  const [aiSettings, setAiSettings] = useState<Prefs>({
     autoPublish: false,
     removeBg: true,
     ocrDetection: true,
     priceSuggestions: false,
   });
-  const [mapVisibility, setMapVisibility] = useState({
+  const [mapVisibility, setMapVisibility] = useState<Prefs>({
     showStore: true,
     livePins: true,
     enableDiscovery: true,
@@ -56,37 +53,36 @@ export default function SettingsPage() {
       setIsLoading(true);
       try {
         const dbData = await getSettings(storeId);
-        const config = dbData?.data || dbData;
+        const config = dbData?.data ?? dbData ?? {};
         if (config.notifications) setNotifications(config.notifications);
         if (config.aiSettings) setAiSettings(config.aiSettings);
         if (config.mapVisibility) setMapVisibility(config.mapVisibility);
       } catch (error) {
         console.error("Failed to parse settings:", error);
-      }
-      bits: {
+      } finally {
         setIsLoading(false);
       }
     };
     fetchStorePreferences();
   }, [storeId]);
 
-  const updatePreferenceMutation = async (
+  const persist = async (
     section: string,
-    updatedPayload: object,
+    next: Prefs,
+    prev: Prefs,
+    setLocal: (value: Prefs) => void,
   ) => {
+    setLocal(next); // optimistic
     try {
-      await updateSettings(storeId, section, updatedPayload);
-      setToast({
-        open: true,
-        message: "Preferences synchronized instantly!",
-        severity: "success",
-      });
-    } catch (error: any) {
-      setToast({
-        open: true,
-        message: error.message || "Failed to sync configurations.",
-        severity: "error",
-      });
+      await updateSettings(storeId, section, next);
+      showNotification("Preferences saved!", "success");
+    } catch (error: unknown) {
+      setLocal(prev); // rollback on failure
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to sync configurations.";
+      showNotification(message, "error");
     }
   };
 
@@ -141,14 +137,18 @@ export default function SettingsPage() {
                     {item.label}
                   </span>
                   <ToggleButton
-                    checked={(notifications as any)[item.key]}
+                    checked={notifications[item.key]}
                     onChange={() => {
                       const nextState = {
                         ...notifications,
-                        [item.key]: !(notifications as any)[item.key],
+                        [item.key]: !notifications[item.key],
                       };
-                      setNotifications(nextState);
-                      updatePreferenceMutation("notifications", nextState);
+                      persist(
+                        "notifications",
+                        nextState,
+                        notifications,
+                        setNotifications,
+                      );
                     }}
                   />
                 </div>
@@ -187,14 +187,18 @@ export default function SettingsPage() {
                     {item.label}
                   </span>
                   <ToggleButton
-                    checked={(aiSettings as any)[item.key]}
+                    checked={aiSettings[item.key]}
                     onChange={() => {
                       const nextState = {
                         ...aiSettings,
-                        [item.key]: !(aiSettings as any)[item.key],
+                        [item.key]: !aiSettings[item.key],
                       };
-                      setAiSettings(nextState);
-                      updatePreferenceMutation("aiSettings", nextState);
+                      persist(
+                        "aiSettings",
+                        nextState,
+                        aiSettings,
+                        setAiSettings,
+                      );
                     }}
                   />
                 </div>
@@ -235,14 +239,18 @@ export default function SettingsPage() {
                     {item.label}
                   </span>
                   <ToggleButton
-                    checked={(mapVisibility as any)[item.key]}
+                    checked={mapVisibility[item.key]}
                     onChange={() => {
                       const nextState = {
                         ...mapVisibility,
-                        [item.key]: !(mapVisibility as any)[item.key],
+                        [item.key]: !mapVisibility[item.key],
                       };
-                      setMapVisibility(nextState);
-                      updatePreferenceMutation("mapVisibility", nextState);
+                      persist(
+                        "mapVisibility",
+                        nextState,
+                        mapVisibility,
+                        setMapVisibility,
+                      );
                     }}
                   />
                 </div>
@@ -292,12 +300,6 @@ export default function SettingsPage() {
           </Card>
         </div>
       </div>
-      <Snackbar
-        open={toast.open}
-        message={toast.message}
-        severity={toast.severity}
-        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
-      />
     </div>
   );
 }

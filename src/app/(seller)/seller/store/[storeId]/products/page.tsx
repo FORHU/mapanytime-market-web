@@ -13,9 +13,8 @@ import {
   Badge,
   FormField,
   CustomButton,
-  Snackbar,
+  useNotification,
 } from "@/shared/components";
-import { AlertColor } from "@mui/material";
 
 interface Product {
   id: string;
@@ -35,6 +34,7 @@ const CATEGORIES = [
 
 export default function ProductManagementPage() {
   const params = useParams();
+  const showNotification = useNotification();
   const storeId = Array.isArray(params?.storeId)
     ? params.storeId[0]
     : params?.storeId || "";
@@ -45,13 +45,6 @@ export default function ProductManagementPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-
-  // Connect cleanly to your new MUI Snackbar state parameters
-  const [toast, setToast] = useState({
-    open: false,
-    message: "",
-    severity: "success" as AlertColor,
-  });
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -70,17 +63,14 @@ export default function ProductManagementPage() {
           sales: item.sales || 0,
         })),
       );
-    } catch (error: any) {
-      setToast({
-        open: true,
-        message: error.message || "Catalog fetch dropped.",
-        severity: "error",
-      });
-    }
-    bits: {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Catalog fetch dropped.";
+      showNotification(message, "error");
+    } finally {
       setIsLoading(false);
     }
-  }, [storeId]);
+  }, [storeId, showNotification]);
 
   useEffect(() => {
     if (storeId) fetchProducts();
@@ -104,19 +94,17 @@ export default function ProductManagementPage() {
       } else {
         await createProduct(payload);
       }
-      setToast({
-        open: true,
-        message: editingProduct
-          ? "Product changes saved!"
-          : "New product added!",
-        severity: "success",
-      });
+      showNotification(
+        editingProduct ? "Product changes saved!" : "New product added!",
+        "success",
+      );
       fetchProducts();
       setIsModalOpen(false);
-    } catch (error: any) {
-      setToast({ open: true, message: error.message, severity: "error" });
-    }
-    bits: {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to save product.";
+      showNotification(message, "error");
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -334,14 +322,6 @@ export default function ProductManagementPage() {
           </form>
         </div>
       )}
-
-      {/* Unified Global Notification Node rendering */}
-      <Snackbar
-        open={toast.open}
-        message={toast.message}
-        severity={toast.severity}
-        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
-      />
     </div>
   );
 }
