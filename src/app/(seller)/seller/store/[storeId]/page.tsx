@@ -1,234 +1,247 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { useParams } from "next/navigation";
+import { createProduct } from "@/features/products/api/products.api";
+import {
+  Card,
+  FormField,
+  CustomButton,
+  useNotification,
+} from "@/shared/components";
+import {
+  Sparkles,
+  UploadCloud,
+  CheckCircle,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
 
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-}
-
-export default function StorePage() {
+export default function AIProductUploadPage() {
   const params = useParams();
-
-  // Safe extraction for dynamic parameters strings or array fallbacks
+  const showNotification = useNotification();
   const storeId = Array.isArray(params?.storeId)
     ? params.storeId[0]
     : params?.storeId || "";
 
-  // Local Component States
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Form State Management
+  const [productName, setProductName] = useState("");
+  const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("Mains");
 
-  // Debounce Effect: Delays the search execution until typing pauses
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setPage(1); // Reset to page 1 whenever search filters change
-    }, 400);
+  // File & Pipeline UI States
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [analyzed, setAnalyzed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchTerm]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Data Fetching Pipeline: Corrected with an ignore latch to block race conditions
-  useEffect(() => {
-    if (!storeId) return;
+  const handleFileChange = (file: File) => {
+    setSelectedFile(file);
+    setIsProcessing(true);
+    setAnalyzed(false);
 
-    let activeQueryThread = true; // Flag guard to track effect lifecycle
+    // Simulate OCR text parsing delay
+    setTimeout(() => {
+      setIsProcessing(false);
+      setAnalyzed(true);
 
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        // 1. Simulate a 600ms network database latency delay
-        await new Promise((resolve) => setTimeout(resolve, 600));
+      // Auto-populate the form inputs mock data based on store context during testing
+      setProductName("Special Crispy Pata");
+      setPrice("580.00");
+      setCategory("Mains");
+    }, 1800);
+  };
 
-        // Block stale execution context changes from updating states if a new one started
-        if (!activeQueryThread) return;
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileChange(e.dataTransfer.files[0]);
+    }
+  };
 
-        // 2. Structural mock inventory database state pool
-        const mockInventoryPool: Product[] = [
-          {
-            id: "PROD-001",
-            name: "Premium Wireless Headphones",
-            price: 129.99,
-          },
-          { id: "PROD-002", name: "Mechanical Gaming Keyboard", price: 89.5 },
-          { id: "PROD-003", name: "Ergonomic Office Chair", price: 249.0 },
-          { id: "PROD-004", name: "UltraWide 4K Monitor", price: 399.99 },
-          { id: "PROD-005", name: "Smart Fitness Watch", price: 59.95 },
-          { id: "PROD-006", name: "USB-C Multi-Port Hub", price: 34.99 },
-          { id: "PROD-007", name: "Portable SSD 1TB", price: 115.0 },
-          { id: "PROD-008", name: "Minimalist Leather Wallet", price: 45.0 },
-        ];
+  const handleProductSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
 
-        // 3. Filter data based on active debounced input
-        const filteredItems = mockInventoryPool.filter((item) =>
-          item.name.toLowerCase().includes(debouncedSearch.toLowerCase()),
-        );
-
-        // 4. Handle pagination segments math (3 items per segment)
-        const itemsPerPage = 3;
-        const computedTotalPages =
-          Math.ceil(filteredItems.length / itemsPerPage) || 1;
-
-        const startIndex = (page - 1) * itemsPerPage;
-        const paginatedItems = filteredItems.slice(
-          startIndex,
-          startIndex + itemsPerPage,
-        );
-
-        // 5. Update local view state context safely if this remains the primary task thread
-        if (activeQueryThread) {
-          setProducts(paginatedItems);
-          setTotalPages(computedTotalPages);
-        }
-      } catch (error) {
-        console.error("Failed to fetch mock data array:", error);
-      } finally {
-        if (activeQueryThread) {
-          setLoading(false);
-        }
-      }
+    const productPayload = {
+      storeId: storeId,
+      categoryId: category,
+      name: productName.trim(),
+      price: parseFloat(price) || 0,
+      isActive: true,
     };
 
-    fetchProducts();
+    try {
+      await createProduct(productPayload);
 
-    // Cleanup statement kills the capability of dead async closures updating parameters
-    return () => {
-      activeQueryThread = false;
-    };
-  }, [storeId, debouncedSearch, page]);
+      showNotification(
+        "Product successfully cataloged into system records!",
+        "success",
+      );
+
+      // Reset State
+      setSelectedFile(null);
+      setProductName("");
+      setPrice("");
+      setAnalyzed(false);
+    } catch (error: unknown) {
+      console.error("Transmission Failure:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to sync listing with the server.";
+      showNotification(message, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const isFormInvalid =
+    !selectedFile ||
+    productName.trim() === "" ||
+    !price ||
+    parseFloat(price) <= 0 ||
+    category.trim() === "";
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      {/* Top Header Information Panel */}
-      <header className="border-b pb-4 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
-            Store Management Portal
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Active Store Code:{" "}
-            <span className="font-mono bg-gray-100 text-red-600 px-1.5 py-0.5 rounded text-xs font-semibold">
-              {storeId || "No active parameter found"}
-            </span>
-          </p>
-        </div>
-      </header>
-
-      {/* Controller Section: Input Fields & Real-time Flags */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Inventory Search Filter
-        </label>
-        <input
-          type="text"
-          placeholder="Filter by product title (e.g., 'watch', 'keyboard')..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full border border-gray-300 rounded-md p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
-        />
-        <div className="flex justify-between items-center mt-2 text-xs text-gray-400 font-mono">
-          <span>Typing State: &quot;{searchTerm}&quot;</span>
-          <span>Debounced Server Query: &quot;{debouncedSearch}&quot;</span>
-        </div>
+    <div className="space-y-6 max-w-[1400px] mx-auto animate-in fade-in duration-300 p-6">
+      {/* Page Branding Header */}
+      <div>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight inline-flex items-center gap-2">
+          AI Product Upload{" "}
+          <Sparkles className="w-5 h-5 text-emerald-500 fill-emerald-500/10" />
+        </h1>
+        <p className="text-xs font-bold text-slate-400 mt-0.5">
+          Drop restaurant menus, item photos, or invoices. The system
+          automatically parses catalog text fields.
+        </p>
       </div>
 
-      {/* Main Content Area: Tabular Inventory Render */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden min-h-[300px] flex flex-col justify-between">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-          <h2 className="font-semibold text-gray-700">
-            Stock Inventory (Mock Backend)
-          </h2>
-        </div>
+      {/* Main Form Split Layout Layer */}
+      <div className="grid lg:grid-cols-5 gap-6 items-start">
+        {/* LEFT COLUMN: Image Ingestion Dropzone Panel */}
+        <Card
+          variant="outlined"
+          padding="md"
+          className="lg:col-span-3 !rounded-3xl space-y-5 bg-white"
+        >
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">
+            Image Dropzone Target
+          </h3>
 
-        <div className="p-4 flex-grow">
-          {loading ? (
-            <div className="h-48 flex items-center justify-center text-gray-400 space-x-2">
-              <svg
-                className="animate-spin h-5 w-5 text-blue-500"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              <span>Querying local simulation state...</span>
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-2xl p-12 text-center flex flex-col items-center justify-center space-y-3 bg-slate-50/50 hover:bg-emerald-50/10 transition-all cursor-pointer group"
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={(e) =>
+                e.target.files?.[0] && handleFileChange(e.target.files[0])
+              }
+              className="hidden"
+              accept="image/*"
+            />
+
+            <div className="w-12 h-12 rounded-xl bg-white shadow-xs border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
+              <UploadCloud className="w-6 h-6" />
             </div>
-          ) : products.length === 0 ? (
-            <div className="h-48 flex items-center justify-center border-2 border-dashed border-gray-100 rounded-md">
-              <p className="text-gray-400 italic text-sm">
-                No inventory records match your criteria.
+
+            <div>
+              <p className="text-xs font-black text-slate-800">
+                {selectedFile
+                  ? selectedFile.name
+                  : "Drop menu or product photography here"}
+              </p>
+              <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                Supports standard formats (PNG, JPG, JPEG) up to 10MB
               </p>
             </div>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-              {products.map((product) => (
-                <li
-                  key={product.id}
-                  className="py-3 flex justify-between items-center hover:bg-gray-50 px-2 rounded-md transition-colors"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium text-gray-800 text-sm">
-                      {product.name}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      ID: {product.id}
-                    </span>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-900">
-                    ${product.price.toFixed(2)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          </div>
+
+          {/* Status Notifications */}
+          {isProcessing && (
+            <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 text-xs font-bold text-blue-800 animate-pulse">
+              <RefreshCw className="w-4 h-4 text-blue-600 animate-spin flex-shrink-0" />
+              <p>
+                Vision OCR scanning executing image array payload parsing...
+              </p>
+            </div>
           )}
-        </div>
 
-        {/* Footer Element: Pagination Controls */}
-        <div className="border-t border-gray-100 p-4 bg-gray-50/50 flex justify-between items-center text-sm">
-          <button
-            type="button"
-            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-            disabled={page === 1 || loading}
-            className="px-4 py-1.5 border border-gray-200 rounded bg-white text-gray-700 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+          {analyzed && (
+            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-start gap-3 text-xs font-bold text-emerald-800 animate-in fade-in duration-300">
+              <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p>OCR Text Extraction Complete</p>
+                <p className="text-[10px] text-emerald-600 font-normal mt-0.5">
+                  Parameters extracted with high confidence. Inspect fields in
+                  the manual attributes panel before publishing.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!selectedFile && (
+            <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-400 italic">
+              <AlertCircle className="w-4 h-4 text-slate-300 flex-shrink-0" />
+              Awaiting image file attachments to trigger auto-fill pipeline
+              overrides.
+            </div>
+          )}
+        </Card>
+
+        {/* RIGHT COLUMN: Parameters Form Overrides */}
+        <form
+          onSubmit={handleProductSubmit}
+          className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4"
+        >
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">
+            Product Attributes Panel
+          </h3>
+
+          <FormField
+            type="text"
+            label="Product Title"
+            value={productName}
+            onChange={(e) => setProductName(e.target.value)}
+            placeholder="e.g., Organic Veg Bundle"
+            required
+          />
+
+          <FormField
+            type="number"
+            step="0.01"
+            label="Retail Unit Price (PHP)"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="0.00"
+            required
+          />
+
+          {/* 🟢 ENHANCED: Converted text input to standard FormField primitive component tracking structure */}
+          <FormField
+            type="text"
+            label="Catalog Category Type"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="e.g., Mains, Sides, Beverages"
+            required
+          />
+
+          <CustomButton
+            type="submit"
+            loading={isSubmitting || isProcessing}
+            disabled={isFormInvalid}
+            className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3.5"
           >
-            Previous
-          </button>
-
-          <span className="text-gray-500 font-medium">
-            Page <span className="text-gray-800">{page}</span> of{" "}
-            <span className="text-gray-800">{totalPages}</span>
-          </span>
-
-          <button
-            type="button"
-            onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
-            disabled={page === totalPages || loading}
-            className="px-4 py-1.5 border border-gray-200 rounded bg-white text-gray-700 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
-          >
-            Next
-          </button>
-        </div>
+            Publish Product Listing
+          </CustomButton>
+        </form>
       </div>
     </div>
   );

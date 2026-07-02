@@ -1,42 +1,25 @@
-import { API_BASE_URL } from "@/shared/config/api";
+// src/features/auth/api/auth.api.ts
+import { fetcher } from "@/shared/lib/http";
 
-export const login = async (email: string, password: string) => {
-  const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+export const login = async (credentials: Record<string, string>) => {
+  return fetcher<{ data: { accessToken: string } }>("/api/v1/auth/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: email.trim(), password }),
+    body: JSON.stringify(credentials),
   });
-
-  const dbData = await response.json();
-
-  if (!response.ok) {
-    throw new Error(dbData?.message || "Invalid account credentials.");
-  }
-
-  return dbData;
 };
 
-export const register = async (
-  name: string,
-  email: string,
-  password: string,
-) => {
-  const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+export const register = async (userData: Record<string, string>) => {
+  return fetcher("/api/v1/auth/register", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      name: name.trim(),
-      email: email.trim(),
-      password,
-      roleName: "SELLER",
+      ...userData,
+      roleName: "SELLER", // Auto-injecting role per backend Joi schema requirements
     }),
   });
+};
 
-  const dbData = await response.json();
-
-  if (!response.ok) {
-    throw new Error(dbData?.message || `Server Error: ${response.status}`);
-  }
-
-  return dbData;
+export const logout = async () => {
+  return fetcher("/api/v1/auth/signout", {
+    method: "POST",
+  });
 };

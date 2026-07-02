@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { getAnalytics } from "@/features/dashboard/api/analytics.api";
+import { Card } from "@/shared/components";
 import {
   AreaChart,
   Area,
@@ -32,7 +33,7 @@ export default function AnalyticsPage() {
       <h1 className="text-2xl font-black text-slate-900 tracking-tight">
         Business Intelligence Stream
       </h1>
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 h-72">
+      <Card variant="outlined" padding="none" className="h-72 p-6 !rounded-3xl">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={data}
@@ -55,7 +56,7 @@ export default function AnalyticsPage() {
             />
           </AreaChart>
         </ResponsiveContainer>
-      </div>
+      </Card>
     </div>
   );
 }

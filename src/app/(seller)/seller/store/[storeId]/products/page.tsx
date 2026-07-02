@@ -2,12 +2,19 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Search, Plus, Filter, Edit3, Trash2, X, Loader2 } from "lucide-react";
+import { Loader2, Edit3 } from "lucide-react";
 import {
   getProducts,
   createProduct,
   updateProduct,
 } from "@/features/products/api/products.api";
+import {
+  Card,
+  Badge,
+  FormField,
+  CustomButton,
+  useNotification,
+} from "@/shared/components";
 
 interface Product {
   id: string;
@@ -17,9 +24,17 @@ interface Product {
   status: "Active" | "Draft";
   sales: number;
 }
+const CATEGORIES = [
+  { id: "mains", name: "Mains" },
+  { id: "appetizers", name: "Appetizers" },
+  { id: "desserts", name: "Desserts" },
+  { id: "beverages", name: "Beverages" },
+  { id: "supplies", name: "Supplies & Soils" },
+];
 
 export default function ProductManagementPage() {
   const params = useParams();
+  const showNotification = useNotification();
   const storeId = Array.isArray(params?.storeId)
     ? params.storeId[0]
     : params?.storeId || "";
@@ -30,36 +45,14 @@ export default function ProductManagementPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
 
-  const [formState, setFormState] = useState({
-    name: "",
-    categoryId: "",
-    price: "",
-    status: "Active",
-  });
-
-  // Automatically clear notification layout alerts after 4 seconds
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
-
-  // ── 🔄 LIVE FETCH: GET STORE CATALOG (MEMOIZED TO RESOLVE HOISTING HOOK ERROR) ──
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const dbData = await getProducts(storeId);
-
       const productArray = Array.isArray(dbData)
         ? dbData
-        : dbData?.data?.products || dbData?.products || dbData?.data || [];
-
+        : dbData?.data?.products || dbData?.products || [];
       setProducts(
         productArray.map((item: any) => ({
           id: item.id || item._id,
@@ -70,23 +63,19 @@ export default function ProductManagementPage() {
           sales: item.sales || 0,
         })),
       );
-    } catch (error: any) {
-      console.error("Fetch catalog exception trace:", error);
-      setToast({
-        message: error.message || "Catalog fetch dropped.",
-        type: "error",
-      });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Catalog fetch dropped.";
+      showNotification(message, "error");
     } finally {
       setIsLoading(false);
     }
-  }, [storeId]);
+  }, [storeId, showNotification]);
 
-  // ── 🔄 STABLE LIVE EFFECT TRIGGERS AFTER REGISTRATION DECLARATION ──
   useEffect(() => {
     if (storeId) fetchProducts();
   }, [storeId, fetchProducts]);
 
-  // ── 💾 LIVE MUTATION: POST/PATCH FORMS ──
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -105,37 +94,35 @@ export default function ProductManagementPage() {
       } else {
         await createProduct(payload);
       }
-
-      setToast({
-        message: editingProduct
-          ? "Product changes saved!"
-          : "New product added to catalogue matrix!",
-        type: "success",
-      });
-
+      showNotification(
+        editingProduct ? "Product changes saved!" : "New product added!",
+        "success",
+      );
       fetchProducts();
       setIsModalOpen(false);
-    } catch (error: any) {
-      setToast({ message: error.message, type: "error" });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to save product.";
+      showNotification(message, "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const [formState, setFormState] = useState({
+    name: "",
+    categoryId: "",
+    price: "",
+    status: "Active",
+  });
+  const isFormInvalid =
+    formState.name.trim() === "" ||
+    !formState.price ||
+    parseFloat(formState.price) <= 0 ||
+    formState.categoryId === "";
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {toast && (
-        <div
-          className={`fixed top-5 right-5 p-4 rounded-2xl shadow-xl text-xs font-black border z-50 transition-all animate-in slide-in-from-top-3 duration-200 ${
-            toast.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : "bg-rose-50 border-rose-200 text-rose-800"
-          }`}
-        >
-          {toast.message}
-        </div>
-      )}
-
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
@@ -148,7 +135,7 @@ export default function ProductManagementPage() {
             </span>
           </p>
         </div>
-        <button
+        <CustomButton
           onClick={() => {
             setEditingProduct(null);
             setFormState({
@@ -159,14 +146,17 @@ export default function ProductManagementPage() {
             });
             setIsModalOpen(true);
           }}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-2xs cursor-pointer"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
         >
           Add New Product
-        </button>
+        </CustomButton>
       </div>
 
-      {/* Table Interface Viewport Layer */}
-      <div className="bg-white border rounded-3xl overflow-hidden shadow-2xs">
+      <Card
+        variant="outlined"
+        padding="none"
+        className="!rounded-3xl overflow-hidden shadow-2xs"
+      >
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="bg-slate-50 border-b text-slate-400 font-bold uppercase text-[10px] tracking-wider">
@@ -193,8 +183,7 @@ export default function ProductManagementPage() {
                   colSpan={5}
                   className="p-12 text-center text-slate-400 font-medium"
                 >
-                  No products found inside this store node context shell. Click
-                  Add New Product above to begin.
+                  No products found. Click Add New Product above to begin.
                 </td>
               </tr>
             ) : (
@@ -214,30 +203,30 @@ export default function ProductManagementPage() {
                     })}
                   </td>
                   <td className="p-4">
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] tracking-wide font-black ${
-                        p.status === "Active"
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                          : "bg-slate-100 text-slate-600 border border-slate-200"
-                      }`}
+                    <Badge
+                      variant={p.status === "Active" ? "success" : "neutral"}
+                      size="sm"
                     >
-                      {p.status.toUpperCase()}
-                    </span>
+                      {p.status}
+                    </Badge>
                   </td>
                   <td className="p-4 text-right">
                     <button
                       onClick={() => {
+                        const foundCategory = CATEGORIES.find(
+                          (c) =>
+                            c.name.toLowerCase() === p.category.toLowerCase(),
+                        );
                         setEditingProduct(p);
                         setFormState({
                           name: p.name,
-                          categoryId: "",
+                          categoryId: foundCategory ? foundCategory.id : "",
                           price: p.price.toString(),
                           status: p.status,
                         });
                         setIsModalOpen(true);
                       }}
-                      className="text-slate-400 hover:text-slate-900 p-1.5 transition-colors cursor-pointer"
-                      title="Edit item definitions"
+                      className="text-slate-400 hover:text-slate-900 p-1.5 cursor-pointer"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
@@ -247,9 +236,8 @@ export default function ProductManagementPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
 
-      {/* Operation Action Drawer Modal Layer Form Container */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 animate-in fade-in duration-150">
           <form
@@ -262,99 +250,74 @@ export default function ProductManagementPage() {
                   ? "Edit Existing Product"
                   : "Launch New Catalog Entry"}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Ensure fields align cleanly to your target relational parent
-                records.
-              </p>
             </div>
 
             <div className="space-y-3">
-              <div>
-                <label className="text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1 block">
-                  Product Title
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., 1KG Organic Loam Soil"
-                  value={formState.name}
-                  onChange={(e) =>
-                    setFormState({ ...formState, name: e.target.value })
-                  }
-                  className="w-full border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold focus:outline-none focus:border-emerald-500 bg-slate-50/50"
-                  required
-                />
-              </div>
+              <FormField
+                type="text"
+                label="Product Title"
+                placeholder="e.g. 1KG Organic Loam Soil"
+                value={formState.name}
+                onChange={(e) =>
+                  setFormState({ ...formState, name: e.target.value })
+                }
+                required
+              />
 
-              <div>
-                <label className="text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1 block">
-                  Parent Category ID (UUID)
+              <div className="space-y-1.5 text-left">
+                <label className="text-xs font-bold text-slate-700">
+                  Catalog Category
                 </label>
-                <input
-                  type="text"
-                  placeholder="Paste the category UUID key copied from your ledger"
+                <select
                   value={formState.categoryId}
                   onChange={(e) =>
                     setFormState({ ...formState, categoryId: e.target.value })
                   }
-                  className="w-full border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-emerald-500 bg-slate-50/50"
+                  className="w-full border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-50/50 cursor-pointer"
                   required
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1 block">
-                  Retail Pricing Unit (PHP)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formState.price}
-                  onChange={(e) =>
-                    setFormState({ ...formState, price: e.target.value })
-                  }
-                  className="w-full border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold focus:outline-none focus:border-emerald-500 bg-slate-50/50"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1 block">
-                  Display Visibility Status
-                </label>
-                <select
-                  value={formState.status}
-                  onChange={(e) =>
-                    setFormState({ ...formState, status: e.target.value })
-                  }
-                  className="w-full border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold focus:outline-none focus:border-emerald-500 bg-white"
                 >
-                  <option value="Active">Active (Visible to Buyers)</option>
-                  <option value="Draft">Draft (Hidden Layout Mode)</option>
+                  <option value="" disabled hidden>
+                    Select category option...
+                  </option>
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
               </div>
+
+              <FormField
+                type="number"
+                step="0.01"
+                label="Retail Pricing Unit (PHP)"
+                placeholder="0.00"
+                value={formState.price}
+                onChange={(e) =>
+                  setFormState({ ...formState, price: e.target.value })
+                }
+                required
+              />
             </div>
 
-            <div className="flex justify-end gap-2 text-xs font-bold pt-2 border-t border-dashed">
+            <div className="flex justify-end gap-2 pt-2 border-t border-dashed border-slate-200">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-3 py-2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                className="px-3 py-2 text-slate-400 font-bold text-xs hover:text-slate-600 cursor-pointer"
               >
                 Cancel
               </button>
-              <button
+              <CustomButton
                 type="submit"
-                disabled={isSubmitting}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
+                loading={isSubmitting}
+                disabled={isFormInvalid}
+                className="bg-emerald-600 text-white font-bold text-xs"
               >
-                {isSubmitting && (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                )}
                 <span>
-                  {isSubmitting ? "Transmitting..." : "Commit Structure"}
+                  {isSubmitting ? "Committing..." : "Commit Structure"}
                 </span>
-              </button>
+              </CustomButton>
             </div>
           </form>
         </div>

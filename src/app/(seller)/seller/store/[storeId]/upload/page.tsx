@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { createProduct } from "@/features/products/api/products.api";
+import { Card, FormField, CustomButton } from "@/shared/components";
 import {
   Sparkles,
   UploadCloud,
@@ -11,18 +12,23 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+const CATEGORIES = [
+  { id: "mains", name: "Mains" },
+  { id: "appetizers", name: "Appetizers" },
+  { id: "desserts", name: "Desserts" },
+  { id: "beverages", name: "Beverages" },
+];
+
 export default function AIProductUploadPage() {
   const params = useParams();
   const storeId = Array.isArray(params?.storeId)
     ? params.storeId[0]
     : params?.storeId || "";
 
-  // Form State Management
   const [productName, setProductName] = useState("");
   const [price, setPrice] = useState("");
-  const [category, setCategory] = useState("Mains");
+  const [category, setCategory] = useState("");
 
-  // File & Pipeline UI States
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
@@ -30,21 +36,17 @@ export default function AIProductUploadPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Simulate AI parsing data from an uploaded menu image or photography
   const handleFileChange = (file: File) => {
     setSelectedFile(file);
     setIsProcessing(true);
     setAnalyzed(false);
 
-    // Simulate OCR text parsing delay
     setTimeout(() => {
       setIsProcessing(false);
       setAnalyzed(true);
-
-      // Auto-populate the form inputs mock data based on store context during testing
       setProductName("Special Crispy Pata");
       setPrice("580.00");
-      setCategory("Mains");
+      setCategory("mains");
     }, 1800);
   };
 
@@ -55,13 +57,12 @@ export default function AIProductUploadPage() {
     }
   };
 
-  // Format form parameters into target backend payloads
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     const productPayload = {
-      storeId: storeId,
+      storeId,
       categoryId: category,
       name: productName.trim(),
       price: parseFloat(price) || 0,
@@ -71,42 +72,48 @@ export default function AIProductUploadPage() {
     try {
       await createProduct(productPayload);
       alert("Product successfully cataloged!");
-
-      // Reset State
       setSelectedFile(null);
       setProductName("");
       setPrice("");
+      setCategory("");
       setAnalyzed(false);
     } catch (error) {
       console.error("Transmission Failure:", error);
-      alert("Failed to sync listing with the server.");
-    } finally {
+    }
+    bits: {
       setIsSubmitting(false);
     }
   };
 
+  const isFormInvalid =
+    !selectedFile ||
+    productName.trim() === "" ||
+    !price ||
+    parseFloat(price) <= 0 ||
+    category.trim() === "";
+
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto animate-in fade-in duration-300 p-6">
-      {/* Page Branding Header */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight inline-flex items-center gap-2">
           AI Product Upload{" "}
           <Sparkles className="w-5 h-5 text-emerald-500 fill-emerald-500/10" />
         </h1>
         <p className="text-xs font-bold text-slate-400 mt-0.5">
-          Drop restaurant menus, item photos, or invoices. The system
-          automatically parses catalog text fields.
+          Drop restaurant menus or item photos. The system automatically parses
+          catalog text fields.
         </p>
       </div>
 
-      {/* Main Form Split Layout Layer */}
       <div className="grid lg:grid-cols-5 gap-6 items-start">
-        {/* LEFT COLUMN: Image Ingestion Dropzone Panel */}
-        <div className="lg:col-span-3 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-5">
+        <Card
+          variant="outlined"
+          padding="md"
+          className="lg:col-span-3 !rounded-3xl space-y-5"
+        >
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">
             Image Dropzone Target
           </h3>
-
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
@@ -122,11 +129,9 @@ export default function AIProductUploadPage() {
               className="hidden"
               accept="image/*"
             />
-
             <div className="w-12 h-12 rounded-xl bg-white shadow-xs border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
               <UploadCloud className="w-6 h-6" />
             </div>
-
             <div>
               <p className="text-xs font-black text-slate-800">
                 {selectedFile
@@ -134,15 +139,14 @@ export default function AIProductUploadPage() {
                   : "Drop menu or product photography here"}
               </p>
               <p className="text-[10px] font-bold text-slate-400 mt-0.5">
-                Supports standard formats (PNG, JPG, JPEG) up to 10MB
+                Supports standard formats up to 10MB
               </p>
             </div>
           </div>
 
-          {/* Status Notifications */}
           {isProcessing && (
             <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 text-xs font-bold text-blue-800 animate-pulse">
-              <RefreshCw className="w-4 h-4 text-blue-600 animate-spin flex-shrink-0" />
+              <RefreshCw className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
               <p>
                 Vision OCR scanning executing image array payload parsing...
               </p>
@@ -151,27 +155,17 @@ export default function AIProductUploadPage() {
 
           {analyzed && (
             <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-start gap-3 text-xs font-bold text-emerald-800 animate-in fade-in duration-300">
-              <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
                 <p>OCR Text Extraction Complete</p>
                 <p className="text-[10px] text-emerald-600 font-normal mt-0.5">
-                  Parameters extracted with high confidence. Inspect fields in
-                  the manual attributes panel before publishing.
+                  Parameters extracted with high confidence.
                 </p>
               </div>
             </div>
           )}
+        </Card>
 
-          {!selectedFile && (
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-400 italic">
-              <AlertCircle className="w-4 h-4 text-slate-300 flex-shrink-0" />
-              Awaiting image file attachments to trigger auto-fill pipeline
-              overrides.
-            </div>
-          )}
-        </div>
-
-        {/* RIGHT COLUMN: Parameters Form Overrides */}
         <form
           onSubmit={handleProductSubmit}
           className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4"
@@ -180,56 +174,53 @@ export default function AIProductUploadPage() {
             Product Attributes Panel
           </h3>
 
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold text-slate-500">
-              Product Title
-            </label>
-            <input
-              type="text"
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-              placeholder="e.g., Organic Veg Bundle"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
-              required
-            />
-          </div>
+          <FormField
+            type="text"
+            label="Product Title"
+            value={productName}
+            onChange={(e) => setProductName(e.target.value)}
+            placeholder="e.g., Organic Veg Bundle"
+            required
+          />
+          <FormField
+            type="number"
+            step="0.01"
+            label="Retail Unit Price (PHP)"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="0.00"
+            required
+          />
 
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold text-slate-500">
-              Retail Unit Price (PHP)
+          <div className="space-y-1 text-left">
+            <label className="text-xs font-bold text-slate-700">
+              Catalog Category
             </label>
-            <input
-              type="number"
-              step="0.01"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="0.00"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
-              required
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold text-slate-500">
-              Catalog Category UUID
-            </label>
-            <input
-              type="text"
+            <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              placeholder="Paste category layout ID from Swagger"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all cursor-pointer"
               required
-            />
+            >
+              <option value="" disabled hidden>
+                Select product category
+              </option>
+              {CATEGORIES.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <button
+          <CustomButton
             type="submit"
-            disabled={isSubmitting || isProcessing}
-            className="w-full mt-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm disabled:bg-slate-100 disabled:text-slate-400 cursor-pointer"
+            loading={isSubmitting}
+            disabled={isFormInvalid}
+            className="w-full mt-2 bg-emerald-600 text-white font-bold text-xs py-3.5"
           >
-            {isSubmitting ? "Publishing Listing..." : "Publish Product Listing"}
-          </button>
+            Publish Product Listing
+          </CustomButton>
         </form>
       </div>
     </div>

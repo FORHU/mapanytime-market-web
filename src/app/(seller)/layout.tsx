@@ -83,12 +83,7 @@ export default function SellerLayout({
       icon: LayoutDashboard,
       requiresStore: true,
     },
-    {
-      name: "Categories",
-      subPath: "/categories",
-      icon: LayoutDashboard,
-      requiresStore: true,
-    },
+
     {
       name: "Product Management",
       subPath: "/products",

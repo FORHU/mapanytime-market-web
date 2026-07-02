@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Star, Send } from "lucide-react";
+import { Star } from "lucide-react";
 import { getReviews, postReviewReply } from "@/features/orders/api/reviews.api";
+import { Card } from "@/shared/components";
 
 interface Review {
   id: string;
@@ -20,7 +21,6 @@ export default function ReviewsPage() {
     : params?.storeId || "";
 
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replies, setReplies] = useState<Record<string, string>>({});
 
@@ -32,24 +32,18 @@ export default function ReviewsPage() {
     }
   }, [storeId]);
 
-  const handlePostReply = async (reviewId: string) => {
-    try {
-      await postReviewReply(reviewId, replyText);
-      setReplies((prev) => ({ ...prev, [reviewId]: replyText.trim() }));
-      setActiveReplyId(null);
-      setReplyText("");
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-4">
       <h1 className="text-2xl font-black text-slate-900">
         Customer Feedback Ledger
       </h1>
       {reviews.map((r) => (
-        <div key={r.id} className="bg-white border p-5 rounded-2xl space-y-3">
+        <Card
+          key={r.id}
+          variant="outlined"
+          padding="md"
+          className="!rounded-2xl space-y-3"
+        >
           <div className="flex justify-between">
             <div>
               <h4 className="font-bold">{r.author}</h4>
@@ -69,7 +63,7 @@ export default function ReviewsPage() {
               <strong>Response:</strong> {replies[r.id]}
             </div>
           )}
-        </div>
+        </Card>
       ))}
     </div>
   );

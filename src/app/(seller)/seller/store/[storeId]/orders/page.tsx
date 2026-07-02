@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Clock, ShoppingBag, Truck } from "lucide-react";
 import { getOrders } from "@/features/orders/api/orders.api";
+import { Card, Badge } from "@/shared/components";
 
 interface Order {
   id: string;
@@ -32,10 +32,14 @@ export default function OrdersPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <h1 className="text-2xl font-black text-slate-900">Live Orders Matrix</h1>
-      <div className="bg-white border rounded-3xl overflow-hidden shadow-xs">
+      <Card
+        variant="outlined"
+        padding="none"
+        className="!rounded-3xl overflow-hidden shadow-xs"
+      >
         <table className="w-full text-left text-xs">
           <thead>
-            <tr className="bg-slate-50 border-b text-slate-400 font-bold uppercase text-[10px]">
+            <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
               <th className="p-4">Order ID</th>
               <th className="p-4">Customer</th>
               <th className="p-4">Items</th>
@@ -55,15 +59,15 @@ export default function OrdersPage() {
                   ₱{order.amount}
                 </td>
                 <td className="py-4 px-4">
-                  <span className="px-2 py-0.5 rounded-md text-[9px] uppercase tracking-wide bg-amber-50 text-amber-700 border border-amber-100">
+                  <Badge variant="warning" size="sm">
                     {order.status}
-                  </span>
+                  </Badge>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
     </div>
   );
 }
