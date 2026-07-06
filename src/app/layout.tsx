@@ -5,7 +5,6 @@ import QueryProvider from "@/shared/lib/providers/query-provider";
 import { Toaster } from "sonner";
 import { AuthListener } from "@/features/auth/components/AuthListener";
 import { ThemeProvider } from "next-themes";
-import { NotificationProvider } from "@/shared/components"; // 👈 ADD THIS IMPORT
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -79,8 +78,8 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-            {/* 👈 WRAP YOUR CHILDREN IN THE NOTIFICATION PROVIDER */}
-            <NotificationProvider>{children}</NotificationProvider>
+            {/* Kept only the actual components, removed the phantom provider */}
+            {children}
 
             <Toaster position="top-right" theme="system" richColors />
             <AuthListener />
