@@ -1,22 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import "mapbox-gl/dist/mapbox-gl.css"
-  /* 2026 Theme Options:
-  
+@import "mapbox-gl/dist/mapbox-gl.css";
+
+/* 2026 Theme Options:
   Option 1: Cyberpunk Blue (Deep Blue & Electric Cyan) - ACTIVE
   --brand-core: #0ea5e9; --brand-vibrant: #22d3ee; --brand-burgundy: #0c4a6e; --brand-dark: #082f49; --brand-light: #7dd3fc;
-  
-  Option 2: Emerald Aurora (Forest Green & Vibrant Teal)
-  --brand-core: #10b981; --brand-vibrant: #34d399; --brand-burgundy: #064e3b; --brand-dark: #06201a; --brand-light: #6ee7b7;
-  
-  Option 3: Retro Sunset (Deep Amber & Vivid Rose)
-  --brand-core: #f43f5e; --brand-vibrant: #fb923c; --brand-burgundy: #881337; --brand-dark: #4c0519; --brand-light: #fda4af;
-  
-  Option 4: Midnight Monochrome (Sleek Grays & Pure White Accents)
-  --brand-core: #ffffff; --brand-vibrant: #94a3b8; --brand-burgundy: #1e293b; --brand-dark: #020617; --brand-light: #f8fafc;
 */
-  @layer base {
+
+@layer base {
   :root {
     /* Cyberpunk Blue Light Mode */
     --brand-core: #0ea5e9;
@@ -73,7 +65,7 @@
 }
 
 @layer components {
-  /* Enhanced 2026 Glassmorphism - Updated to use brand tokens */
+  /* Enhanced 2026 Glassmorphism */
   .glass {
     background: rgba(8, 47, 73, 0.6);
     backdrop-filter: blur(20px) saturate(180%);

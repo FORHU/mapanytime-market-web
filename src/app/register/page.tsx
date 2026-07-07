@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import RegisterWorkflow from "@/features/auth/components/RegisterWorkflow";
-import StoreOnboardingForm from "@/features/auth/components/StoreOnboardingForm";
+//  CORRECT PATH (Pointing directly to your stores feature directory)
+import StoreOnboardingForm from "@/features/stores/components/StoreOnboardingForm";
 import { useRouter } from "next/navigation";
 
 type PagePhase = "REGISTRATION" | "STORE_ONBOARDING";

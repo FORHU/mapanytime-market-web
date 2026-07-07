@@ -21,4 +21,7 @@ export { Sidebar } from "./layout/Sidebar";
 // ============================================================================
 // 3. BUSINESS FEATURES LAYER
 // ============================================================================
-// export { default as StorePickerMap } from "./features/StorePickerMap";
+// 🔥 REMOVED: Feature-specific elements have been safely decoupled from here.
+// They now live isolated inside their own public feature modules:
+// - Login flow -> @/features/auth
+// - Onboarding and Mapbox nodes -> @/features/stores

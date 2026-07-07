@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "../stores/auth.store";
 import { useQueryClient } from "@tanstack/react-query";
+// ✅ FIXED: Relative route mapping straight to the unified store file inside the api folder
+import { useAuthStore } from "../api/auth.api";
 
 export function AuthListener() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export function AuthListener() {
 
   useEffect(() => {
     const handleUnauthorized = () => {
-      // Clear token and query cache on 401
+      // Clear token and query cache on 401 interceptor drop
       setToken(null);
       queryClient.clear();
       router.push("/login");

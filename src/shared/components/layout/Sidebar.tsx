@@ -20,7 +20,7 @@ import {
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  isLocked?: boolean; // 🔒 Added fallback state descriptor property
+  isLocked?: boolean;
 }
 
 export function Sidebar({ isOpen, onClose, isLocked = false }: SidebarProps) {
@@ -28,7 +28,7 @@ export function Sidebar({ isOpen, onClose, isLocked = false }: SidebarProps) {
   const router = useRouter();
 
   const navigationLinks = [
-    { label: "Manage Stores", href: "/seller/manage-stores", icon: Store }, // 🌟 Exposed root context gateway item
+    { label: "Manage Stores", href: "/seller/manage-stores", icon: Store },
     { label: "Dashboard", href: "/seller/dashboard", icon: LayoutDashboard },
     { label: "AI Catalog Upload", href: "/seller/ai-upload", icon: Wand2 },
     { label: "My Products", href: "/seller/products", icon: Package },
@@ -40,17 +40,25 @@ export function Sidebar({ isOpen, onClose, isLocked = false }: SidebarProps) {
     { label: "System Settings", href: "/seller/settings", icon: Settings },
   ];
 
+  // ✅ RESTORED: Core route navigation dispatcher function
   const handleNavigation = (href: string) => {
     router.push(href);
-    onClose(); // Auto-close drawer overlay on mobile view selection
+    onClose(); // Automatically drops mobile modal drawers on trigger
   };
+
+  // Dynamic conditional evaluation checking for active environment session tokens
+  const visibleLinks = navigationLinks.filter((item) => {
+    if (!isLocked && item.href === "/seller/manage-stores") {
+      return false;
+    }
+    return true;
+  });
 
   const linkBaseClasses =
     "flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 select-none";
 
   return (
     <>
-      {/* Mobile Drawer Overlay Backdrop */}
       {isOpen && (
         <div
           onClick={onClose}
@@ -58,7 +66,6 @@ export function Sidebar({ isOpen, onClose, isLocked = false }: SidebarProps) {
         />
       )}
 
-      {/* Primary Sidebar Container Element */}
       <aside
         className={`fixed md:sticky top-0 left-0 z-50 h-screen w-64 border-r flex flex-col justify-between p-6 transition-transform duration-300 ease-in-out md:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
@@ -69,7 +76,6 @@ export function Sidebar({ isOpen, onClose, isLocked = false }: SidebarProps) {
         }}
       >
         <div className="space-y-8">
-          {/* Header Identity Layout */}
           <div className="flex items-center justify-between">
             <div
               className="flex items-center gap-2 cursor-pointer"
@@ -79,7 +85,6 @@ export function Sidebar({ isOpen, onClose, isLocked = false }: SidebarProps) {
                 Map<span style={{ color: "var(--brand-core)" }}>Central</span>
               </span>
             </div>
-            {/* Close trigger for mobile screens */}
             <button
               onClick={onClose}
               className="p-1 rounded-lg md:hidden hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -88,13 +93,10 @@ export function Sidebar({ isOpen, onClose, isLocked = false }: SidebarProps) {
             </button>
           </div>
 
-          {/* Navigation Links Loop Matrix */}
           <nav className="space-y-1 text-left">
-            {navigationLinks.map((item) => {
+            {visibleLinks.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
-
-              // 🔒 Prevent selection leakage: Lock down everything except store management selector
               const isItemLocked =
                 isLocked && item.href !== "/seller/manage-stores";
 
@@ -135,7 +137,6 @@ export function Sidebar({ isOpen, onClose, isLocked = false }: SidebarProps) {
           </nav>
         </div>
 
-        {/* Footer Actions (Sign Out Option Slot) */}
         <div
           className="pt-4 border-t"
           style={{ borderColor: "var(--border-light)" }}

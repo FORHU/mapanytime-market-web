@@ -5,6 +5,7 @@ import { Sidebar } from "./Sidebar";
 import { Menu, Sun, Moon, Lock, Unlock, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
+import { Button } from "../ui/Button"; // Reusable custom UI button module
 
 export function SellerLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,7 +19,6 @@ export function SellerLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
-    // Synced with localStorage context to keep state intact on reload
     const storedActiveId = localStorage.getItem("active_store_context_id");
     setActiveStoreId(storedActiveId);
   }, []);
@@ -29,10 +29,8 @@ export function SellerLayout({ children }: { children: React.ReactNode }) {
     router.push("/seller/manage-stores");
   };
 
-  // Determine if features should be totally locked down
   const isLocked = !activeStoreId && pathname !== "/seller/manage-stores";
 
-  // Enforce lock redirect instantly
   useEffect(() => {
     if (mounted && !activeStoreId && pathname !== "/seller/manage-stores") {
       router.push("/seller/manage-stores");
@@ -44,14 +42,12 @@ export function SellerLayout({ children }: { children: React.ReactNode }) {
       className="flex min-h-screen transition-colors duration-300"
       style={{ backgroundColor: "var(--background-primary)" }}
     >
-      {/* Navigation Sidebar Frame - Pass down the lock state */}
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isLocked={!activeStoreId}
       />
 
-      {/* Main Viewport Content Stack */}
       <div className="flex-1 flex flex-col min-w-0">
         <header
           className="h-20 border-b flex items-center px-6 justify-between sticky top-0 z-30 backdrop-blur-md bg-opacity-80 transition-colors"
@@ -60,7 +56,6 @@ export function SellerLayout({ children }: { children: React.ReactNode }) {
             borderColor: "var(--border-default)",
           }}
         >
-          {/* Left Block: Mobile Menu Hamburger Trigger */}
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -86,52 +81,51 @@ export function SellerLayout({ children }: { children: React.ReactNode }) {
                   </span>
                 )}
               </span>
-              <h2 className="text-sm font-black text-text-primary">
+              <h2 className="text-sm font-black text-[var(--text-primary)]">
                 Verified Merchant Dashboard
               </h2>
             </div>
           </div>
 
-          {/* Right Block: Theme Toggle and Profile Widgets */}
           <div className="flex items-center gap-3">
             {activeStoreId && (
-              <button
+              <Button
+                variant="dark"
                 onClick={handleClearContext}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold border rounded-xl bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500"
-                style={{ borderColor: "var(--border-light)" }}
+                className="!h-9 !px-4 !rounded-xl !text-[10px]"
               >
                 <RefreshCw className="w-3 h-3" /> Switch Store
-              </button>
+              </Button>
             )}
 
-            <button
+            <Button
+              variant="secondary"
               onClick={() =>
                 setTheme(resolvedTheme === "dark" ? "light" : "dark")
               }
-              className="p-2.5 rounded-xl border transition-colors flex items-center justify-center w-9 h-9"
-              style={{
-                backgroundColor: "var(--background-tertiary)",
-                borderColor: "var(--border-light)",
-              }}
+              className="!w-9 !h-9 !p-0 !rounded-xl border"
+              style={{ borderColor: "var(--border-light)" }}
               aria-label="Toggle Theme"
             >
               {!mounted ? (
-                <div className="w-4 h-4 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+                <div className="w-4 h-4 rounded-full animate-pulse bg-[var(--border-strong)]" />
               ) : resolvedTheme === "dark" ? (
                 <Sun className="w-4 h-4 text-amber-500" />
               ) : (
                 <Moon className="w-4 h-4 text-indigo-500" />
               )}
-            </button>
+            </Button>
 
             <div
-              className="w-10 h-10 rounded-xl bg-zinc-200 dark:bg-zinc-800 border"
-              style={{ borderColor: "var(--border-light)" }}
+              className="w-10 h-10 rounded-xl border cursor-pointer shadow-sm transition-colors"
+              style={{
+                backgroundColor: "var(--background-tertiary)",
+                borderColor: "var(--border-light)",
+              }}
             />
           </div>
         </header>
 
-        {/* Dynamic Inner Page Screen Render Slot */}
         <main className="p-6 md:p-8 flex-1 max-w-7xl w-full mx-auto overflow-y-auto">
           {isLocked ? (
             <div className="p-12 text-center py-24">

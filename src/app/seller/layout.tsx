@@ -1,7 +1,6 @@
-// src/app/seller/layout.tsx
 import { SellerLayout } from "@/shared/components/layout/SellerLayout";
 
-export default function RootMerchantLayout({
+export default function SellerRootLayout({
   children,
 }: {
   children: React.ReactNode;

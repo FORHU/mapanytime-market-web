@@ -1,191 +1,254 @@
 "use client";
 
-import React, { useState } from "react";
-import { PageHeader } from "@/shared/components/ui/PageHeader";
-import { Card, CardHeader, CardContent } from "@/shared/components/ui/Card";
-import { StatusPill } from "@/shared/components/ui/StatusPill";
-import { Sparkles, MapPin, Eye, Package } from "lucide-react";
-import ProductImageUploader from "@/features/seller-catalog/components/ProductImageUploader";
+import React, { useState, useMemo, useCallback } from "react";
+import { Card } from "@/shared/components/ui/Card";
+import { Button } from "@/shared/components/ui/Button";
+import {
+  useOrdersPipeline,
+  OrderRecord,
+} from "@/shared/hooks/useOrdersPipeline";
+import {
+  PackageCheck,
+  Search,
+  SlidersHorizontal,
+  ArrowUpDown,
+  AlertCircle,
+  CheckCircle2,
+  Box,
+} from "lucide-react";
 
-// 💡 SIMULATED DATABASE CONTRACT STRUCTURE
-interface MerchantMetrics {
-  activePins: number;
-  weeklyImpressions: number;
-  catalogCount: number;
-  isConnectedToS3: boolean;
-}
+export default function OrderInventoryMatrix() {
+  const {
+    orders,
+    isLoading,
+    error,
+    fulfillOrder,
+    isMutationPending,
+    mutationVariables,
+    forceManualRefresh,
+  } = useOrdersPipeline();
 
-export default function SellerDashboardPage() {
-  // ⚡ HOOK STATE: Replace the initial values here to immediately update the whole dashboard UI
-  const [storeData, setStoreData] = useState<MerchantMetrics>({
-    activePins: 14,
-    weeklyImpressions: 2840,
-    catalogCount: 48,
-    isConnectedToS3: true,
-  });
+  const [skuSearch, setSkuSearch] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [sortAsc, setSortAsc] = useState<boolean>(false);
 
-  const performanceMetrics = [
-    {
-      title: "Active Pins",
-      value: storeData.activePins.toLocaleString(),
-      description: "Live storefront map markers",
-      icon: MapPin,
+  const handleFulfillOrderOptimistic = useCallback(
+    (orderId: string) => {
+      fulfillOrder(orderId);
     },
-    {
-      title: "Impressions",
-      value: storeData.weeklyImpressions.toLocaleString(),
-      description: "Hyperlocal lookups this week",
-      icon: Eye,
-    },
-    {
-      title: "Catalog Items",
-      value: storeData.catalogCount.toLocaleString(),
-      description: "Total digitalized items",
-      icon: Package,
-    },
-  ];
+    [fulfillOrder],
+  );
+
+  const processedOrders = useMemo<OrderRecord[]>(() => {
+    return orders
+      .filter((order) => {
+        const matchesSku = order.sku
+          .toLowerCase()
+          .includes(skuSearch.toLowerCase().trim());
+        const matchesStatus =
+          statusFilter === "ALL" || order.status === statusFilter;
+        return matchesSku && matchesStatus;
+      })
+      .sort((a, b) => {
+        const timeA = new Date(a.createdAt).getTime();
+        const timeB = new Date(b.createdAt).getTime();
+        return sortAsc ? timeA - timeB : timeB - timeA;
+      });
+  }, [orders, skuSearch, statusFilter, sortAsc]);
+
+  if (error) {
+    return (
+      <Card className="p-8 text-center border-rose-200 bg-rose-50/20 max-w-xl mx-auto space-y-4">
+        <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+        <h3 className="text-sm font-black text-rose-700">
+          Data Layer Crash Event Detected
+        </h3>
+        <p className="text-xs text-rose-600">{error.message}</p>
+        <Button
+          onClick={forceManualRefresh}
+          className="!w-auto mx-auto bg-rose-600 hover:bg-rose-700"
+        >
+          Re-initialize Node Stream
+        </Button>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      {/* 1. Dynamic Page Header Context Block */}
-      <PageHeader
-        title="Merchant Dashboard"
-        description="Monitor mapping presence, stream inventory items, and track live consumer views."
-        action={
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 border rounded-xl text-[11px] font-bold bg-zinc-50 dark:bg-zinc-900"
-            style={{ borderColor: "var(--border-light)" }}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${storeData.isConnectedToS3 ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
+    <div className="space-y-6 w-full">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--background-elevated)] p-4 rounded-2xl border border-[var(--border-light)] shadow-sm">
+        <div className="flex flex-1 flex-col sm:flex-row items-center gap-3">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <input
+              type="text"
+              placeholder="Filter by SKU tracking vector..."
+              value={skuSearch}
+              onChange={(e) => setSkuSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 text-xs border rounded-xl bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-colors text-[var(--text-primary)]"
+              style={{ borderColor: "var(--border-light)" }}
             />
-            <span style={{ color: "var(--text-secondary)" }}>
-              {storeData.isConnectedToS3
-                ? "Connected to S3 Pipelines"
-                : "Pipeline Disconnected"}
-            </span>
           </div>
-        }
-      />
 
-      {/* 2. Micro Stats Row Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {performanceMetrics.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={index}>
-              <CardHeader className="mb-1">
-                <span
-                  className="text-[11px] font-bold uppercase tracking-wider"
-                  style={{ color: "var(--text-tertiary)" }}
-                >
-                  {stat.title}
-                </span>
-                <Icon
-                  className="w-4 h-4"
-                  style={{ color: "var(--brand-core)" }}
-                />
-              </CardHeader>
-              <CardContent className="space-y-0.5 text-left">
-                <div className="text-2xl font-black tracking-tight">
-                  {stat.value}
-                </div>
-                <p
-                  className="text-[10px] font-medium"
-                  style={{ color: "var(--text-quaternary)" }}
-                >
-                  {stat.description}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* 3. Core Functional Split Architecture Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Side: Product Image Asset Dropzone */}
-        <div className="lg:col-span-5">
-          <Card className="p-6">
-            <div className="mb-4 text-left">
-              <div className="flex items-center justify-between gap-4 mb-1">
-                <h2 className="text-sm font-black">
-                  Fast-Upload Catalog Asset
-                </h2>
-                <StatusPill
-                  label={
-                    storeData.isConnectedToS3 ? "Cloud Connected" : "Offline"
-                  }
-                  variant={storeData.isConnectedToS3 ? "success" : "error"}
-                />
-              </div>
-              <p
-                className="text-[11px] font-medium"
-                style={{ color: "var(--text-tertiary)" }}
-              >
-                Snap or drop item snapshots. Images directly feed secure
-                presigned URLs bypassing frontend storage.
-              </p>
-            </div>
-
-            <ProductImageUploader />
-          </Card>
+          <div className="relative w-full sm:max-w-[180px]">
+            <SlidersHorizontal className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 text-xs border rounded-xl bg-[var(--background-primary)] focus:outline-none focus:border-[var(--brand-core)] transition-colors text-[var(--text-primary)] appearance-none cursor-pointer"
+              style={{ borderColor: "var(--border-light)" }}
+            >
+              <option value="ALL">All Manifest States</option>
+              <option value="PENDING">Pending Action</option>
+              <option value="SHIPPED">Shipped Nodes</option>
+              <option value="CANCELLED">Cancelled Matrix</option>
+            </select>
+          </div>
         </div>
 
-        {/* Right Side: Onboarding Canvas Context */}
-        <div className="lg:col-span-7">
-          <Card
-            className="p-8 flex flex-col items-center justify-center text-center border-dashed py-16"
-            style={{
-              backgroundColor: "var(--background-secondary)",
-              borderColor: "var(--border-default)",
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 shadow-sm"
-              style={{
-                backgroundColor: "var(--background-tertiary)",
-                color: "var(--brand-core)",
-              }}
-            >
-              <Sparkles className="w-5 h-5" />
-            </div>
-
-            <h3 className="text-base font-black tracking-tight mb-1">
-              Architecture Canvas Initialized Safely
-            </h3>
-            <p
-              className="text-xs font-medium max-w-sm leading-relaxed"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              Your brand-new dashboard workspace is fully functional. Hardcoded
-              secrets are removed, types are unified, global providers run out
-              of the layout, and features are completely modular.
-            </p>
-
-            <div
-              className="mt-6 p-4 rounded-xl border text-left max-w-md w-full text-[10px] font-mono space-y-1 bg-opacity-60 backdrop-blur-sm"
-              style={{
-                backgroundColor: "var(--background-elevated)",
-                borderColor: "var(--border-light)",
-              }}
-            >
-              <div className="text-emerald-500 font-bold">
-                ✓ src/shared/components/ui/ established
-              </div>
-              <div className="text-emerald-500 font-bold">
-                ✓ src/features/seller-catalog/ encapsulated
-              </div>
-              <div className="text-emerald-500 font-bold">
-                ✓ src/app/api/s3-upload/ fully secured
-              </div>
-              <div className="text-zinc-400 mt-2">
-                <p>Ready to register subsquent pagge frames...</p>
-              </div>
-            </div>
-          </Card>
-        </div>
+        <Button
+          variant="secondary"
+          onClick={() => setSortAsc((prev) => !prev)}
+          className="!text-[11px] !h-9 flex items-center gap-2 border"
+          style={{ borderColor: "var(--border-light)" }}
+        >
+          <ArrowUpDown className="w-3.5 h-3.5" />
+          <span>Timeline: {sortAsc ? "Oldest First" : "Newest First"}</span>
+        </Button>
       </div>
+
+      <Card className="border border-[var(--border-default)] overflow-hidden shadow-sm">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead>
+              <tr className="border-b border-[var(--border-light)] bg-[var(--background-secondary)] text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                <th className="py-3.5 px-4">Order Node ID</th>
+                <th className="py-3.5 px-4">Registry SKU</th>
+                <th className="py-3.5 px-4 text-center">Depth Units</th>
+                <th className="py-3.5 px-4">Destination Entity</th>
+                <th className="py-3.5 px-4">Warehouse Inventory Stock</th>
+                <th className="py-3.5 px-4 text-center">Fulfillment State</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="text-xs divide-y divide-[var(--border-light)]">
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-4 px-4">
+                      <div className="h-4 w-24 bg-[var(--background-secondary)] rounded-md" />
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="h-4 w-32 bg-[var(--background-secondary)] rounded-md" />
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="h-4 w-8 bg-[var(--background-secondary)] rounded-md mx-auto" />
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="h-4 w-28 bg-[var(--background-secondary)] rounded-md" />
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="h-4 w-16 bg-[var(--background-secondary)] rounded-md" />
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="h-5 w-20 bg-[var(--background-secondary)] rounded-full mx-auto" />
+                    </td>
+                    <td className="py-4 px-4 text-right">
+                      <div className="h-8 w-24 bg-[var(--background-secondary)] rounded-xl ml-auto" />
+                    </td>
+                  </tr>
+                ))
+              ) : processedOrders.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="py-12 text-center text-zinc-400 font-medium"
+                  >
+                    <Box className="w-8 h-8 mx-auto text-zinc-300 mb-2" />
+                    No tracked transactional data vectors matching active filter
+                    profiles.
+                  </td>
+                </tr>
+              ) : (
+                processedOrders.map((order) => {
+                  const isThisRowFulfilling =
+                    isMutationPending && mutationVariables === order.id;
+
+                  return (
+                    <tr
+                      key={order.id}
+                      className="hover:bg-[var(--background-secondary)]/30 transition-colors"
+                    >
+                      <td className="py-4 px-4 font-mono text-[11px] font-bold text-[var(--text-primary)]">
+                        #{order.id.slice(0, 8).toUpperCase()}
+                      </td>
+                      <td className="py-4 px-4 font-medium text-zinc-600 dark:text-zinc-300">
+                        {order.sku}
+                      </td>
+                      <td className="py-4 px-4 text-center font-bold text-zinc-700 dark:text-zinc-200">
+                        {order.quantity}
+                      </td>
+                      <td className="py-4 px-4 font-medium text-zinc-600 dark:text-zinc-400">
+                        {order.customer}
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`h-2 w-2 rounded-full ${order.stockSnapshot <= 10 ? "bg-amber-500" : "bg-emerald-500"}`}
+                          />
+                          <span className="font-bold text-[var(--text-secondary)]">
+                            {order.stockSnapshot} items
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex justify-center">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide border uppercase flex items-center gap-1 ${
+                              order.status === "SHIPPED"
+                                ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800"
+                                : order.status === "CANCELLED"
+                                  ? "bg-rose-50 text-rose-600 border-rose-200"
+                                  : "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800"
+                            }`}
+                          >
+                            {order.status === "SHIPPED" && (
+                              <CheckCircle2 className="w-3 h-3" />
+                            )}
+                            {order.status}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        {order.status === "PENDING" ? (
+                          <Button
+                            disabled={isMutationPending}
+                            onClick={() =>
+                              handleFulfillOrderOptimistic(order.id)
+                            }
+                            className="!h-8 !text-[10px] !px-3 !rounded-lg bg-[var(--brand-core)] hover:bg-[var(--brand-vibrant)] text-white shadow-sm inline-flex items-center gap-1.5 disabled:opacity-50"
+                          >
+                            <PackageCheck className="w-3.5 h-3.5" />
+                            <span>
+                              {isThisRowFulfilling
+                                ? "Shipping..."
+                                : "Mark as Shipped"}
+                            </span>
+                          </Button>
+                        ) : (
+                          <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-600 pr-2">
+                            Fulfillment Signed
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 }

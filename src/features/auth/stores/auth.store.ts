@@ -1,34 +1,23 @@
 import { create } from "zustand";
 
-import { Role } from "@/shared/auth/roles";
-import { getToken, setToken, clearToken } from "@/shared/lib/token";
-
-export type UserIdentity = {
-  id: string;
-  tenantId?: string;
-};
-
-type AuthState = {
+interface AuthState {
   token: string | null;
-  role: Role;
-  user: UserIdentity | null;
   setToken: (token: string | null) => void;
-  setRole: (role: Role) => void;
-  setUser: (user: UserIdentity | null) => void;
-};
+  clearToken: () => void;
+}
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: getToken(),
-  role: "viewer",
-  user: null,
+  token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
   setToken: (token) => {
     if (token) {
-      setToken(token);
+      localStorage.setItem("token", token);
     } else {
-      clearToken();
+      localStorage.removeItem("token");
     }
     set({ token });
   },
-  setRole: (role) => set({ role }),
-  setUser: (user) => set({ user }),
+  clearToken: () => {
+    localStorage.removeItem("token");
+    set({ token: null });
+  },
 }));
