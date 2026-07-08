@@ -1,10 +1,16 @@
 "use client";
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Card } from "@/shared/components/ui/Card";
 import { Store, UploadCloud, CheckCircle2 } from "lucide-react";
 import { MapSelection } from "./MapSelection";
 import { Button } from "@/shared/components/ui/Button";
+import { useS3AssetUpload } from "@/shared/hooks/useS3AssetUpload";
+import { submitOnboarding } from "../api/onboarding.client";
+
+type DocumentField = "govIdKey" | "mayorsPermitKey" | "dtiKey" | "tinKey";
 
 export default function StoreOnboardingForm({
   onComplete,
@@ -23,8 +29,44 @@ export default function StoreOnboardingForm({
     tinKey: "",
   });
 
-  const [uploadingField, setUploadingField] = useState<string | null>(null);
   const [isDone, setIsDone] = useState(false);
+
+  // One mutation instance per document slot — useS3AssetUpload already owns
+  // its own onSuccess/onError (with toasts), so each upload's error handling
+  // lives in one place instead of being re-implemented per form.
+  const govIdUpload = useS3AssetUpload();
+  const mayorsPermitUpload = useS3AssetUpload();
+  const dtiUpload = useS3AssetUpload();
+  const tinUpload = useS3AssetUpload();
+
+  const uploadsByField: Record<DocumentField, typeof govIdUpload> = {
+    govIdKey: govIdUpload,
+    mayorsPermitKey: mayorsPermitUpload,
+    dtiKey: dtiUpload,
+    tinKey: tinUpload,
+  };
+  // Derived from the mutations themselves rather than a separate piece of
+  // state, so "which upload is in flight" can never drift out of sync with
+  // what's actually pending.
+  const uploadingField = (Object.keys(uploadsByField) as DocumentField[]).find(
+    (field) => uploadsByField[field].isPending,
+  );
+
+  const onboardMutation = useMutation({
+    mutationFn: submitOnboarding,
+    onSuccess: () => {
+      setIsDone(true);
+      // Give the confirmation card a moment on screen before routing away.
+      setTimeout(onComplete, 1500);
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Could not submit onboarding data. Please try again.",
+      );
+    },
+  });
 
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -36,74 +78,22 @@ export default function StoreOnboardingForm({
     setFormData((prev) => ({ ...prev, lat, lng }));
   };
 
-  // 🌐 Production AWS S3 Binary Stream Handler via Presigned URLs
-  const handleFileUpload = async (
+  const handleFileUpload = (
     e: ChangeEvent<HTMLInputElement>,
-    fieldName: string,
+    fieldName: DocumentField,
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingField(fieldName);
-
-    try {
-      // 1. Request secure authorization ticket from your backend routing node
-      const ticketResponse = await fetch("/api/onboarding/presigned-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileType: file.type,
-          fieldTarget: fieldName,
-        }),
-      });
-
-      if (!ticketResponse.ok)
-        throw new Error("Failed to secure upload authorization ticket.");
-
-      const { url, s3Key } = await ticketResponse.json();
-
-      // 2. Stream binary file payload directly to your private AWS S3 cloud bucket
-      const s3Upload = await fetch(url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-
-      if (!s3Upload.ok) throw new Error("S3 binary asset streaming rejected.");
-
-      // 3. Bind permanent path key to state matrix for final database assignment
-      setFormData((prev) => ({
-        ...prev,
-        [fieldName]: s3Key,
-      }));
-
-      console.log(`Asset successfully written to secure node path: ${s3Key}`);
-    } catch (err) {
-      console.error("Secure file stream upload failed:", err);
-    } finally {
-      setUploadingField(null);
-    }
+    uploadsByField[fieldName].mutate(file, {
+      onSuccess: (data) =>
+        setFormData((prev) => ({ ...prev, [fieldName]: data.fileKey })),
+    });
   };
 
-  const handleOnboardSubmit = async (e: FormEvent) => {
+  const handleOnboardSubmit = (e: FormEvent) => {
     e.preventDefault();
-    setIsDone(true);
-
-    // This payload passes clean strings, map coordinates, and secure S3 asset pointers
-    console.log("Submitting Production Payload Structure:", formData);
-
-    try {
-      // Optional: Connect final form text/pointer validation payload to your main DB API here
-      // await fetch('/api/onboarding/submit', { method: 'POST', body: JSON.stringify(formData) });
-
-      setTimeout(() => {
-        onComplete();
-      }, 1500);
-    } catch (err) {
-      console.error("Final onboarding database validation mismatch:", err);
-      setIsDone(false);
-    }
+    onboardMutation.mutate(formData);
   };
 
   if (isDone) {
@@ -234,7 +224,7 @@ export default function StoreOnboardingForm({
                     accept="image/*,.pdf"
                     onChange={(e) => handleFileUpload(e, "govIdKey")}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                    disabled={uploadingField !== null}
+                    disabled={Boolean(uploadingField)}
                   />
                   <div className="text-center text-[11px] text-zinc-500 flex items-center gap-2">
                     <UploadCloud className="w-4 h-4 text-zinc-400" />
@@ -264,7 +254,7 @@ export default function StoreOnboardingForm({
                     accept="image/*,.pdf"
                     onChange={(e) => handleFileUpload(e, "mayorsPermitKey")}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                    disabled={uploadingField !== null}
+                    disabled={Boolean(uploadingField)}
                   />
                   <div className="text-center text-[11px] text-zinc-500 flex items-center gap-2">
                     <UploadCloud className="w-4 h-4 text-zinc-400" />
@@ -294,7 +284,7 @@ export default function StoreOnboardingForm({
                     accept="image/*,.pdf"
                     onChange={(e) => handleFileUpload(e, "dtiKey")}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                    disabled={uploadingField !== null}
+                    disabled={Boolean(uploadingField)}
                   />
                   <div className="text-center text-[11px] text-zinc-500 flex items-center gap-2">
                     <UploadCloud className="w-4 h-4 text-zinc-400" />
@@ -324,7 +314,7 @@ export default function StoreOnboardingForm({
                     accept="image/*,.pdf"
                     onChange={(e) => handleFileUpload(e, "tinKey")}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                    disabled={uploadingField !== null}
+                    disabled={Boolean(uploadingField)}
                   />
                   <div className="text-center text-[11px] text-zinc-500 flex items-center gap-2">
                     <UploadCloud className="w-4 h-4 text-zinc-400" />
@@ -345,10 +335,13 @@ export default function StoreOnboardingForm({
             type="submit"
             variant="primary"
             fullWidth
-            disabled={uploadingField !== null}
+            disabled={Boolean(uploadingField) || onboardMutation.isPending}
+            isLoading={onboardMutation.isPending}
             className="!h-11 mt-4 text-xs font-bold rounded-xl"
           >
-            Submit Store Onboarding Data
+            {onboardMutation.isPending
+              ? "Submitting..."
+              : "Submit Store Onboarding Data"}
           </Button>
         </form>
       </Card>

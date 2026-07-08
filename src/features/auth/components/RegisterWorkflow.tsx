@@ -1,8 +1,11 @@
 "use client";
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/shared/components/ui/Card";
 import { User, ShieldCheck, Mail, Smartphone } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import type { UserRole as ApiUserRole } from "../api/login.api";
 
 type AuthStep =
   | "ROLE_SELECT"
@@ -29,7 +32,8 @@ export default function RegisterWorkflow({
   });
 
   const [verificationCode, setVerificationCode] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const { register, isRegistering } = useAuth();
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,22 +44,34 @@ export default function RegisterWorkflow({
     setStep("FIELDS_FORM");
   };
 
-  const handleRegisterSubmit = (e: FormEvent) => {
+  const handleRegisterSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    // Simulate API registration call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    if (!role) return;
+
+    try {
+      await register(
+        {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+          phone: `${formData.countryCode}${formData.phoneNumber}`,
+        },
+        role.toUpperCase() as ApiUserRole,
+      );
       setStep("EMAIL_VERIFY");
-    }, 1200);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Registration failed. Try again.",
+      );
+    }
   };
 
   const handleVerifyEmail = (e: FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    // Simulate JWT/OTP validation backend side
+    setIsVerifying(true);
     setTimeout(() => {
-      setIsSubmitting(false);
+      setIsVerifying(false);
       if (role === "buyer") {
         setStep("BUYER_APP_PROMPT");
       } else {
@@ -66,7 +82,6 @@ export default function RegisterWorkflow({
 
   return (
     <div className="max-w-md w-full mx-auto p-4 text-left">
-      {/* STEP 1: ROLE SELECTION GATEWAY */}
       {step === "ROLE_SELECT" && (
         <Card className="p-6 space-y-4">
           <div className="text-center">
@@ -120,7 +135,6 @@ export default function RegisterWorkflow({
         </Card>
       )}
 
-      {/* STEP 2: PROFILE FIELDS REGISTRATION DATA FORM */}
       {step === "FIELDS_FORM" && (
         <Card className="p-6">
           <div className="mb-4">
@@ -230,10 +244,10 @@ export default function RegisterWorkflow({
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isRegistering}
               className="w-full mt-2 py-2 text-xs font-bold rounded-xl text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              {isSubmitting
+              {isRegistering
                 ? "Generating Credentials..."
                 : "Continue Verification"}
             </button>
@@ -241,7 +255,6 @@ export default function RegisterWorkflow({
         </Card>
       )}
 
-      {/* STEP 3: OTP EMAIL VERIFICATION PORTAL */}
       {step === "EMAIL_VERIFY" && (
         <Card className="p-6 text-center space-y-4">
           <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center mx-auto">
@@ -269,16 +282,15 @@ export default function RegisterWorkflow({
             />
             <button
               type="submit"
-              disabled={isSubmitting || verificationCode.length < 6}
+              disabled={isVerifying || verificationCode.length < 6}
               className="w-full py-2 text-xs font-bold rounded-xl text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 disabled:opacity-50"
             >
-              {isSubmitting ? "Validating Secure Hash..." : "Verify Token"}
+              {isVerifying ? "Validating Secure Hash..." : "Verify Token"}
             </button>
           </form>
         </Card>
       )}
 
-      {/* STEP 4: BUYER MOBILE APP APP-STORE DOWNLOAD PROMPT */}
       {step === "BUYER_APP_PROMPT" && (
         <Card className="p-6 text-center space-y-4 py-8 animate-in fade-in duration-300">
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 flex items-center justify-center mx-auto">

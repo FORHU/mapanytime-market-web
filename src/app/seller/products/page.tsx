@@ -18,9 +18,8 @@ export default function ProductsPage() {
       setIsFormOpen(false); // Callback triggered on mutation success
     });
 
-  const handleAddProductSuccess = (newProduct: ProductItem) => {
+  const handleAddProductSuccess = (newProduct: ProductItem) =>
     addProduct(newProduct);
-  };
 
   return (
     <div className="space-y-6">

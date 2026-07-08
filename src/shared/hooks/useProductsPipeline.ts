@@ -77,7 +77,10 @@ export const useProductsPipeline = (onMutationSuccess?: () => void) => {
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,
-    addProduct: addProductMutation.mutate,
+    // mutateAsync (not mutate) so callers that need to know whether the
+    // create actually succeeded — e.g. ProductForm, before it closes itself
+    // — can await it instead of firing-and-forgetting.
+    addProduct: addProductMutation.mutateAsync,
     isAdding: addProductMutation.isPending,
   };
 };

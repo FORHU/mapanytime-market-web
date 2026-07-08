@@ -6,7 +6,6 @@ import {
 } from "@/shared/types/upload";
 
 const executeCloudUpload = async (file: File): Promise<UploadSuccessResult> => {
-  // 1. Grab secure transient upload URL token from our Next server handler
   const ticketRes = await fetch(
     `/api/s3-upload?filename=${encodeURIComponent(file.name)}&contentType=${file.type}`,
   );
@@ -15,7 +14,6 @@ const executeCloudUpload = async (file: File): Promise<UploadSuccessResult> => {
 
   const { url, fileKey }: PresignedUrlResponse = await ticketRes.json();
 
-  // 2. Perform the direct, un-proxied binary stream upload to S3
   const transferRes = await fetch(url, {
     method: "PUT",
     headers: { "Content-Type": file.type },

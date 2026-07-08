@@ -13,7 +13,10 @@
  * functions below is the only change needed if you keep a client-side store.
  */
 
-const TOKEN_KEY = "auth_token";
+// Must match the key every feature's legacy fetch calls already read directly
+// (localStorage.getItem("token")) — changing this without updating every call
+// site would silently break auth everywhere at once.
+const TOKEN_KEY = "token";
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;

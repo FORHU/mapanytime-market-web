@@ -3,8 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-// ✅ FIXED: Relative route mapping straight to the unified store file inside the api folder
-import { useAuthStore } from "../api/auth.api";
+import { useAuthStore } from "../stores/auth.store";
 
 export function AuthListener() {
   const router = useRouter();

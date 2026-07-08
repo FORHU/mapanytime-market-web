@@ -1,14 +1,16 @@
 "use client";
 
 import React, { useState, FormEvent } from "react";
+import { toast } from "sonner";
 import { Button } from "@/shared/components/ui/Button";
 import {
   ProductFormCore,
   ProductFormValues,
 } from "@/features/seller-catalog/components/ProductFormCore";
+import type { ProductItem } from "@/shared/hooks/useProductsPipeline";
 
 interface ProductFormProps {
-  onSuccess: (newProduct: any) => void;
+  onSuccess: (newProduct: ProductItem) => Promise<ProductItem>;
   closeForm: () => void; // ✅ Added prop to close the window on submit
 }
 
@@ -53,23 +55,12 @@ export default function ProductForm({
 
     setIsSubmitting(true);
     try {
-      const backendPayload = {
-        name: form.name,
-        brand: form.brand,
-        price: form.price,
-        description: form.description,
-        initialStock: form.stock,
-      };
-
-      console.log("Submitting dashboard payload:", backendPayload);
-
-      // 1. Send data up to update array list
-      onSuccess({
+      await onSuccess({
         ...form,
         price: form.price.toString(),
+        category: form.category ?? "Electronics",
       });
 
-      // 2. Clear out input state fields
       setForm({
         name: "",
         brand: "",
@@ -78,11 +69,13 @@ export default function ProductForm({
         stock: 0,
         category: "Electronics",
       });
-
-      // 3. ✅ Hide the form window completely
       closeForm();
     } catch (err) {
-      console.error("Dashboard catalog insertion error:", err);
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Could not add product. Try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }

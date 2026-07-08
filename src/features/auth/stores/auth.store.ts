@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { getToken, setToken, clearToken } from "@/shared/lib/token";
 
 interface AuthState {
   token: string | null;
@@ -6,18 +7,20 @@ interface AuthState {
   clearToken: () => void;
 }
 
+/**
+ * Reactive (Zustand) view over the same persisted token shared/lib/http.ts
+ * reads. Persistence itself always goes through shared/lib/token.ts so the
+ * two can never drift onto different storage keys again.
+ */
 export const useAuthStore = create<AuthState>((set) => ({
-  token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
+  token: getToken(),
   setToken: (token) => {
-    if (token) {
-      localStorage.setItem("token", token);
-    } else {
-      localStorage.removeItem("token");
-    }
+    if (token) setToken(token);
+    else clearToken();
     set({ token });
   },
   clearToken: () => {
-    localStorage.removeItem("token");
+    clearToken();
     set({ token: null });
   },
 }));

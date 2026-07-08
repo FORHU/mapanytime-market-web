@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, ChangeEvent } from "react";
-import { useS3AssetUpload } from "../hooks/useS3AssetUpload";
+import { useS3AssetUpload } from "@/shared/hooks/useS3AssetUpload";
 import { Button } from "@/shared/components/ui/Button";
 import { Camera } from "lucide-react";
 
