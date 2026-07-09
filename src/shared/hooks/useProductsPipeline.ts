@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { API_BASE_URL } from "@/shared/config/api";
 // import { io } from "socket.io-client"; // Commented out until backend is ready
 
 export interface ProductItem {
@@ -17,14 +18,14 @@ const PRODUCTS_QUERY_KEY = ["products"];
 
 const fetchProducts = async (): Promise<ProductItem[]> => {
   if (!USE_LIVE_BACKEND) return Promise.resolve([]);
-  const response = await fetch("http://localhost:4000/api/seller/products");
+  const response = await fetch(`${API_BASE_URL}/api/seller/products`);
   if (!response.ok) throw new Error("Failed to pull live catalog listings.");
   return response.json();
 };
 
 const createProduct = async (newProduct: ProductItem): Promise<ProductItem> => {
   if (!USE_LIVE_BACKEND) return Promise.resolve(newProduct);
-  const response = await fetch("http://localhost:4000/api/seller/products", {
+  const response = await fetch(`${API_BASE_URL}/api/seller/products`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(newProduct),
