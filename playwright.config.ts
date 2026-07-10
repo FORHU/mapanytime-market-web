@@ -32,7 +32,7 @@ export default defineConfig({
   // Auto-starts the dev server before tests if not already running.
   // Comment this out if you prefer to run `pnpm dev` manually first.
   webServer: {
-    command: "npx pnpm dev",
+    command: "pnpm dev",
     url: "http://localhost:4000",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

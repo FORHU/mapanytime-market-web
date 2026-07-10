@@ -43,4 +43,5 @@ next-env.d.ts
 .claude/
 graphify-out/
 playwright-report/
+test-results/playwright-report/
 test-results/
