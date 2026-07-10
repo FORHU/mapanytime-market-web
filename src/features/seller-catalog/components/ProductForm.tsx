@@ -6,7 +6,7 @@ import { Button } from "@/shared/components/ui/Button";
 import {
   ProductFormCore,
   ProductFormValues,
-} from "@/features/seller-catalog/components/ProductFormCore";
+} from "@/shared/components/forms/ProductFormCore";
 import type { ProductItem } from "@/shared/hooks/useProductsPipeline";
 
 interface ProductFormProps {

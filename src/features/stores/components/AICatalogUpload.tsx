@@ -4,11 +4,10 @@ import React, { useState, ChangeEvent, FormEvent, DragEvent } from "react";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { FormSkeleton } from "./FormSkeleton";
-// ✅ FIXED: Corrected import target location using absolute path configurations
 import {
   ProductFormCore,
   ProductFormValues,
-} from "@/features/seller-catalog/components/ProductFormCore";
+} from "@/shared/components/forms/ProductFormCore";
 import { uploadAIImage } from "./aiServiceLocal";
 import { UploadCloud, Sparkles, ShoppingBag, CheckCircle2 } from "lucide-react";
 

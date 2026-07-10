@@ -7,7 +7,7 @@ import { FormSkeleton } from "@/features/stores/components/FormSkeleton";
 import {
   ProductFormCore,
   ProductFormValues,
-} from "@/features/seller-catalog/components/ProductFormCore";
+} from "@/shared/components/forms/ProductFormCore";
 import { uploadAIImage } from "@/features/stores/components/aiServiceLocal";
 import { UploadCloud, Sparkles, ShoppingBag, CheckCircle2 } from "lucide-react";
 
