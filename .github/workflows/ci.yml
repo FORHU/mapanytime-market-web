@@ -44,6 +44,19 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Verify ProductFormCore imports
+        run: |
+          echo "Current commit:"
+          git rev-parse HEAD
+
+          echo ""
+          echo "Searching for old import..."
+          grep -R "seller-catalog/components/ProductFormCore" src || true
+
+          echo ""
+          echo "Showing AICatalogUpload imports..."
+          grep "ProductFormCore" src/features/stores/components/AICatalogUpload.tsx
+
       - name: Validate architecture boundaries
         run: pnpm validate
 
