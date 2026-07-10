@@ -12,15 +12,41 @@ export interface OrderRecord {
   createdAt: string;
 }
 
+export interface OrdersPipelineParams {
+  search?: string;
+  status?: string;
+  sortAsc?: boolean;
+  page?: number;
+  limit?: number;
+}
+
 export const ORDERS_QUERY_KEY = ["orders"];
 
-export const useOrdersPipeline = () => {
+export const useOrdersPipeline = (params: OrdersPipelineParams = {}) => {
+  const {
+    search = "",
+    status = "ALL",
+    sortAsc = false,
+    page = 1,
+    limit = 20,
+  } = params;
   const queryClient = useQueryClient();
+  const queryKey = [
+    ...ORDERS_QUERY_KEY,
+    { search, status, sortAsc, page, limit },
+  ];
 
   const query = useQuery<OrderRecord[], Error>({
-    queryKey: ORDERS_QUERY_KEY,
+    queryKey,
     queryFn: async () => {
-      const res = await fetch("/api/orders");
+      const searchParams = new URLSearchParams({
+        search,
+        status,
+        sort: sortAsc ? "asc" : "desc",
+        page: String(page),
+        limit: String(limit),
+      });
+      const res = await fetch(`/api/orders?${searchParams.toString()}`);
       if (!res.ok) throw new Error("Server engine stream delivery faulted.");
       return res.json();
     },
@@ -61,11 +87,10 @@ export const useOrdersPipeline = () => {
       return response.json();
     },
     onMutate: async (orderId) => {
-      await queryClient.cancelQueries({ queryKey: ORDERS_QUERY_KEY });
-      const previousOrders =
-        queryClient.getQueryData<OrderRecord[]>(ORDERS_QUERY_KEY);
+      await queryClient.cancelQueries({ queryKey });
+      const previousOrders = queryClient.getQueryData<OrderRecord[]>(queryKey);
 
-      queryClient.setQueryData<OrderRecord[]>(ORDERS_QUERY_KEY, (old) => {
+      queryClient.setQueryData<OrderRecord[]>(queryKey, (old) => {
         return old?.map((order) => {
           if (order.id === orderId && order.status === "PENDING") {
             return {
@@ -81,7 +106,7 @@ export const useOrdersPipeline = () => {
     },
     onError: (err, orderId, context) => {
       if (context?.previousOrders) {
-        queryClient.setQueryData(ORDERS_QUERY_KEY, context.previousOrders);
+        queryClient.setQueryData(queryKey, context.previousOrders);
       }
     },
     onSettled: () => {

@@ -1,12 +1,9 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
-import {
-  useOrdersPipeline,
-  OrderRecord,
-} from "@/shared/hooks/useOrdersPipeline";
+import { useOrdersPipeline } from "@/shared/hooks/useOrdersPipeline";
 import {
   PackageCheck,
   Search,
@@ -18,6 +15,10 @@ import {
 } from "lucide-react";
 
 export default function OrderInventoryMatrix() {
+  const [skuSearch, setSkuSearch] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [sortAsc, setSortAsc] = useState<boolean>(false);
+
   const {
     orders,
     isLoading,
@@ -26,11 +27,11 @@ export default function OrderInventoryMatrix() {
     isMutationPending,
     mutationVariables,
     forceManualRefresh,
-  } = useOrdersPipeline();
-
-  const [skuSearch, setSkuSearch] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [sortAsc, setSortAsc] = useState<boolean>(false);
+  } = useOrdersPipeline({
+    search: skuSearch,
+    status: statusFilter,
+    sortAsc,
+  });
 
   const handleFulfillOrderOptimistic = useCallback(
     (orderId: string) => {
@@ -38,23 +39,6 @@ export default function OrderInventoryMatrix() {
     },
     [fulfillOrder],
   );
-
-  const processedOrders = useMemo<OrderRecord[]>(() => {
-    return orders
-      .filter((order) => {
-        const matchesSku = order.sku
-          .toLowerCase()
-          .includes(skuSearch.toLowerCase().trim());
-        const matchesStatus =
-          statusFilter === "ALL" || order.status === statusFilter;
-        return matchesSku && matchesStatus;
-      })
-      .sort((a, b) => {
-        const timeA = new Date(a.createdAt).getTime();
-        const timeB = new Date(b.createdAt).getTime();
-        return sortAsc ? timeA - timeB : timeB - timeA;
-      });
-  }, [orders, skuSearch, statusFilter, sortAsc]);
 
   if (error) {
     return (
@@ -158,7 +142,7 @@ export default function OrderInventoryMatrix() {
                     </td>
                   </tr>
                 ))
-              ) : processedOrders.length === 0 ? (
+              ) : orders.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}
@@ -170,7 +154,7 @@ export default function OrderInventoryMatrix() {
                   </td>
                 </tr>
               ) : (
-                processedOrders.map((order) => {
+                orders.map((order) => {
                   const isThisRowFulfilling =
                     isMutationPending && mutationVariables === order.id;
 

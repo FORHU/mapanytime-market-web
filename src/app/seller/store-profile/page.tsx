@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Card } from "@/shared/components/ui/Card";
 import {
   Store,
@@ -13,7 +13,7 @@ import {
 
 export default function StoreProfilePage() {
   // Mock data representing the currently active store from your header state
-  const [storeInfo] = useState({
+  const storeInfo = {
     name: "MapCentral Groceries Node Alpha",
     id: "STR-NODE-9921",
     email: "ops@mapcentralgroceries.io",
@@ -21,7 +21,7 @@ export default function StoreProfilePage() {
     address: "742 Evergreen Terrace, Sector 7G",
     joinedDate: "October 14, 2025",
     status: "Active & Synced",
-  });
+  };
 
   return (
     <div className="space-y-6 text-left max-w-4xl mx-auto pt-4">

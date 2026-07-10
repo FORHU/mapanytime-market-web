@@ -16,17 +16,50 @@ export default function SettingsPage() {
     notifyOnLowStock: true,
   });
 
-  const handleSaveSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const settingsApi = async () => {
     setIsSubmitting(true);
-    try {
-      console.log("Saving store-isolated configurations to DB node:", settings);
-      // await axios.patch('/api/stores/settings', settings);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSubmitting(false);
-    }
+
+    console.log("Saving store-isolated configurations to DB node:", settings);
+    // await axios.patch('/api/stores/settings', settings);
+
+    setIsSubmitting(false);
+  };
+
+  const handleSaveSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    settingsApi();
+  };
+
+  const handleDiscoveryRadiusChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    setSettings((prev) => ({
+      ...prev,
+      discoveryRadius: Number(e.target.value),
+    }));
+  };
+
+  const handleLocalTaxRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSettings((prev) => ({
+      ...prev,
+      localTaxRate: Number(e.target.value),
+    }));
+  };
+
+  const handleInstantCheckoutToggle = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    setSettings((prev) => ({
+      ...prev,
+      allowInstantCheckout: e.target.checked,
+    }));
+  };
+
+  const handleLowStockToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSettings((prev) => ({
+      ...prev,
+      notifyOnLowStock: e.target.checked,
+    }));
   };
 
   return (
@@ -59,12 +92,7 @@ export default function SettingsPage() {
                 max="25"
                 step="0.5"
                 value={settings.discoveryRadius}
-                onChange={(e) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    discoveryRadius: Number(e.target.value),
-                  }))
-                }
+                onChange={handleDiscoveryRadiusChange}
                 className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[var(--brand-core)]"
               />
             </div>
@@ -84,12 +112,7 @@ export default function SettingsPage() {
                 type="number"
                 step="0.01"
                 value={settings.localTaxRate}
-                onChange={(e) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    localTaxRate: Number(e.target.value),
-                  }))
-                }
+                onChange={handleLocalTaxRateChange}
                 className="w-full px-3 py-2 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-all border-[var(--border-light)] text-[var(--text-primary)]"
               />
             </div>
@@ -114,12 +137,7 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={settings.allowInstantCheckout}
-                onChange={(e) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    allowInstantCheckout: e.target.checked,
-                  }))
-                }
+                onChange={handleInstantCheckoutToggle}
                 className="w-4 h-4 rounded text-[var(--brand-core)] bg-transparent border-zinc-300 focus:ring-[var(--brand-core)] cursor-pointer"
               />
             </div>
@@ -136,12 +154,7 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={settings.notifyOnLowStock}
-                onChange={(e) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    notifyOnLowStock: e.target.checked,
-                  }))
-                }
+                onChange={handleLowStockToggle}
                 className="w-4 h-4 rounded text-[var(--brand-core)] bg-transparent border-zinc-300 focus:ring-[var(--brand-core)] cursor-pointer"
               />
             </div>

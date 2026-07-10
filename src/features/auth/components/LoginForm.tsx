@@ -22,14 +22,12 @@ export default function LoginForm({
     e.preventDefault();
     setIsSubmitting(true);
 
-    // ⚡ Simulating Authentication Service Execution Chain
-    setTimeout(() => {
-      setIsSubmitting(false);
-      console.log("Authenticated Secure Parameters:", credentials);
+    console.log("Authenticated Secure Parameters:", credentials);
 
-      // Simulated role extraction from JWT claims (Hardcoded to seller for dashboard routing)
-      onLoginSuccess("seller");
-    }, 1200);
+    // Simulated role extraction from JWT claims (Hardcoded to seller for dashboard routing)
+    onLoginSuccess("seller");
+
+    setIsSubmitting(false);
   };
 
   return (
