@@ -1,0 +1,172 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy Production Environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    environment:
+      name: production
+
+    env:
+      NEXT_PUBLIC_APP_ENV: production
+      NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+      NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+      ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+      IMAGE_TAG: production-${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
+            --build-arg NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
+            --build-arg NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
+            --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN="$NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN" \
+            -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
+            -t "$ECR_REGISTRY/$ECR_REPOSITORY:production-latest" \
+            .
+
+      - name: Push image to ECR
+        run: |
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:production-latest"
+
+      # Pull / stop / remove / run / cleanup all happen inside one SSH session
+      # so the deploy script can share shell state (the health-check result)
+      # across those sub-steps — splitting them into separate ssh-action
+      # steps would reconnect SSH each time and lose that shared state.
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+
+          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV
+
+          script: |
+            set -euo pipefail
+
+            IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+            CONTAINER="frontend-production"
+            NEW_CONTAINER="frontend-production-new"
+
+            HEALTH_PORT=3001
+
+            # Amazon ECR Login — the EC2 host authenticates independently of
+            # the GitHub Actions runner (requires its own IAM instance role).
+            aws ecr get-login-password \
+              --region "$AWS_REGION" \
+              | docker login \
+              --username AWS \
+              --password-stdin "$ECR_REGISTRY"
+
+            # Docker Pull
+            docker pull "$IMAGE"
+
+            docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
+
+            # Docker Run — new container on a temporary port for health-checking
+            docker run -d \
+              --name "$NEW_CONTAINER" \
+              -p "$HEALTH_PORT:3000" \
+              -e NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
+              -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
+              -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
+              "$IMAGE"
+
+            healthy=false
+
+            for i in $(seq 1 10)
+            do
+              if curl -fs "http://localhost:$HEALTH_PORT/" > /dev/null
+              then
+                healthy=true
+                break
+              fi
+
+              sleep 3
+            done
+
+            if [ "$healthy" != "true" ]
+            then
+              echo "Deployment failed — health check never passed"
+
+              docker logs "$NEW_CONTAINER" || true
+
+              docker rm -f "$NEW_CONTAINER" || true
+
+              exit 1
+            fi
+
+            # Docker Stop + Docker Remove — old container comes down only
+            # after the new image has proven healthy
+            docker rm -f "$CONTAINER" 2>/dev/null || true
+
+            docker rm -f "$NEW_CONTAINER"
+
+            # Docker Run — promote the image to the real port
+            docker run -d \
+              --name "$CONTAINER" \
+              -p 3000:3000 \
+              --restart unless-stopped \
+              -e NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
+              -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
+              -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
+              "$IMAGE"
+
+            sleep 2
+
+            curl -fs http://localhost:3000/ > /dev/null
+
+            # Docker Image Cleanup — drop dangling layers from the old image
+            docker image prune -f

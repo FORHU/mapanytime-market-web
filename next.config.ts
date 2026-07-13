@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Standalone output produces a self-contained server bundle
+  // (.next/standalone) used by the production Dockerfile.
+  output: "standalone",
   // Keep your local network development origins intact
   allowedDevOrigins: ["localhost:3000", "192.168.100.9:3000"],
 

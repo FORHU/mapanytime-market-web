@@ -1,11 +1,14 @@
 name: CI
 
 on:
+  workflow_dispatch:
+
   pull_request:
+
   push:
     branches:
+      - staging
       - main
-      - develop
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -15,13 +18,15 @@ permissions:
   contents: read
 
 jobs:
-  quality:
-    name: Type Check, Lint, Validate, Test, Build
+  build:
+    name: Build and Validate
     runs-on: ubuntu-latest
+
     env:
       NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
       NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
       NEXT_PUBLIC_APP_ENV: staging
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,24 +43,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type check
-        run: pnpm type-check
-
+      # Fast, cheap checks first so a failure here gives quick feedback
+      # without paying for a full production build.
       - name: Lint
         run: pnpm lint
 
-      - name: Verify ProductFormCore imports
-        run: |
-          echo "Current commit:"
-          git rev-parse HEAD
-
-          echo ""
-          echo "Searching for old import..."
-          grep -R "seller-catalog/components/ProductFormCore" src || true
-
-          echo ""
-          echo "Showing AICatalogUpload imports..."
-          grep "ProductFormCore" src/features/stores/components/AICatalogUpload.tsx
+      - name: Type check
+        run: pnpm type-check
 
       - name: Validate architecture boundaries
         run: pnpm validate
@@ -63,5 +57,6 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      # Build runs last, once, only after every cheaper check has passed.
       - name: Build
         run: pnpm build
