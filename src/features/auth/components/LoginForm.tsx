@@ -22,8 +22,6 @@ export default function LoginForm({
     e.preventDefault();
     setIsSubmitting(true);
 
-    console.log("Authenticated Secure Parameters:", credentials);
-
     // Simulated role extraction from JWT claims (Hardcoded to seller for dashboard routing)
     onLoginSuccess("seller");
 
@@ -45,7 +43,6 @@ export default function LoginForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Email Address */}
         <div className="space-y-1">
           <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
             Email Address

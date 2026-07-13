@@ -20,6 +20,7 @@ concurrency:
 permissions:
   contents: read
   security-events: write
+  actions: read
 
 jobs:
   dependency-scan:
@@ -32,24 +33,42 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Audit dependencies
-        run: pnpm audit --audit-level=high
-        continue-on-error: true
+      # Only audit packages shipped to production.
+      # Storybook, ESLint, Vite, Playwright are development tools.
+      - name: Production Dependency Audit
+        run: pnpm audit --prod --audit-level=high
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'pull_request'
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
 
   codeql:
     name: CodeQL Analysis
+
     runs-on: ubuntu-latest
 
     steps:
@@ -60,6 +79,9 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4
