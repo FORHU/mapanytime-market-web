@@ -21,9 +21,15 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   isLocked?: boolean;
+  onSignOut: () => void;
 }
 
-export function Sidebar({ isOpen, onClose, isLocked = false }: SidebarProps) {
+export function Sidebar({
+  isOpen,
+  onClose,
+  isLocked = false,
+  onSignOut,
+}: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -40,13 +46,16 @@ export function Sidebar({ isOpen, onClose, isLocked = false }: SidebarProps) {
     { label: "System Settings", href: "/seller/settings", icon: Settings },
   ];
 
-  // ✅ RESTORED: Core route navigation dispatcher function
   const handleNavigation = (href: string) => {
     router.push(href);
-    onClose(); // Automatically drops mobile modal drawers on trigger
+    onClose();
   };
 
-  // Dynamic conditional evaluation checking for active environment session tokens
+  const handleSignOutClick = () => {
+    onClose();
+    onSignOut();
+  };
+
   const visibleLinks = navigationLinks.filter((item) => {
     if (!isLocked && item.href === "/seller/manage-stores") {
       return false;
@@ -142,7 +151,7 @@ export function Sidebar({ isOpen, onClose, isLocked = false }: SidebarProps) {
           style={{ borderColor: "var(--border-light)" }}
         >
           <div
-            onClick={() => handleNavigation("/logout")}
+            onClick={handleSignOutClick}
             className={`${linkBaseClasses} cursor-pointer text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20`}
           >
             <LogOut className="w-4 h-4" />

@@ -5,16 +5,25 @@ import { Sidebar } from "./Sidebar";
 import { Menu, Sun, Moon, Lock, Unlock, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
-import { Button } from "../ui/Button"; // Reusable custom UI button module
+import { Button } from "../ui/Button";
 
-export function SellerLayout({ children }: { children: React.ReactNode }) {
+interface SellerLayoutProps {
+  children: React.ReactNode;
+  isAuthenticated: boolean;
+  onSignOut: () => void;
+}
+
+export function SellerLayout({
+  children,
+  isAuthenticated,
+  onSignOut,
+}: SellerLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
-  // 🔒 Multi-Tenant Environment Session Locks
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,13 +38,20 @@ export function SellerLayout({ children }: { children: React.ReactNode }) {
     router.push("/seller/manage-stores");
   };
 
-  const isLocked = !activeStoreId && pathname !== "/seller/manage-stores";
+  const isLocked =
+    !isAuthenticated ||
+    (!activeStoreId && pathname !== "/seller/manage-stores");
 
   useEffect(() => {
-    if (mounted && !activeStoreId && pathname !== "/seller/manage-stores") {
+    if (
+      mounted &&
+      isAuthenticated &&
+      !activeStoreId &&
+      pathname !== "/seller/manage-stores"
+    ) {
       router.push("/seller/manage-stores");
     }
-  }, [router, activeStoreId, pathname, mounted]);
+  }, [router, activeStoreId, pathname, mounted, isAuthenticated]);
 
   return (
     <div
@@ -46,6 +62,7 @@ export function SellerLayout({ children }: { children: React.ReactNode }) {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isLocked={!activeStoreId}
+        onSignOut={onSignOut}
       />
 
       <div className="flex-1 flex flex-col min-w-0">

@@ -1,31 +1,40 @@
 "use client";
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
+import { toast } from "sonner";
 import { Card } from "@/shared/components/ui/Card";
 import { LogIn, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "../hooks/useAuth";
+import type { UserRole as ApiUserRole } from "../api/login.api";
+
+type LoginRole = "buyer" | "seller";
 
 export default function LoginForm({
   onLoginSuccess,
 }: {
-  onLoginSuccess: (role: string) => void;
+  onLoginSuccess: (role: LoginRole) => void;
 }) {
+  const [role, setRole] = useState<LoginRole>("seller");
   const [credentials, setCredentials] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login, isLoggingIn } = useAuth();
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setCredentials({ ...credentials, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
-    // Simulated role extraction from JWT claims (Hardcoded to seller for dashboard routing)
-    onLoginSuccess("seller");
-
-    setIsSubmitting(false);
+    try {
+      await login(credentials, role.toUpperCase() as ApiUserRole);
+      onLoginSuccess(role);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Login failed. Try again.",
+      );
+    }
   };
 
   return (
@@ -40,6 +49,34 @@ export default function LoginForm({
         <p className="text-xs text-zinc-400 mt-0.5">
           Access your merchant portal or buyer credentials
         </p>
+      </div>
+
+      <div
+        className="grid grid-cols-2 gap-2 p-1 mb-5 rounded-xl border"
+        style={{ borderColor: "var(--border-light)" }}
+      >
+        <button
+          type="button"
+          onClick={() => setRole("seller")}
+          className={`py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors ${
+            role === "seller"
+              ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+              : "text-zinc-400"
+          }`}
+        >
+          Merchant
+        </button>
+        <button
+          type="button"
+          onClick={() => setRole("buyer")}
+          className={`py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors ${
+            role === "buyer"
+              ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+              : "text-zinc-400"
+          }`}
+        >
+          Buyer
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -62,7 +99,6 @@ export default function LoginForm({
           </div>
         </div>
 
-        {/* Password */}
         <div className="space-y-1">
           <div className="flex justify-between items-center">
             <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
@@ -103,10 +139,10 @@ export default function LoginForm({
 
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isLoggingIn}
           className="w-full py-2 mt-2 text-xs font-bold rounded-xl text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          {isSubmitting ? "Verifying Session..." : "Secure Sign In"}
+          {isLoggingIn ? "Verifying Session..." : "Secure Sign In"}
         </button>
       </form>
 
