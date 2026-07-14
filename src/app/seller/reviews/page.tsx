@@ -1,0 +1,26 @@
+"use client";
+
+import React from "react";
+import { Card, CardContent } from "@/shared/components/ui/Card";
+import { Star } from "lucide-react";
+
+export default function ReviewsPage() {
+  return (
+    <Card>
+      <CardContent className="p-12 text-center py-16">
+        <div className="flex justify-center gap-1 mb-3 text-zinc-300 dark:text-zinc-700">
+          {[...Array(5)].map((_, i) => (
+            <Star key={i} className="w-4 h-4 fill-current" />
+          ))}
+        </div>
+        <p
+          className="text-xs font-medium"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          No reviews logged yet. Customer input metrics appear following
+          successful store interactions.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}

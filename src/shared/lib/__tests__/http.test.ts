@@ -20,7 +20,7 @@ function mockNetworkFailure() {
 describe("fetcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
+    sessionStorage.clear();
   });
 
   afterEach(() => {
@@ -46,8 +46,8 @@ describe("fetcher", () => {
     expect(json).not.toHaveBeenCalled();
   });
 
-  it("attaches Authorization header when auth_token is in localStorage", async () => {
-    localStorage.setItem("auth_token", "test-token-123");
+  it("attaches Authorization header when a token is in sessionStorage", async () => {
+    sessionStorage.setItem("token", "test-token-123");
     mockFetch(200, {});
     await fetcher("/api/users");
 

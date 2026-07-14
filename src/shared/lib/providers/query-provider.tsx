@@ -11,7 +11,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { routeError } from "@/shared/errors/error-router";
 import { getRetryCount } from "@/shared/errors/retry-policy";
-import { logError } from "@/shared/errors/use-error-telemetry";
+import { logError } from "@/shared/errors/error-telemetry";
 
 export default function QueryProvider({
   children,

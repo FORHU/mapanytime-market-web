@@ -1,17 +1,27 @@
-// src/shared/components/index.tsx
-
-// UI Atom Elements
-export * from "./ui/CustomButton";
-export * from "./ui/CustomInput";
+// ============================================================================
+// 1. UI ATOM ELEMENTS
+// ============================================================================
 export * from "./ui/Card";
-export * from "./ui/Badge";
-export * from "./ui/Skeleton";
-export * from "./ui/Snackbar";
-export * from "./ui/NotificationProvider";
-export * from "./ui/FormField";
+export * from "./ui/Grid";
+export * from "./ui/PageHeader";
+export * from "./ui/StatusPill";
+export * from "./Skeleton";
 
-// Structural Layouts
-export * from "./layout/AuthLayout";
+// Temporarily bypassed atom blocks to keep the build safe during migration
+// export * from "./ui/Snackbar";
+// export * from "./ui/NotificationProvider";
+// export * from "./ui/FormField";
 
-// Business Features Layer
-export { default as StorePickerMap } from "./features/StorePickerMap"; // ◄ Add this exact line!
+// ============================================================================
+// 2. STRUCTURAL LAYOUTS
+// ============================================================================
+export { SellerLayout } from "./layout/SellerLayout";
+export { Sidebar } from "./layout/Sidebar";
+
+// ============================================================================
+// 3. BUSINESS FEATURES LAYER
+// ============================================================================
+// 🔥 REMOVED: Feature-specific elements have been safely decoupled from here.
+// They now live isolated inside their own public feature modules:
+// - Login flow -> @/features/auth
+// - Onboarding and Mapbox nodes -> @/features/stores

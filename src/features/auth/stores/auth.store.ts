@@ -1,34 +1,26 @@
 import { create } from "zustand";
-
-import { Role } from "@/shared/auth/roles";
 import { getToken, setToken, clearToken } from "@/shared/lib/token";
 
-export type UserIdentity = {
-  id: string;
-  tenantId?: string;
-};
-
-type AuthState = {
+interface AuthState {
   token: string | null;
-  role: Role;
-  user: UserIdentity | null;
   setToken: (token: string | null) => void;
-  setRole: (role: Role) => void;
-  setUser: (user: UserIdentity | null) => void;
-};
+  clearToken: () => void;
+}
 
+/**
+ * Reactive (Zustand) view over the same persisted token shared/lib/http.ts
+ * reads. Persistence itself always goes through shared/lib/token.ts so the
+ * two can never drift onto different storage keys again.
+ */
 export const useAuthStore = create<AuthState>((set) => ({
   token: getToken(),
-  role: "viewer",
-  user: null,
   setToken: (token) => {
-    if (token) {
-      setToken(token);
-    } else {
-      clearToken();
-    }
+    if (token) setToken(token);
+    else clearToken();
     set({ token });
   },
-  setRole: (role) => set({ role }),
-  setUser: (user) => set({ user }),
+  clearToken: () => {
+    clearToken();
+    set({ token: null });
+  },
 }));

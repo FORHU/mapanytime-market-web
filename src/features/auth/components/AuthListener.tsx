@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "../stores/auth.store";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "../stores/auth.store";
 
 export function AuthListener() {
   const router = useRouter();
@@ -12,7 +12,7 @@ export function AuthListener() {
 
   useEffect(() => {
     const handleUnauthorized = () => {
-      // Clear token and query cache on 401
+      // Clear token and query cache on 401 interceptor drop
       setToken(null);
       queryClient.clear();
       router.push("/login");
