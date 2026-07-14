@@ -1,76 +1,67 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import LoginForm from "@/features/auth/components/LoginForm";
 import { Card } from "@/shared/components/ui/Card";
-import { Button } from "@/shared/components/ui/Button";
-import Link from "next/link";
+import { Smartphone } from "lucide-react";
+
+type LoginRole = "buyer" | "seller";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [buyerLoggedIn, setBuyerLoggedIn] = useState(false);
+
+  const handleLoginSuccess = (role: LoginRole) => {
+    if (role === "seller") {
+      router.push("/seller/manage-stores");
+      return;
+    }
+    setBuyerLoggedIn(true);
+  };
+
+  if (buyerLoggedIn) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-[var(--background-primary)]">
+        <Card className="p-6 text-center space-y-4 py-8 max-w-md w-full">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 flex items-center justify-center mx-auto">
+            <Smartphone className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-base font-black">Download MapAnytime Mobile</h2>
+            <p className="text-xs text-zinc-400 max-w-xs mx-auto mt-1">
+              You&apos;re signed in! To browse store pins and check out locally,
+              use our native mobile companion app.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col gap-2">
+            <a
+              href="#app-store"
+              className="w-full py-2 text-center text-xs font-bold border rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-900"
+              style={{ borderColor: "var(--border-light)" }}
+            >
+              Download on iOS App Store
+            </a>
+            <a
+              href="#google-play"
+              className="w-full py-2 text-center text-xs font-bold text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 rounded-xl hover:opacity-90"
+            >
+              Get it on Google Play
+            </a>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    // Outer dynamic flex wrapper maximizing viewport frame scale
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-[var(--background-primary)]">
-      {/* Centered card module bumped up to max-w-md for optimal visual density */}
-      <Card className="w-full max-w-md p-8 shadow-xl border border-[var(--border-default)]">
-        <div className="text-center space-y-2 mb-6">
-          <div className="text-xl font-black tracking-tight">
-            Map<span className="text-[var(--brand-core)]">Central</span>
-          </div>
-          <h2 className="text-base font-black">Welcome Back to MapAnytime</h2>
-          <p className="text-xs text-zinc-400">
-            Access your merchant portal or buyer credentials
-          </p>
+      <div className="text-center space-y-1 mb-6">
+        <div className="text-xl font-black tracking-tight">
+          Map<span className="text-[var(--brand-core)]">Central</span>
         </div>
-
-        <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-              Email Address
-            </label>
-            <input
-              type="email"
-              placeholder="name@domain.com"
-              className="w-full px-3 py-2.5 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-colors"
-              style={{ borderColor: "var(--border-light)" }}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <div className="flex justify-between items-center">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                Password
-              </label>
-              <a href="#" className="text-[10px] text-zinc-400 hover:underline">
-                Forgot?
-              </a>
-            </div>
-            <input
-              type="password"
-              placeholder="••••••••"
-              className="w-full px-3 py-2.5 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-colors"
-              style={{ borderColor: "var(--border-light)" }}
-            />
-          </div>
-
-          <Button
-            type="submit"
-            variant="primary"
-            fullWidth
-            className="!h-11 mt-2"
-          >
-            Secure Sign In
-          </Button>
-        </form>
-
-        <div className="text-center mt-6 text-[11px] text-zinc-400">
-          {" Don't have an account?"}
-          <Link
-            href="/register"
-            className="font-bold text-[var(--brand-core)] hover:underline"
-          >
-            Create account
-          </Link>
-        </div>
-      </Card>
+      </div>
+      <LoginForm onLoginSuccess={handleLoginSuccess} />
     </div>
   );
 }
