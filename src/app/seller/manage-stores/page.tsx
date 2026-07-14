@@ -35,9 +35,9 @@ export default function ManageStoresPage() {
     window.location.href = "/seller/dashboard";
   };
 
-  const handleCreateStoreSuccess = () => {
+  const handleCreateStoreSuccess = (storeId: string) => {
     const newStore: StoreItem = {
-      id: `store_${Date.now()}`,
+      id: storeId,
       name: "New Baguio Market Extension",
       category: "retail",
       coordinates: "16.4164° N, 120.5931° E | City Center, Baguio",

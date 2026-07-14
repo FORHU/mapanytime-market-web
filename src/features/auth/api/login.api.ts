@@ -17,14 +17,14 @@ export const login = async (
   credentials: Record<string, string>,
   roleName: UserRole,
 ) => {
-  const res = await fetcher<{ data: AuthResponse }>("/api/auth/login", {
+  const res = await fetcher<{ data: AuthResponse }>("/api/v1/auth/login", {
     method: "POST",
     body: JSON.stringify({
       ...credentials,
       roleName, // Injected dynamically ("BUYER" or "SELLER")
     }),
   });
-
+  console.log("----------------------------------------------", res);
   return {
     accessToken: res.data.accessToken,
     hasStoreBranches: res.data.hasStoreBranches,
@@ -39,7 +39,7 @@ export const register = async (
   userData: Record<string, string>,
   roleName: UserRole,
 ) => {
-  const res = await fetcher<{ data: AuthResponse }>("/api/auth/register", {
+  const res = await fetcher<{ data: AuthResponse }>("/api/v1/auth/register", {
     method: "POST",
     body: JSON.stringify({
       ...userData,

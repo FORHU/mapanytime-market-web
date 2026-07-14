@@ -16,8 +16,9 @@ export default function RegisterEntryRoot() {
     setPhase("STORE_ONBOARDING");
   };
 
-  const handleOnboardSuccess = () => {
+  const handleOnboardSuccess = (storeId: string) => {
     // Successfully onboarded merchant -> Route directly into the app dashboard space
+    localStorage.setItem("active_store_context_id", storeId);
     router.push("/seller/dashboard");
   };
 

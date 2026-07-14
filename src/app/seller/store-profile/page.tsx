@@ -17,7 +17,7 @@ export default function StoreProfilePage() {
     name: "MapCentral Groceries Node Alpha",
     id: "STR-NODE-9921",
     email: "ops@mapcentralgroceries.io",
-    phone: "+1 (555) 019-2834",
+    //phone: "+1 (555) 019-2834",
     address: "742 Evergreen Terrace, Sector 7G",
     joinedDate: "October 14, 2025",
     status: "Active & Synced",

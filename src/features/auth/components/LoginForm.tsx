@@ -8,14 +8,14 @@ import Link from "next/link";
 import { useAuth } from "../hooks/useAuth";
 import type { UserRole as ApiUserRole } from "../api/login.api";
 
-type LoginRole = "buyer" | "seller";
+type LoginRole = "BUYER" | "SELLER";
 
 export default function LoginForm({
   onLoginSuccess,
 }: {
   onLoginSuccess: (role: LoginRole) => void;
 }) {
-  const [role, setRole] = useState<LoginRole>("seller");
+  const [role, setRole] = useState<LoginRole>("SELLER");
   const [credentials, setCredentials] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const { login, isLoggingIn } = useAuth();
@@ -57,9 +57,9 @@ export default function LoginForm({
       >
         <button
           type="button"
-          onClick={() => setRole("seller")}
+          onClick={() => setRole("SELLER")}
           className={`py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors ${
-            role === "seller"
+            role === "SELLER"
               ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
               : "text-zinc-400"
           }`}
@@ -68,9 +68,9 @@ export default function LoginForm({
         </button>
         <button
           type="button"
-          onClick={() => setRole("buyer")}
+          onClick={() => setRole("BUYER")}
           className={`py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors ${
-            role === "buyer"
+            role === "BUYER"
               ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
               : "text-zinc-400"
           }`}

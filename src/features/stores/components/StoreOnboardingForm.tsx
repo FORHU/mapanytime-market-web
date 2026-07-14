@@ -15,7 +15,7 @@ type DocumentField = "govIdKey" | "mayorsPermitKey" | "dtiKey" | "tinKey";
 export default function StoreOnboardingForm({
   onComplete,
 }: {
-  onComplete: () => void;
+  onComplete: (storeId: string) => void;
 }) {
   const [formData, setFormData] = useState({
     storeName: "",
@@ -54,10 +54,10 @@ export default function StoreOnboardingForm({
 
   const onboardMutation = useMutation({
     mutationFn: submitOnboarding,
-    onSuccess: () => {
+    onSuccess: (data) => {
       setIsDone(true);
       // Give the confirmation card a moment on screen before routing away.
-      setTimeout(onComplete, 1500);
+      setTimeout(() => onComplete(data.storeId), 1500);
     },
     onError: (err) => {
       toast.error(
