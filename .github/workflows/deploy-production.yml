@@ -97,8 +97,8 @@ jobs:
 
             IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-            CONTAINER="frontend-production"
-            NEW_CONTAINER="frontend-production-new"
+            CONTAINER="mapanytime-client"
+            NEW_CONTAINER="mapanytime-client-new"
 
             HEALTH_PORT=3001
 
