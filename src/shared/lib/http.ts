@@ -31,6 +31,9 @@ export async function fetcher<T>(
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(env.NEXT_PUBLIC_API_URL.includes("ngrok")
+          ? { "ngrok-skip-browser-warning": "true" }
+          : {}),
         ...(options?.headers || {}),
       },
     });

@@ -1,6 +1,21 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  QueryClient,
+} from "@tanstack/react-query";
 import { login, logout, register, type UserRole } from "../api/login.api";
 import { useAuthStore } from "../stores/auth.store";
+
+export function clearAuthSession(
+  setToken: (token: string | null) => void,
+  queryClient: QueryClient,
+) {
+  setToken(null);
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("active_store_context_id");
+  }
+  queryClient.clear();
+}
 
 // Explicit parameters signature to handle your two-argument login API function
 interface LoginVariables {
@@ -29,26 +44,27 @@ export function useAuth() {
   });
 
   const registerMutation = useMutation({
-    mutationFn: ({ userData, roleName }: RegisterVariables) =>
-      register(userData, roleName),
+    mutationFn: async ({ userData, roleName }: RegisterVariables) => {
+      const result = await register(userData, roleName);
+      if (result.accessToken) return result;
+
+      return login(
+        { email: userData.email, password: userData.password },
+        roleName,
+      );
+    },
     onSuccess: (data) => {
-      // register() returns an accessToken too — the backend logs the user in
-      // immediately on signup, same as login.
       if (data.accessToken) setToken(data.accessToken);
       queryClient.invalidateQueries();
     },
   });
 
+  const clearSession = () => clearAuthSession(setToken, queryClient);
+
   const logoutMutation = useMutation({
     mutationFn: logout,
-    onSuccess: () => {
-      setToken(null);
-      queryClient.clear();
-    },
-    onError: () => {
-      setToken(null);
-      queryClient.clear();
-    },
+    onSuccess: clearSession,
+    onError: clearSession,
   });
 
   return {
