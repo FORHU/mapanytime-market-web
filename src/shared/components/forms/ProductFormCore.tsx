@@ -21,6 +21,10 @@ interface ProductFormCoreProps {
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) => void;
+  /** Suppress the generic Initial Stock field for callers that manage stock themselves. */
+  hideStock?: boolean;
+  /** Suppress the generic fixed-enum Category field for callers that manage category themselves. */
+  hideCategory?: boolean;
 }
 
 export function ProductFormCore({
@@ -28,6 +32,8 @@ export function ProductFormCore({
   errors,
   aiHighlights = {},
   onChange,
+  hideStock = false,
+  hideCategory = false,
 }: ProductFormCoreProps) {
   const getFieldStyle = (fieldName: string) => {
     if (aiHighlights[fieldName]) {
@@ -122,46 +128,50 @@ export function ProductFormCore({
       </div>
 
       {/* Initial Stock */}
-      <div className="space-y-1">
-        <div className="flex justify-between items-center">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-            Initial Stock
-          </label>
-          {aiHighlights.stock && (
-            <span className="text-[9px] font-black text-[var(--brand-core)] flex items-center gap-0.5">
-              <Sparkles className="w-2.5 h-2.5" /> AI Populated
-            </span>
-          )}
+      {!hideStock && (
+        <div className="space-y-1">
+          <div className="flex justify-between items-center">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+              Initial Stock
+            </label>
+            {aiHighlights.stock && (
+              <span className="text-[9px] font-black text-[var(--brand-core)] flex items-center gap-0.5">
+                <Sparkles className="w-2.5 h-2.5" /> AI Populated
+              </span>
+            )}
+          </div>
+          <input
+            type="number"
+            name="stock"
+            placeholder="0"
+            value={values.stock || ""}
+            onChange={onChange}
+            className="w-full px-3 py-2.5 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)]"
+            style={getFieldStyle("stock")}
+          />
         </div>
-        <input
-          type="number"
-          name="stock"
-          placeholder="0"
-          value={values.stock || ""}
-          onChange={onChange}
-          className="w-full px-3 py-2.5 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)]"
-          style={getFieldStyle("stock")}
-        />
-      </div>
+      )}
 
       {/* Category */}
-      <div className="space-y-1 sm:col-span-2">
-        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-          Category
-        </label>
-        <select
-          name="category"
-          value={values.category || "Electronics"}
-          onChange={onChange}
-          className="w-full px-3 py-2.5 border rounded-xl text-xs bg-[var(--background-primary)] focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)] appearance-none cursor-pointer"
-          style={{ borderColor: "var(--border-light)" }}
-        >
-          <option value="Electronics">Electronics</option>
-          <option value="Apparel">Apparel</option>
-          <option value="Home & Kitchen">Home & Kitchen</option>
-          <option value="Groceries">Groceries</option>
-        </select>
-      </div>
+      {!hideCategory && (
+        <div className="space-y-1 sm:col-span-2">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+            Category
+          </label>
+          <select
+            name="category"
+            value={values.category || "Electronics"}
+            onChange={onChange}
+            className="w-full px-3 py-2.5 border rounded-xl text-xs bg-[var(--background-primary)] focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)] appearance-none cursor-pointer"
+            style={{ borderColor: "var(--border-light)" }}
+          >
+            <option value="Electronics">Electronics</option>
+            <option value="Apparel">Apparel</option>
+            <option value="Home & Kitchen">Home & Kitchen</option>
+            <option value="Groceries">Groceries</option>
+          </select>
+        </div>
+      )}
 
       {/* Product Description */}
       <div className="space-y-1 sm:col-span-2">
