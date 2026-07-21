@@ -1,16 +1,25 @@
 "use client";
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { Card } from "@/shared/components/ui/Card";
 import { Store, UploadCloud, CheckCircle2 } from "lucide-react";
 import { MapSelection } from "./MapSelection";
 import { Button } from "@/shared/components/ui/Button";
 import { useS3AssetUpload } from "@/shared/hooks/useS3AssetUpload";
-import { submitOnboarding } from "../api/onboarding.client";
+import { useCategories } from "../hooks/useCategories";
+import { useCreateStore } from "../hooks/useCreateStore";
 
-type DocumentField = "govIdKey" | "mayorsPermitKey" | "dtiKey" | "tinKey";
+type DocumentField =
+  "mayorsPermit" | "dtiCertificate" | "birCertificate" | "secCertificate";
+
+const DOCUMENT_LABELS: Record<DocumentField, string> = {
+  mayorsPermit: "Mayor's Business Permit",
+  dtiCertificate: "DTI Registration Certificate",
+  birCertificate: "BIR Certificate (2303)",
+  secCertificate: "SEC Certificate",
+};
+
+const SHOW_DOCUMENT_UPLOAD_SECTION = false;
 
 export default function StoreOnboardingForm({
   onComplete,
@@ -19,52 +28,56 @@ export default function StoreOnboardingForm({
 }) {
   const [formData, setFormData] = useState({
     storeName: "",
-    storeHours: "08:00 AM - 09:00 PM",
-    parentCategory: "retail",
+    categoryId: "",
     lat: 16.4164,
     lng: 120.5931,
-    govIdKey: "",
+    currentAddress: "",
+    homeAddress: "",
+    city: "",
+    province: "",
+    zipCode: "",
+    country: "Philippines",
+    openTime: "08:00",
+    closeTime: "20:00",
     mayorsPermitKey: "",
-    dtiKey: "",
-    tinKey: "",
+    mayorsPermitFileName: "",
+    dtiCertificateKey: "",
+    dtiCertificateFileName: "",
+    birCertificateKey: "",
+    birCertificateFileName: "",
+    secCertificateKey: "",
+    secCertificateFileName: "",
   });
 
   const [isDone, setIsDone] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
-  // One mutation instance per document slot — useS3AssetUpload already owns
-  // its own onSuccess/onError (with toasts), so each upload's error handling
-  // lives in one place instead of being re-implemented per form.
-  const govIdUpload = useS3AssetUpload();
+  const {
+    data: categories,
+    isLoading: categoriesLoading,
+    isError: categoriesError,
+  } = useCategories();
+
   const mayorsPermitUpload = useS3AssetUpload();
-  const dtiUpload = useS3AssetUpload();
-  const tinUpload = useS3AssetUpload();
+  const dtiCertificateUpload = useS3AssetUpload();
+  const birCertificateUpload = useS3AssetUpload();
+  const secCertificateUpload = useS3AssetUpload();
 
-  const uploadsByField: Record<DocumentField, typeof govIdUpload> = {
-    govIdKey: govIdUpload,
-    mayorsPermitKey: mayorsPermitUpload,
-    dtiKey: dtiUpload,
-    tinKey: tinUpload,
+  const uploadsByField: Record<DocumentField, typeof mayorsPermitUpload> = {
+    mayorsPermit: mayorsPermitUpload,
+    dtiCertificate: dtiCertificateUpload,
+    birCertificate: birCertificateUpload,
+    secCertificate: secCertificateUpload,
   };
-  // Derived from the mutations themselves rather than a separate piece of
-  // state, so "which upload is in flight" can never drift out of sync with
-  // what's actually pending.
   const uploadingField = (Object.keys(uploadsByField) as DocumentField[]).find(
     (field) => uploadsByField[field].isPending,
   );
 
-  const onboardMutation = useMutation({
-    mutationFn: submitOnboarding,
+  const onboardMutation = useCreateStore({
+    onValidationError: setFieldErrors,
     onSuccess: () => {
       setIsDone(true);
-      // Give the confirmation card a moment on screen before routing away.
       setTimeout(onComplete, 1500);
-    },
-    onError: (err) => {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "Could not submit onboarding data. Please try again.",
-      );
     },
   });
 
@@ -87,7 +100,11 @@ export default function StoreOnboardingForm({
 
     uploadsByField[fieldName].mutate(file, {
       onSuccess: (data) =>
-        setFormData((prev) => ({ ...prev, [fieldName]: data.fileKey })),
+        setFormData((prev) => ({
+          ...prev,
+          [`${fieldName}Key`]: data.fileKey,
+          [`${fieldName}FileName`]: data.fileName,
+        })),
     });
   };
 
@@ -100,10 +117,9 @@ export default function StoreOnboardingForm({
     return (
       <Card className="max-w-xl mx-auto p-8 text-center space-y-4 py-16">
         <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto animate-bounce" />
-        <h2 className="text-lg font-black">Merchant Onboarding Verified!</h2>
+        <h2 className="text-lg font-black">Store Created!</h2>
         <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-          Your documentation matrix, secure S3 asset pointers, and spatial node
-          configurations are locked.
+          Your store details and spatial node configuration are locked in.
         </p>
       </Card>
     );
@@ -133,7 +149,6 @@ export default function StoreOnboardingForm({
 
         <form onSubmit={handleOnboardSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Store Name */}
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                 Store Name
@@ -150,192 +165,250 @@ export default function StoreOnboardingForm({
               />
             </div>
 
-            {/* Store Hours */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                Operating Hours
-              </label>
-              <input
-                type="text"
-                name="storeHours"
-                required
-                value={formData.storeHours}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)]"
-                style={{ borderColor: "var(--border-light)" }}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Category Taxonomy */}
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                 Store Type Category
               </label>
               <select
-                name="parentCategory"
-                value={formData.parentCategory}
+                name="categoryId"
+                required
+                value={formData.categoryId}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-xl text-xs bg-[var(--background-primary)] focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)] cursor-pointer"
+                disabled={categoriesLoading || categoriesError}
+                className="w-full px-3 py-2 border rounded-xl text-xs bg-[var(--background-primary)] focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ borderColor: "var(--border-light)" }}
               >
-                <option value="retail">
-                  Retail Enterprise (Parent General)
+                <option value="" disabled>
+                  {categoriesLoading
+                    ? "Loading categories..."
+                    : categoriesError
+                      ? "Unable to load categories"
+                      : "Select a category"}
                 </option>
-                <option value="food_beverage">Food & Beverage Specialty</option>
-                <option value="groceries">Fresh Produce & Groceries</option>
-                <option value="pharmacy">Medical Health & Pharmacy</option>
+                {categories?.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
               </select>
-            </div>
-
-            {/* Map Selection Frame */}
-            <div className="sm:col-span-2 pt-2">
-              <MapSelection
-                initialLat={formData.lat}
-                initialLng={formData.lng}
-                onChange={handleLocationChange}
-              />
+              {categoriesError && (
+                <p className="text-[10px] text-rose-500">
+                  Could not load store categories from the server. Reload the
+                  page to try again.
+                </p>
+              )}
             </div>
           </div>
 
-          {/* SECURE FILE UPLOAD MATRIX */}
           <div
             className="pt-2 border-t"
             style={{ borderColor: "var(--border-light)" }}
           >
             <h3 className="text-xs font-black tracking-tight mb-4 text-[var(--text-secondary)] uppercase">
-              Compliance Verification Documents
+              Store Address
             </h3>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Government ID */}
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                  Government-Issued ID
+                  Store Street Address
                 </label>
-                <div
-                  className="relative flex items-center justify-center border border-dashed rounded-xl p-3 bg-[var(--background-secondary)] cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                <input
+                  type="text"
+                  name="currentAddress"
+                  required
+                  placeholder="Street, building, unit"
+                  value={formData.currentAddress}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)]"
                   style={{ borderColor: "var(--border-light)" }}
-                >
-                  <input
-                    type="file"
-                    required={!formData.govIdKey}
-                    accept="image/*,.pdf"
-                    onChange={(e) => handleFileUpload(e, "govIdKey")}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                    disabled={Boolean(uploadingField)}
-                  />
-                  <div className="text-center text-[11px] text-zinc-500 flex items-center gap-2">
-                    <UploadCloud className="w-4 h-4 text-zinc-400" />
-                    <span>
-                      {uploadingField === "govIdKey"
-                        ? "Streaming..."
-                        : formData.govIdKey
-                          ? "✓ ID Attached"
-                          : "Select ID PDF/Img"}
-                    </span>
-                  </div>
-                </div>
+                />
               </div>
-
-              {/* Mayor's Business Permit */}
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                  Mayor&apos;s Business Permit
+                  Business Mailing Address
                 </label>
-                <div
-                  className="relative flex items-center justify-center border border-dashed rounded-xl p-3 bg-[var(--background-secondary)] cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                <input
+                  type="text"
+                  name="homeAddress"
+                  required
+                  placeholder="Registered business mailing address"
+                  value={formData.homeAddress}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)]"
                   style={{ borderColor: "var(--border-light)" }}
-                >
-                  <input
-                    type="file"
-                    required={!formData.mayorsPermitKey}
-                    accept="image/*,.pdf"
-                    onChange={(e) => handleFileUpload(e, "mayorsPermitKey")}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                    disabled={Boolean(uploadingField)}
-                  />
-                  <div className="text-center text-[11px] text-zinc-500 flex items-center gap-2">
-                    <UploadCloud className="w-4 h-4 text-zinc-400" />
-                    <span>
-                      {uploadingField === "mayorsPermitKey"
-                        ? "Streaming..."
-                        : formData.mayorsPermitKey
-                          ? "✓ Permit Attached"
-                          : "Select Permit"}
-                    </span>
-                  </div>
-                </div>
+                />
               </div>
-
-              {/* DTI Certificate */}
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                  DTI Registration Certificate
+                  City
                 </label>
-                <div
-                  className="relative flex items-center justify-center border border-dashed rounded-xl p-3 bg-[var(--background-secondary)] cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                <input
+                  type="text"
+                  name="city"
+                  required
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)]"
                   style={{ borderColor: "var(--border-light)" }}
-                >
-                  <input
-                    type="file"
-                    required={!formData.dtiKey}
-                    accept="image/*,.pdf"
-                    onChange={(e) => handleFileUpload(e, "dtiKey")}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                    disabled={Boolean(uploadingField)}
-                  />
-                  <div className="text-center text-[11px] text-zinc-500 flex items-center gap-2">
-                    <UploadCloud className="w-4 h-4 text-zinc-400" />
-                    <span>
-                      {uploadingField === "dtiKey"
-                        ? "Streaming..."
-                        : formData.dtiKey
-                          ? "✓ DTI Attached"
-                          : "Select Certificate"}
-                    </span>
-                  </div>
-                </div>
+                />
               </div>
-
-              {/* TIN Certification */}
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                  TIN Certification (BIR 2303)
+                  Province
                 </label>
-                <div
-                  className="relative flex items-center justify-center border border-dashed rounded-xl p-3 bg-[var(--background-secondary)] cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                <input
+                  type="text"
+                  name="province"
+                  required
+                  value={formData.province}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)]"
                   style={{ borderColor: "var(--border-light)" }}
-                >
-                  <input
-                    type="file"
-                    required={!formData.tinKey}
-                    accept="image/*,.pdf"
-                    onChange={(e) => handleFileUpload(e, "tinKey")}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                    disabled={Boolean(uploadingField)}
-                  />
-                  <div className="text-center text-[11px] text-zinc-500 flex items-center gap-2">
-                    <UploadCloud className="w-4 h-4 text-zinc-400" />
-                    <span>
-                      {uploadingField === "tinKey"
-                        ? "Streaming..."
-                        : formData.tinKey
-                          ? "✓ BIR 2303 Attached"
-                          : "Select Document"}
-                    </span>
-                  </div>
-                </div>
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  Zip Code
+                </label>
+                <input
+                  type="text"
+                  name="zipCode"
+                  required
+                  value={formData.zipCode}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)]"
+                  style={{ borderColor: "var(--border-light)" }}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  Country
+                </label>
+                <input
+                  type="text"
+                  name="country"
+                  required
+                  value={formData.country}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)]"
+                  style={{ borderColor: "var(--border-light)" }}
+                />
+              </div>
+              <div className="sm:col-span-2 pt-2">
+                <MapSelection
+                  initialLat={formData.lat}
+                  initialLng={formData.lng}
+                  onChange={handleLocationChange}
+                />
               </div>
             </div>
           </div>
+
+          <div
+            className="pt-2 border-t"
+            style={{ borderColor: "var(--border-light)" }}
+          >
+            <h3 className="text-xs font-black tracking-tight mb-4 text-[var(--text-secondary)] uppercase">
+              Operating Hours
+            </h3>
+            <p className="text-[10px] text-zinc-400 -mt-2 mb-3">
+              Applies to every day the store is open.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  Open Time
+                </label>
+                <input
+                  type="time"
+                  name="openTime"
+                  required
+                  value={formData.openTime}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)]"
+                  style={{ borderColor: "var(--border-light)" }}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  Close Time
+                </label>
+                <input
+                  type="time"
+                  name="closeTime"
+                  required
+                  value={formData.closeTime}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-xl text-xs bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-all text-[var(--text-primary)]"
+                  style={{ borderColor: "var(--border-light)" }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {SHOW_DOCUMENT_UPLOAD_SECTION && (
+            <div
+              className="pt-2 border-t"
+              style={{ borderColor: "var(--border-light)" }}
+            >
+              <h3 className="text-xs font-black tracking-tight mb-4 text-[var(--text-secondary)] uppercase">
+                Compliance Verification Documents
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {(Object.keys(DOCUMENT_LABELS) as DocumentField[]).map(
+                  (field) => (
+                    <div className="space-y-1" key={field}>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                        {DOCUMENT_LABELS[field]}
+                      </label>
+                      <div
+                        className="relative flex items-center justify-center border border-dashed rounded-xl p-3 bg-[var(--background-secondary)] cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                        style={{ borderColor: "var(--border-light)" }}
+                      >
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e) => handleFileUpload(e, field)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                          disabled={Boolean(uploadingField)}
+                        />
+                        <div className="text-center text-[11px] text-zinc-500 flex items-center gap-2">
+                          <UploadCloud className="w-4 h-4 text-zinc-400" />
+                          <span>
+                            {uploadingField === field
+                              ? "Streaming..."
+                              : formData[`${field}Key`]
+                                ? "✓ Attached"
+                                : "Select File"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+          )}
+
+          {Object.keys(fieldErrors).length > 0 && (
+            <div
+              className="rounded-xl border p-3 text-[11px] text-rose-500 space-y-0.5"
+              style={{ borderColor: "var(--border-light)" }}
+            >
+              {Object.entries(fieldErrors).map(([field, messages]) => (
+                <p key={field}>
+                  {field}: {messages.join(", ")}
+                </p>
+              ))}
+            </div>
+          )}
 
           <Button
             type="submit"
             variant="primary"
             fullWidth
-            disabled={Boolean(uploadingField) || onboardMutation.isPending}
+            disabled={onboardMutation.isPending}
             isLoading={onboardMutation.isPending}
             className="!h-11 mt-4 text-xs font-bold rounded-xl"
           >

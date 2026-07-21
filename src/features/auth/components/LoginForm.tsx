@@ -13,7 +13,7 @@ type LoginRole = "buyer" | "seller";
 export default function LoginForm({
   onLoginSuccess,
 }: {
-  onLoginSuccess: (role: LoginRole) => void;
+  onLoginSuccess: (role: LoginRole, hasStores: boolean) => void;
 }) {
   const [role, setRole] = useState<LoginRole>("seller");
   const [credentials, setCredentials] = useState({ email: "", password: "" });
@@ -28,8 +28,11 @@ export default function LoginForm({
     e.preventDefault();
 
     try {
-      await login(credentials, role.toUpperCase() as ApiUserRole);
-      onLoginSuccess(role);
+      const result = await login(
+        credentials,
+        role.toUpperCase() as ApiUserRole,
+      );
+      onLoginSuccess(role, result.hasStores);
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Login failed. Try again.",

@@ -12,9 +12,9 @@ export default function LoginPage() {
   const router = useRouter();
   const [buyerLoggedIn, setBuyerLoggedIn] = useState(false);
 
-  const handleLoginSuccess = (role: LoginRole) => {
+  const handleLoginSuccess = (role: LoginRole, hasStores: boolean) => {
     if (role === "seller") {
-      router.push("/seller/manage-stores");
+      router.push(hasStores ? "/seller/manage-stores" : "/seller/onboarding");
       return;
     }
     setBuyerLoggedIn(true);

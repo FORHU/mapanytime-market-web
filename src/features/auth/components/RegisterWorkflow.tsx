@@ -2,17 +2,12 @@
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/shared/components/ui/Card";
-import { User, ShieldCheck, Mail, Smartphone } from "lucide-react";
+import { Card } from "@/shared/components/ui/Card";
+import { User, ShieldCheck, Smartphone } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import type { UserRole as ApiUserRole } from "../api/login.api";
 
-type AuthStep =
-  | "ROLE_SELECT"
-  | "FIELDS_FORM"
-  | "EMAIL_VERIFY"
-  | "BUYER_APP_PROMPT"
-  | "SELLER_ONBOARD_REDIRECT";
+type AuthStep = "ROLE_SELECT" | "FIELDS_FORM" | "BUYER_APP_PROMPT";
 type UserRole = "buyer" | "seller";
 
 export default function RegisterWorkflow({
@@ -25,14 +20,10 @@ export default function RegisterWorkflow({
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    countryCode: "+63",
-    phoneNumber: "",
     email: "",
     password: "",
   });
 
-  const [verificationCode, setVerificationCode] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
   const { register, isRegistering } = useAuth();
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -55,29 +46,19 @@ export default function RegisterWorkflow({
           lastName: formData.lastName,
           email: formData.email,
           password: formData.password,
-          phone: `${formData.countryCode}${formData.phoneNumber}`,
         },
         role.toUpperCase() as ApiUserRole,
       );
-      setStep("EMAIL_VERIFY");
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Registration failed. Try again.",
-      );
-    }
-  };
-
-  const handleVerifyEmail = (e: FormEvent) => {
-    e.preventDefault();
-    setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifying(false);
       if (role === "buyer") {
         setStep("BUYER_APP_PROMPT");
       } else {
         onCompleteSeller();
       }
-    }, 1000);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Registration failed. Try again.",
+      );
+    }
   };
 
   return (
@@ -178,38 +159,6 @@ export default function RegisterWorkflow({
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-2">
-              <div className="space-y-1 col-span-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                  Code
-                </label>
-                <input
-                  type="text"
-                  name="countryCode"
-                  required
-                  value={formData.countryCode}
-                  onChange={handleInputChange}
-                  className="w-full px-2 py-2 border rounded-xl text-xs bg-background text-center focus:outline-none"
-                  style={{ borderColor: "var(--border-light)" }}
-                />
-              </div>
-              <div className="space-y-1 col-span-3">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  name="phoneNumber"
-                  required
-                  placeholder="912 345 6789"
-                  value={formData.phoneNumber}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-xl text-xs bg-background focus:outline-none"
-                  style={{ borderColor: "var(--border-light)" }}
-                />
-              </div>
-            </div>
-
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                 Email Address
@@ -247,45 +196,7 @@ export default function RegisterWorkflow({
               disabled={isRegistering}
               className="w-full mt-2 py-2 text-xs font-bold rounded-xl text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              {isRegistering
-                ? "Generating Credentials..."
-                : "Continue Verification"}
-            </button>
-          </form>
-        </Card>
-      )}
-
-      {step === "EMAIL_VERIFY" && (
-        <Card className="p-6 text-center space-y-4">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center mx-auto">
-            <Mail className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-black">Verify Your Email Address</h2>
-            <p className="text-xs text-zinc-400 max-w-xs mx-auto mt-1">
-              We dispatched a 6-digit verification security parameter to{" "}
-              <span className="text-zinc-600 dark:text-zinc-200 font-bold">
-                {formData.email}
-              </span>
-            </p>
-          </div>
-          <form onSubmit={handleVerifyEmail} className="space-y-3">
-            <input
-              type="text"
-              maxLength={6}
-              required
-              placeholder="000000"
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value)}
-              className="w-full px-4 py-2 border rounded-xl text-center text-sm font-bold tracking-[0.5em] bg-background focus:outline-none"
-              style={{ borderColor: "var(--border-light)" }}
-            />
-            <button
-              type="submit"
-              disabled={isVerifying || verificationCode.length < 6}
-              className="w-full py-2 text-xs font-bold rounded-xl text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 disabled:opacity-50"
-            >
-              {isVerifying ? "Validating Secure Hash..." : "Verify Token"}
+              {isRegistering ? "Generating Credentials..." : "Create Account"}
             </button>
           </form>
         </Card>

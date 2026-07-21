@@ -4,6 +4,7 @@
 // Change this to use named exports matching how they are written inside their components
 export { default as StoreOnboardingForm } from "./components/StoreOnboardingForm";
 export { default as StoreManagementDashboard } from "./components/StoreManagementDashboard";
+export { useActiveStore } from "./hooks/useActiveStore";
 
 // 💡 NOTE: If you used named exports inside the files instead of default exports, write it like this:
 // export { StoreOnboardingForm } from "./components/StoreOnboardingForm";
