@@ -24,7 +24,7 @@ export const ProductSchema = z.object({
   // can't fail on this field alone.
   stock: z.number().int().nonnegative().optional(),
   categoryId: z.string(),
-  imageKey: z.string().nullable(),
+  imageKey: z.string().nullable().optional(),
   createdAt: z.string(),
 });
 
@@ -38,18 +38,19 @@ export const CreateProductInputSchema = z.object({
   price: z.number().nonnegative("Price cannot be negative"),
   initialStock: z.number().int().nonnegative("Stock cannot be negative"),
   categoryId: z.string().min(1, "Category is required"),
-  imageKey: z.string().nullable().optional(),
 });
 
 // No stock/initialStock field: verified against the live backend that
 // PUT /api/v1/products/:id rejects it ("initialStock" is not allowed).
+// No imageKey field: verified against the live backend that both
+// POST /api/v1/products and PUT /api/v1/products/:id reject it
+// ("imageKey" is not allowed).
 export const UpdateProductInputSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   brand: z.string().min(1, "Brand name is required"),
   description: z.string(),
   price: z.number().nonnegative("Price cannot be negative"),
   categoryId: z.string().min(1, "Category is required"),
-  imageKey: z.string().nullable().optional(),
 });
 
 export type Category = z.infer<typeof CategorySchema>;

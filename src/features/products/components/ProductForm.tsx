@@ -50,8 +50,8 @@ export function ProductForm({
   });
   const [initialStock, setInitialStock] = useState(0);
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
-  const [imageKey, setImageKey] = useState<string | null>(
-    product?.imageKey ?? null,
+  const [imageKey, setImageKey] = useState<string | undefined>(
+    product?.imageKey || undefined,
   );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -104,7 +104,6 @@ export function ProductForm({
           description: form.description,
           price: form.price,
           categoryId,
-          imageKey,
         });
         toast.success("Product updated.");
       } else {
@@ -116,7 +115,6 @@ export function ProductForm({
           price: form.price,
           initialStock,
           categoryId,
-          imageKey,
         });
         toast.success("Product created.");
       }
