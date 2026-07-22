@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { API_BASE_URL } from "@/shared/config/api";
-// import { io } from "socket.io-client"; // Commented out until backend is ready
 
 export interface ProductItem {
   id?: string;
@@ -13,62 +12,117 @@ export interface ProductItem {
   stock: number;
 }
 
-const USE_LIVE_BACKEND = true;
 const PRODUCTS_QUERY_KEY = ["products"];
 
-const fetchProducts = async (): Promise<ProductItem[]> => {
-  if (!USE_LIVE_BACKEND) return Promise.resolve([]);
-  const response = await fetch(`${API_BASE_URL}/api/seller/products`);
+const fetchProducts = async (
+  storeId: string | null,
+): Promise<ProductItem[]> => {
+  if (!storeId) return [];
+
+  const token = localStorage.getItem("token");
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/products?storeId=${storeId}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
   if (!response.ok) throw new Error("Failed to pull live catalog listings.");
-  return response.json();
+
+  const envelope = await response.json();
+  const rawList = envelope.data || [];
+
+  return rawList.map((prod: any) => ({
+    id: prod.id,
+    name: prod.name,
+    brand: prod.brand || "",
+    price: prod.price.toString(),
+    category: prod.category?.name || "Electronics",
+    description: prod.description || "",
+    stock: prod.inventory?.[0]?.quantityOnHand || 0,
+  }));
 };
 
-const createProduct = async (newProduct: ProductItem): Promise<ProductItem> => {
-  if (!USE_LIVE_BACKEND) return Promise.resolve(newProduct);
-  const response = await fetch(`${API_BASE_URL}/api/seller/products`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(newProduct),
-  });
-  if (!response.ok)
-    throw new Error("Could not register product item downstream.");
-  return response.json();
-};
-
-export const useProductsPipeline = (onMutationSuccess?: () => void) => {
+export const useProductsPipeline = (
+  storeId: string | null,
+  onMutationSuccess?: () => void,
+) => {
   const queryClient = useQueryClient();
 
   const query = useQuery<ProductItem[], Error>({
-    queryKey: PRODUCTS_QUERY_KEY,
-    queryFn: fetchProducts,
-    // Changing staleTime back to a normal window (like 10 seconds) so the UI
-    // refetches normally until the socket layer is live.
+    queryKey: [...PRODUCTS_QUERY_KEY, storeId],
+    queryFn: () => fetchProducts(storeId),
     staleTime: 10000,
+    enabled: Boolean(storeId),
   });
 
-  /* ==========================================================
-     SOCKET.IO PIPELINE (Awaiting Backend Deployment)
-     ==========================================================
-  useEffect(() => {
-    const socketUrl = process.env.NEXT_PUBLIC_WS_GATEWAY_URL || "http://localhost:4000";
-    const socket = io(socketUrl, { transports: ["websocket"] });
-
-    socket.on("CATALOG_UPDATED", () => {
-      queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY });
-    });
-
-    socket.on("reconnect", () => {
-      queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY });
-    });
-
-    return () => { socket.disconnect(); };
-  }, [queryClient]);
-  ========================================================== */
-
   const addProductMutation = useMutation({
-    mutationFn: createProduct,
+    mutationFn: async (newProduct: ProductItem): Promise<ProductItem> => {
+      if (!storeId) throw new Error("No active store branch selected.");
+
+      const token = localStorage.getItem("token");
+
+      // 1. Fetch categories from backend to resolve name to ID
+      const catRes = await fetch(`${API_BASE_URL}/api/v1/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!catRes.ok)
+        throw new Error("Failed to resolve category list from backend.");
+      const catEnvelope = await catRes.json();
+      const categoriesList = catEnvelope.data || [];
+
+      // 2. Map frontend dropdown category to seeded database category name
+      const categoryNameMap: Record<string, string> = {
+        Electronics: "Electronics",
+        Apparel: "Shopping & Retail",
+        "Home & Kitchen": "Home & Living",
+        Groceries: "Food & Beverage",
+      };
+
+      const targetName = categoryNameMap[newProduct.category] || "Electronics";
+      const matchedCategory = categoriesList.find(
+        (c: any) => c.name.toLowerCase() === targetName.toLowerCase(),
+      );
+
+      const categoryId = matchedCategory?.id || categoriesList[0]?.id;
+      if (!categoryId) {
+        throw new Error(
+          "No category ID matches. Ensure database categories are seeded.",
+        );
+      }
+
+      // 3. Post to backend to create the product
+      const response = await fetch(`${API_BASE_URL}/api/v1/products`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          storeId,
+          name: newProduct.name,
+          price: Number(newProduct.price),
+          brand: newProduct.brand,
+          description: newProduct.description,
+          categoryId,
+          isActive: true,
+          initialStock: newProduct.stock || 0,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(
+          errorBody?.message ||
+            "Catalog mutation rejected by validation rules.",
+        );
+      }
+
+      return response.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY });
+      queryClient.invalidateQueries({
+        queryKey: [...PRODUCTS_QUERY_KEY, storeId],
+      });
       if (onMutationSuccess) onMutationSuccess();
     },
   });
@@ -78,9 +132,6 @@ export const useProductsPipeline = (onMutationSuccess?: () => void) => {
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,
-    // mutateAsync (not mutate) so callers that need to know whether the
-    // create actually succeeded — e.g. ProductForm, before it closes itself
-    // — can await it instead of firing-and-forgetting.
     addProduct: addProductMutation.mutateAsync,
     isAdding: addProductMutation.isPending,
   };

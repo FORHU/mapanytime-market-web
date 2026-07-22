@@ -359,10 +359,11 @@ Install (pnpm, cached) → type-check → lint → FAOS validate → vitest → 
 **Preview deploys** — every PR gets an automatic Vercel preview URL posted as a PR comment.
 
 Required GitHub repository secrets for preview deploys:
-| Secret | Description |
-|---|---|
-| `VERCEL_TOKEN` | Vercel API token |
-| `NEXT_PUBLIC_API_URL` | Staging API URL |
+
+| Secret                 | Description          |
+| ---------------------- | -------------------- |
+| `VERCEL_TOKEN`         | Vercel API token     |
+| `NEXT_PUBLIC_API_URL`  | Staging API URL      |
 | `NEXT_PUBLIC_SITE_URL` | Staging frontend URL |
 
 ---

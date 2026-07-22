@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { io, Socket } from "socket.io-client";
 
 export interface ChatMessage {
   id: string;
@@ -10,14 +11,14 @@ export interface ChatMessage {
   createdAt: string;
 }
 
-/* ==========================================================
-   CHAT WEBSOCKET TYPES (Awaiting Backend Deployment)
-   ==========================================================
-interface ChatWebSocketPayload {
-  type: "MESSAGE_RECEIVED" | "MESSAGE_UPDATED" | "MESSAGE_DELETED";
-  data: ChatMessage;
+export interface ChatMessagePayload {
+  roomId: string;
+  senderId: string;
+  senderName: string;
+  body: string;
+  sentAt: string;
+  metadata?: Record<string, unknown>;
 }
-========================================================== */
 
 export const useChatSync = (channelId: string) => {
   const queryClient = useQueryClient();
@@ -37,87 +38,48 @@ export const useChatSync = (channelId: string) => {
     staleTime: 5000,
   });
 
-  /* ==========================================================
-     REAL-TIME CHAT WEBSOCKET PIPELINE (Awaiting Backend Deployment)
-     ==========================================================
   useEffect(() => {
     if (!channelId) return;
 
     const targetCacheKey = ["messages", channelId];
+    const socketUrl =
+      process.env.NEXT_PUBLIC_WS_GATEWAY_URL || "http://localhost:4000";
+    const socket: Socket = io(socketUrl, { transports: ["websocket"] });
 
-    const baseSocketUrl =
-      process.env.NEXT_PUBLIC_WS_CHAT_URL || "wss://api.mapcentral.io/chat";
-    const socketUrl = `${baseSocketUrl}?channelId=${channelId}`;
+    socket.on("connect", () => {
+      socket.emit("join_chat_room", channelId);
+    });
 
-    let ws: WebSocket;
-    let reconnectionTimeout: NodeJS.Timeout;
-    let isExplicitDisconnect = false;
+    socket.on("chat:message", (payload: ChatMessagePayload) => {
+      const liveMessage: ChatMessage = {
+        id:
+          (payload.metadata?.id as string) ||
+          `msg-${Date.now()}-${Math.random()}`,
+        channelId: payload.roomId,
+        senderId: payload.senderId,
+        text: payload.body,
+        status: "SENT",
+        createdAt: payload.sentAt,
+      };
 
-    const connectChatSocket = () => {
-      ws = new WebSocket(socketUrl);
-
-      ws.onmessage = (event) => {
-        try {
-          const payload: ChatWebSocketPayload = JSON.parse(event.data);
-          if (!payload) return;
-
-          const liveMessage = payload.data;
-
-          queryClient.setQueryData<ChatMessage[]>(targetCacheKey, (old) => {
-            const currentHistory = old ?? [];
-
-            switch (payload.type) {
-              case "MESSAGE_RECEIVED":
-                if (currentHistory.some((m) => m.id === liveMessage.id)) {
-                  return currentHistory;
-                }
-                return [...currentHistory, liveMessage];
-
-              case "MESSAGE_UPDATED":
-                return currentHistory.map((m) =>
-                  m.id === liveMessage.id ? liveMessage : m,
-                );
-
-              case "MESSAGE_DELETED":
-                return currentHistory.filter((m) => m.id !== liveMessage.id);
-
-              default:
-                return currentHistory;
-            }
-          });
-        } catch (err) {
-          console.error("Failed to parse chat message event:", err);
+      queryClient.setQueryData<ChatMessage[]>(targetCacheKey, (old) => {
+        const currentHistory = old ?? [];
+        if (currentHistory.some((m) => m.id === liveMessage.id)) {
+          return currentHistory;
         }
-      };
+        return [...currentHistory, liveMessage];
+      });
+    });
 
-      ws.onerror = (err) => {
-        console.error("Chat WebSocket stream error:", err);
-      };
-
-      ws.onclose = () => {
-        if (isExplicitDisconnect) return;
-
-        console.warn(
-          "Chat stream disconnected unexpectedly. Re-fetching historical baseline...",
-        );
-
-        queryClient.invalidateQueries({ queryKey: targetCacheKey });
-
-        reconnectionTimeout = setTimeout(() => {
-          connectChatSocket();
-        }, 3000);
-      };
-    };
-
-    connectChatSocket();
+    socket.on("disconnect", () => {
+      queryClient.invalidateQueries({ queryKey: targetCacheKey });
+    });
 
     return () => {
-      isExplicitDisconnect = true;
-      if (ws) ws.close();
-      clearTimeout(reconnectionTimeout);
+      socket.emit("leave_chat_room", channelId);
+      socket.disconnect();
     };
   }, [channelId, queryClient]);
-  ========================================================== */
 
   return query;
 };

@@ -164,12 +164,13 @@ pnpm start
 Open [http://localhost:3000](http://localhost:3000) — this is the exact build that Vercel will serve.
 
 Common build issues:
-| Error | Cause | Fix |
-|---|---|---|
-| `Missing NEXT_PUBLIC_API_URL` | env var not set | Set in `.env.local` or Vercel env settings |
-| TypeScript errors | Type issues | Run `pnpm type-check` and fix all errors |
-| ESLint errors | Boundary violation | Run `pnpm lint` and fix |
-| Build size warning | Large bundle | Run `pnpm analyze` to inspect |
+
+| Error                         | Cause              | Fix                                        |
+| ----------------------------- | ------------------ | ------------------------------------------ |
+| `Missing NEXT_PUBLIC_API_URL` | env var not set    | Set in `.env.local` or Vercel env settings |
+| TypeScript errors             | Type issues        | Run `pnpm type-check` and fix all errors   |
+| ESLint errors                 | Boundary violation | Run `pnpm lint` and fix                    |
+| Build size warning            | Large bundle       | Run `pnpm analyze` to inspect              |
 
 ---
 

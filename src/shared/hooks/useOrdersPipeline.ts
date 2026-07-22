@@ -1,6 +1,6 @@
+import { io, Socket } from "socket.io-client";
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// import { io } from "socket.io-client"; // Commented out until backend is ready
 
 export interface OrderRecord {
   id: string;
@@ -13,6 +13,7 @@ export interface OrderRecord {
 }
 
 export interface OrdersPipelineParams {
+  userId: string | null;
   search?: string;
   status?: string;
   sortAsc?: boolean;
@@ -22,8 +23,9 @@ export interface OrdersPipelineParams {
 
 export const ORDERS_QUERY_KEY = ["orders"];
 
-export const useOrdersPipeline = (params: OrdersPipelineParams = {}) => {
+export const useOrdersPipeline = (params: OrdersPipelineParams) => {
   const {
+    userId,
     search = "",
     status = "ALL",
     sortAsc = false,
@@ -53,28 +55,34 @@ export const useOrdersPipeline = (params: OrdersPipelineParams = {}) => {
     staleTime: 5000, // Safe polling sync window until socket is live
   });
 
-  /* ==========================================================
-     SOCKET.IO PIPELINE (Awaiting Backend Deployment)
-     ==========================================================
   useEffect(() => {
-    const socketUrl = process.env.NEXT_PUBLIC_WS_GATEWAY_URL || "http://localhost:4000";
-    const socket = io(socketUrl, { transports: ["websocket"] });
+    if (!userId) return;
 
-    socket.on("ORDER_CREATED", (newOrder: OrderRecord) => {
-      queryClient.setQueryData<OrderRecord[]>(ORDERS_QUERY_KEY, (old) => {
-        const currentOrders = old ?? [];
-        if (currentOrders.some((order) => order.id === newOrder.id)) return currentOrders;
-        return [newOrder, ...currentOrders];
-      });
+    const socketUrl =
+      process.env.NEXT_PUBLIC_WS_GATEWAY_URL || "http://localhost:4000";
+    const socket: Socket = io(socketUrl, { transports: ["websocket"] });
+
+    socket.on("connect", () => {
+      socket.emit("subscribe_notifications", { userId });
+    });
+
+    socket.on("notification:new", (notification: any) => {
+      if (
+        notification?.metadata?.type === "ORDER_CREATED" ||
+        notification?.metadata?.type === "ORDER_PAID"
+      ) {
+        queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
+      }
     });
 
     socket.on("disconnect", () => {
       queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
     });
 
-    return () => { socket.disconnect(); };
-  }, [queryClient]);
-  ========================================================== */
+    return () => {
+      socket.disconnect();
+    };
+  }, [userId, queryClient]);
 
   const fulfillmentMutation = useMutation({
     mutationFn: async (orderId: string) => {

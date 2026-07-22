@@ -4,6 +4,7 @@ import React, { useState, useCallback } from "react";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { useOrdersPipeline } from "@/shared/hooks/useOrdersPipeline";
+import { useAuthStore } from "@/features/auth/stores/auth.store";
 import {
   PackageCheck,
   Search,
@@ -18,6 +19,25 @@ export default function OrderInventoryMatrix() {
   const [skuSearch, setSkuSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [sortAsc, setSortAsc] = useState<boolean>(false);
+  const token = useAuthStore((state) => state.token);
+
+  let userId: string | null = null;
+  if (token) {
+    try {
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        window
+          .atob(base64)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join(""),
+      );
+      userId = JSON.parse(jsonPayload).userId || null;
+    } catch (err) {
+      console.error("Failed to decode token", err);
+    }
+  }
 
   const {
     orders,
@@ -28,6 +48,7 @@ export default function OrderInventoryMatrix() {
     mutationVariables,
     forceManualRefresh,
   } = useOrdersPipeline({
+    userId,
     search: skuSearch,
     status: statusFilter,
     sortAsc,

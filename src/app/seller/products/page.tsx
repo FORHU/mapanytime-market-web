@@ -7,14 +7,16 @@ import {
   useProductsPipeline,
   ProductItem,
 } from "@/shared/hooks/useProductsPipeline";
+import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
 import { Plus, X, Tag, Layers } from "lucide-react";
 
 export default function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const { activeStoreId } = useActiveStore();
 
   // Consume orchestrated features and handle state updates via callbacks
   const { products, isLoading, isError, error, addProduct, isAdding } =
-    useProductsPipeline(() => {
+    useProductsPipeline(activeStoreId, () => {
       setIsFormOpen(false); // Callback triggered on mutation success
     });
 
