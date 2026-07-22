@@ -1,14 +1,15 @@
 "use client";
 
 import React from "react";
-import { Card, CardContent } from "@/shared/components/ui/Card";
+import { Card } from "@/shared/components/ui/Card";
 import { Store, Plus, ArrowRight, ShieldCheck, MapPin } from "lucide-react";
 
 interface StoreItem {
   id: string;
-  name: string;
-  category: string;
-  coordinates: string;
+  storeName: string;
+  isActive: boolean;
+  city?: string;
+  province?: string;
 }
 
 interface StoreManagementDashboardProps {
@@ -24,7 +25,6 @@ export default function StoreManagementDashboard({
 }: StoreManagementDashboardProps) {
   return (
     <div className="max-w-4xl mx-auto space-y-6 text-left">
-      {/* Upper Info Banner */}
       <div
         className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-4 border-b"
         style={{ borderColor: "var(--border-default)" }}
@@ -46,7 +46,6 @@ export default function StoreManagementDashboard({
         </button>
       </div>
 
-      {/* Main Grid View */}
       {stores.length === 0 ? (
         <Card className="p-12 text-center py-20 border-dashed">
           <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4 text-zinc-400">
@@ -84,22 +83,29 @@ export default function StoreManagementDashboard({
                     </div>
                     <div>
                       <h3 className="text-sm font-black tracking-tight text-text-primary group-hover:text-brand-core transition-colors">
-                        {store.name}
+                        {store.storeName}
                       </h3>
-                      <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">
-                        {store.category.replace("_", " ")}
-                      </span>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 border rounded-md text-emerald-500 bg-emerald-500/5 border-emerald-500/20 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3" /> Isolated
-                  </span>
+                  {store.isActive ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 border rounded-md text-emerald-500 bg-emerald-500/5 border-emerald-500/20 flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> Active
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 border rounded-md text-amber-500 bg-amber-500/5 border-amber-500/20 flex items-center gap-1">
+                      Pending
+                    </span>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-1 text-[10px] text-zinc-400">
-                  <MapPin className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate">{store.coordinates}</span>
-                </div>
+                {(store.city || store.province) && (
+                  <div className="flex items-center gap-1 text-[10px] text-zinc-400">
+                    <MapPin className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">
+                      {[store.city, store.province].filter(Boolean).join(", ")}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div

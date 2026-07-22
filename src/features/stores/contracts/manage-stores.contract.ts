@@ -1,0 +1,28 @@
+import { z } from "zod";
+
+export const StoreLocationSchema = z
+  .object({
+    city: z.string(),
+    province: z.string(),
+    currentAddress: z.string(),
+    country: z.string(),
+  })
+  .loose();
+
+export const StoreSchema = z
+  .object({
+    id: z.string(),
+    storeName: z.string(),
+    description: z.string().nullable(),
+    isActive: z.boolean(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    storeLocations: StoreLocationSchema.optional(),
+  })
+  .loose();
+
+export const StoresResponseSchema = z.array(StoreSchema);
+
+export type StoreLocation = z.infer<typeof StoreLocationSchema>;
+export type Store = z.infer<typeof StoreSchema>;
+export type StoresResponse = z.infer<typeof StoresResponseSchema>;
