@@ -55,7 +55,9 @@ export default function QueryProvider({
         }),
         defaultOptions: {
           queries: {
-            staleTime: 1000 * 60,
+            staleTime: 1000 * 5,
+            refetchOnWindowFocus: true,
+            refetchOnMount: true,
             retry: (count, error) => count < getRetryCount(error),
           },
         },

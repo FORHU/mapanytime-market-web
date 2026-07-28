@@ -7,7 +7,7 @@ import {
 } from "../contracts/auth.contract";
 
 // Unified type definitions
-export type UserRole = "BUYER" | "SELLER";
+export type UserRole = "BUYER" | "SELLER" | "ADMIN";
 
 interface AuthResponse {
   accessToken: string;
@@ -68,7 +68,7 @@ export const register = async (
  * Universal Global Logout Handler
  */
 export const logout = async () => {
-  return fetcher("/api/v1/auth/signout", {
+  return fetcher("/api/v1/auth/logout", {
     method: "POST",
   });
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { StoreOnboardingForm } from "@/features/stores";
 import StoreManagementDashboard from "@/features/stores/components/StoreManagementDashboard";
 import { useStores } from "@/features/stores/hooks/useStores";
@@ -8,10 +9,11 @@ import { useStores } from "@/features/stores/hooks/useStores";
 export default function ManageStoresPage() {
   const [view, setView] = useState<"LIST" | "ONBOARDING">("LIST");
   const { data: stores, isLoading, isError, error } = useStores();
+  const router = useRouter();
 
   const handleSelectStore = (storeId: string) => {
     localStorage.setItem("active_store_context_id", storeId);
-    window.location.href = "/seller/dashboard";
+    router.push("/seller/dashboard");
   };
 
   const handleCreateStoreSuccess = () => {

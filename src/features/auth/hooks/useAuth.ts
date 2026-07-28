@@ -17,7 +17,6 @@ export function clearAuthSession(
   queryClient.clear();
 }
 
-// Explicit parameters signature to handle your two-argument login API function
 interface LoginVariables {
   credentials: Record<string, string>;
   roleName: UserRole;
@@ -33,12 +32,10 @@ export function useAuth() {
   const queryClient = useQueryClient();
 
   const loginMutation = useMutation({
-    // Pack variables into a single object argument for TanStack Query
     mutationFn: ({ credentials, roleName }: LoginVariables) =>
       login(credentials, roleName),
     onSuccess: (data) => {
-      // ✅ FIX: Using data.accessToken matching your api return types schema
-      setToken(data.accessToken);
+      setToken(data.accessToken, data.refreshToken);
       queryClient.invalidateQueries();
     },
   });
@@ -54,7 +51,8 @@ export function useAuth() {
       );
     },
     onSuccess: (data) => {
-      if (data.accessToken) setToken(data.accessToken);
+      if (data.accessToken)
+        setToken(data.accessToken, (data as any).refreshToken);
       queryClient.invalidateQueries();
     },
   });
@@ -68,7 +66,6 @@ export function useAuth() {
   });
 
   return {
-    // ✅ FIX: Wrap mutateAsync so components can still call it clean as login(credentials, role)
     login: (credentials: Record<string, string>, roleName: UserRole) =>
       loginMutation.mutateAsync({ credentials, roleName }),
     register: (userData: Record<string, string>, roleName: UserRole) =>

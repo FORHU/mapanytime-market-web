@@ -6,13 +6,17 @@ import LoginForm from "@/features/auth/components/LoginForm";
 import { Card } from "@/shared/components/ui/Card";
 import { Smartphone } from "lucide-react";
 
-type LoginRole = "buyer" | "seller";
+type LoginRole = "buyer" | "seller" | "admin";
 
 export default function LoginPage() {
   const router = useRouter();
   const [buyerLoggedIn, setBuyerLoggedIn] = useState(false);
 
   const handleLoginSuccess = (role: LoginRole, hasStores: boolean) => {
+    if (role === "admin") {
+      router.push("/admin");
+      return;
+    }
     if (role === "seller") {
       router.push(hasStores ? "/seller/manage-stores" : "/seller/onboarding");
       return;

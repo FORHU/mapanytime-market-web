@@ -69,11 +69,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${poppins.variable} ${geistSans.variable} ${geistMono.variable} font-[family-name:var(--font-poppins)] antialiased bg-background-primary text-text-primary`}
+        className={`${poppins.variable} ${geistSans.variable} ${geistMono.variable} font-[family-name:var(--font-poppins)] antialiased bg-background-primary text-text-primary min-h-screen flex flex-col`}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
