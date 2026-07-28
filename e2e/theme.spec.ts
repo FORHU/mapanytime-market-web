@@ -11,8 +11,8 @@ test.describe("Theme toggle", () => {
   test("clicking the theme toggle switches to light mode", async ({ page }) => {
     await page.goto("/");
 
-    // Find the theme toggle button (contains Sun or Moon icon)
-    const toggleBtn = page.locator("nav button").first();
+    // Find the theme toggle button
+    const toggleBtn = page.locator('button[aria-label="Toggle theme"]').first();
     await toggleBtn.click();
 
     const html = page.locator("html");
@@ -25,7 +25,7 @@ test.describe("Theme toggle", () => {
   }) => {
     await page.goto("/");
 
-    const toggleBtn = page.locator("nav button").first();
+    const toggleBtn = page.locator('button[aria-label="Toggle theme"]').first();
     await toggleBtn.click(); // → light
     await toggleBtn.click(); // → dark again
 

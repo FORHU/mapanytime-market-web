@@ -174,6 +174,7 @@ export default function LandingPage() {
             </button>
             <button
               onClick={toggleTheme}
+              aria-label="Toggle theme"
               className="p-2 rounded-xl border transition-colors"
               style={{ ...styleTertiaryBg, ...styleDefaultBorder }}
             >
