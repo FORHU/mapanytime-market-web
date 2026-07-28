@@ -1,6 +1,8 @@
 import { io, Socket } from "socket.io-client";
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetcher } from "@/shared/lib/http";
+import { getToken } from "@/shared/lib/token";
 
 export interface OrderRecord {
   id: string;
@@ -14,6 +16,7 @@ export interface OrderRecord {
 
 export interface OrdersPipelineParams {
   userId: string | null;
+  storeId?: string | null;
   search?: string;
   status?: string;
   sortAsc?: boolean;
@@ -26,6 +29,7 @@ export const ORDERS_QUERY_KEY = ["orders"];
 export const useOrdersPipeline = (params: OrdersPipelineParams) => {
   const {
     userId,
+    storeId,
     search = "",
     status = "ALL",
     sortAsc = false,
@@ -33,9 +37,17 @@ export const useOrdersPipeline = (params: OrdersPipelineParams) => {
     limit = 20,
   } = params;
   const queryClient = useQueryClient();
+  const token = getToken();
+
+  const activeStoreId =
+    storeId ||
+    (typeof window !== "undefined"
+      ? localStorage.getItem("active_store_context_id")
+      : null);
+
   const queryKey = [
     ...ORDERS_QUERY_KEY,
-    { search, status, sortAsc, page, limit },
+    { userId, storeId: activeStoreId, search, status, sortAsc, page, limit },
   ];
 
   const query = useQuery<OrderRecord[], Error>({
@@ -48,19 +60,27 @@ export const useOrdersPipeline = (params: OrdersPipelineParams) => {
         page: String(page),
         limit: String(limit),
       });
-      const res = await fetch(`/api/orders?${searchParams.toString()}`);
-      if (!res.ok) throw new Error("Server engine stream delivery faulted.");
-      return res.json();
+
+      const endpoint = activeStoreId
+        ? `/api/v1/orders/seller?storeId=${activeStoreId}&${searchParams.toString()}`
+        : `/api/v1/orders?${searchParams.toString()}`;
+
+      const res: any = await fetcher(endpoint);
+      return Array.isArray(res) ? res : res?.data || [];
     },
-    staleTime: 5000, // Safe polling sync window until socket is live
+    enabled: Boolean(token),
+    staleTime: 5000,
   });
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !token) return;
 
     const socketUrl =
-      process.env.NEXT_PUBLIC_WS_GATEWAY_URL || "http://localhost:4000";
-    const socket: Socket = io(socketUrl, { transports: ["websocket"] });
+      process.env.NEXT_PUBLIC_WS_GATEWAY_URL || "http://localhost:4002";
+    const socket: Socket = io(socketUrl, {
+      transports: ["polling", "websocket"],
+      autoConnect: true,
+    });
 
     socket.on("connect", () => {
       socket.emit("subscribe_notifications", { userId });
@@ -82,17 +102,14 @@ export const useOrdersPipeline = (params: OrdersPipelineParams) => {
     return () => {
       socket.disconnect();
     };
-  }, [userId, queryClient]);
+  }, [userId, token, queryClient]);
 
   const fulfillmentMutation = useMutation({
     mutationFn: async (orderId: string) => {
-      const response = await fetch(`/api/orders/${orderId}/fulfill`, {
+      return fetcher(`/api/v1/orders/${orderId}/fulfill`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "SHIPPED" }),
       });
-      if (!response.ok) throw new Error("Server rejected state updates.");
-      return response.json();
     },
     onMutate: async (orderId) => {
       await queryClient.cancelQueries({ queryKey });
