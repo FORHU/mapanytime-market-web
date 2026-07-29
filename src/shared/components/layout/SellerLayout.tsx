@@ -88,7 +88,7 @@ export function SellerLayout({
     if (!userId || !token) return;
 
     const socketUrl =
-      process.env.NEXT_PUBLIC_WS_GATEWAY_URL || "http://localhost:4002";
+      process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:4002";
     const socket: Socket = io(socketUrl, {
       transports: ["polling", "websocket"],
       autoConnect: true,

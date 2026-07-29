@@ -43,7 +43,7 @@ export const useChatSync = (channelId: string) => {
 
     const targetCacheKey = ["messages", channelId];
     const socketUrl =
-      process.env.NEXT_PUBLIC_WS_GATEWAY_URL || "http://localhost:4000";
+      process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:4002";
     const socket: Socket = io(socketUrl, { transports: ["websocket"] });
 
     socket.on("connect", () => {

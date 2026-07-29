@@ -3,12 +3,18 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { PresignedUrlResponse } from "@/shared/types/upload";
 
 // This is isolated inside the shared layer and only executes on the server side
+//
+// Credentials are only passed explicitly when both keys are present (local dev).
+// On EC2 they are omitted so the SDK falls back to its default provider chain
+// and picks up the instance role — no long-lived keys on the host.
+const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
+  ...(accessKeyId && secretAccessKey
+    ? { credentials: { accessKeyId, secretAccessKey } }
+    : {}),
 });
 
 /**
