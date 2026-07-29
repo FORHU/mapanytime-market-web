@@ -103,7 +103,12 @@ jobs:
             CONTAINER="mapanytime-client"
             NEW_CONTAINER="mapanytime-client-new"
 
-            HEALTH_PORT=3001
+            # Host ports: the app is published on 4000 (the API owns 4002 on this
+            # same instance). 4001 is the temporary port used to health-check the
+            # new container before it takes over 4000. The container itself always
+            # listens on 3000 — see PORT in the Dockerfile.
+            APP_PORT=4000
+            HEALTH_PORT=4001
 
             # Amazon ECR Login — the EC2 host authenticates independently of
             # the GitHub Actions runner (requires its own IAM instance role).
@@ -163,7 +168,7 @@ jobs:
             # Docker Run — promote the image to the real port
             docker run -d \
               --name "$CONTAINER" \
-              -p 3000:3000 \
+              -p "$APP_PORT:3000" \
               --restart unless-stopped \
               -e NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
               -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
@@ -175,7 +180,7 @@ jobs:
 
             sleep 2
 
-            curl -fs http://localhost:3000/ > /dev/null
+            curl -fs "http://localhost:$APP_PORT/" > /dev/null
 
             # Docker Image Cleanup — drop dangling layers from the old image
             docker image prune -f
