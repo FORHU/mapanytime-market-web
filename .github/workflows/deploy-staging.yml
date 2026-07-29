@@ -31,7 +31,6 @@ jobs:
       NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }}
       NEXT_PUBLIC_SOCKET_SERVER_URL: ${{ secrets.NEXT_PUBLIC_SOCKET_SERVER_URL }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
-      AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
       ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
       ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
       IMAGE_TAG: staging-${{ github.sha }}
@@ -93,7 +92,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
 
-          envs: AWS_REGION,AWS_BUCKET_NAME,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV,NEXT_PUBLIC_SOCKET_SERVER_URL
+          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV,NEXT_PUBLIC_SOCKET_SERVER_URL
 
           script: |
             set -euo pipefail
@@ -126,8 +125,6 @@ jobs:
               -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
               -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
               -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
-              -e AWS_REGION="$AWS_REGION" \
-              -e AWS_BUCKET_NAME="$AWS_BUCKET_NAME" \
               "$IMAGE"
 
             healthy=false
@@ -169,8 +166,6 @@ jobs:
               -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
               -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
               -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
-              -e AWS_REGION="$AWS_REGION" \
-              -e AWS_BUCKET_NAME="$AWS_BUCKET_NAME" \
               "$IMAGE"
 
             sleep 2

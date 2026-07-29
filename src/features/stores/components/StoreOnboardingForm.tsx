@@ -58,10 +58,10 @@ export default function StoreOnboardingForm({
     isError: categoriesError,
   } = useCategories();
 
-  const mayorsPermitUpload = useS3AssetUpload();
-  const dtiCertificateUpload = useS3AssetUpload();
-  const birCertificateUpload = useS3AssetUpload();
-  const secCertificateUpload = useS3AssetUpload();
+  const mayorsPermitUpload = useS3AssetUpload("compliance");
+  const dtiCertificateUpload = useS3AssetUpload("compliance");
+  const birCertificateUpload = useS3AssetUpload("compliance");
+  const secCertificateUpload = useS3AssetUpload("compliance");
 
   const uploadsByField: Record<DocumentField, typeof mayorsPermitUpload> = {
     mayorsPermit: mayorsPermitUpload,

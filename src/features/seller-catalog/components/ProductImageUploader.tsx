@@ -7,7 +7,7 @@ import { Camera } from "lucide-react";
 
 export default function ProductImageUploader() {
   const [targetFile, setTargetFile] = useState<File | null>(null);
-  const { mutate, isPending } = useS3AssetUpload();
+  const { mutate, isPending } = useS3AssetUpload("products");
 
   const handleSelection = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
