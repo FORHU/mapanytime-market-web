@@ -37,7 +37,7 @@ export const useInventoryOrderSync = () => {
     if (!IS_SOCKET_BACKEND_READY) return;
 
     const socketUrl =
-      process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "https://api.mapcentral.io";
+      process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:4002";
 
     const socket: Socket = io(socketUrl, {
       autoConnect: true,

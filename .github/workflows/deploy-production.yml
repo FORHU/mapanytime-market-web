@@ -29,7 +29,9 @@ jobs:
       NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
       NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
       NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }}
+      NEXT_PUBLIC_SOCKET_SERVER_URL: ${{ secrets.NEXT_PUBLIC_SOCKET_SERVER_URL }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
       ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
       ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
       IMAGE_TAG: production-${{ github.sha }}
@@ -69,6 +71,7 @@ jobs:
             --build-arg NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
             --build-arg NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
             --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN="$NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN" \
+            --build-arg NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
             -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
             -t "$ECR_REGISTRY/$ECR_REPOSITORY:production-latest" \
             .
@@ -90,7 +93,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
 
-          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV
+          envs: AWS_REGION,AWS_BUCKET_NAME,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV,NEXT_PUBLIC_SOCKET_SERVER_URL
 
           script: |
             set -euo pipefail
@@ -100,7 +103,12 @@ jobs:
             CONTAINER="mapanytime-client"
             NEW_CONTAINER="mapanytime-client-new"
 
-            HEALTH_PORT=3001
+            # Host ports: the app is published on 4000 (the API owns 4002 on this
+            # same instance). 4001 is the temporary port used to health-check the
+            # new container before it takes over 4000. The container itself always
+            # listens on 3000 — see PORT in the Dockerfile.
+            APP_PORT=4000
+            HEALTH_PORT=4001
 
             # Amazon ECR Login — the EC2 host authenticates independently of
             # the GitHub Actions runner (requires its own IAM instance role).
@@ -122,6 +130,9 @@ jobs:
               -e NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
               -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
               -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
+              -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
+              -e AWS_REGION="$AWS_REGION" \
+              -e AWS_BUCKET_NAME="$AWS_BUCKET_NAME" \
               "$IMAGE"
 
             healthy=false
@@ -157,16 +168,19 @@ jobs:
             # Docker Run — promote the image to the real port
             docker run -d \
               --name "$CONTAINER" \
-              -p 3000:3000 \
+              -p "$APP_PORT:3000" \
               --restart unless-stopped \
               -e NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
               -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
               -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
+              -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
+              -e AWS_REGION="$AWS_REGION" \
+              -e AWS_BUCKET_NAME="$AWS_BUCKET_NAME" \
               "$IMAGE"
 
             sleep 2
 
-            curl -fs http://localhost:3000/ > /dev/null
+            curl -fs "http://localhost:$APP_PORT/" > /dev/null
 
             # Docker Image Cleanup — drop dangling layers from the old image
             docker image prune -f
