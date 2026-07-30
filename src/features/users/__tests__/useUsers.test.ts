@@ -25,17 +25,13 @@ function createWrapper() {
 }
 
 const MOCK_USERS_DATA = {
-  items: [
+  users: [
     {
       id: "1",
       email: "alice@example.com",
       firstName: "Alice",
       lastName: "Smith",
       phoneNumber: null,
-      avatarId: null,
-      accountStatus: "ACTIVE",
-      isEmailVerified: true,
-      isOnBoarding: false,
       countryCode: "US",
       lastLoginAt: "2026-07-01T12:00:00.000Z",
       createdAt: "2026-01-10T00:00:00.000Z",
@@ -47,10 +43,6 @@ const MOCK_USERS_DATA = {
       firstName: "Bob",
       lastName: "Johnson",
       phoneNumber: null,
-      avatarId: null,
-      accountStatus: "ACTIVE",
-      isEmailVerified: true,
-      isOnBoarding: false,
       countryCode: "US",
       lastLoginAt: "2026-06-15T08:30:00.000Z",
       createdAt: "2026-03-20T00:00:00.000Z",
@@ -61,7 +53,7 @@ const MOCK_USERS_DATA = {
   page: 1,
   limit: 20,
   totalPages: 1,
-} as Awaited<ReturnType<typeof usersClient.getUsers>>;
+} satisfies Awaited<ReturnType<typeof usersClient.getUsers>>;
 
 describe("useUsers", () => {
   beforeEach(() => {
