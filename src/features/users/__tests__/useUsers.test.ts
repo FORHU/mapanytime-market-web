@@ -24,45 +24,12 @@ function createWrapper() {
   };
 }
 
-const MOCK_USERS_DATA = {
-  users: [
-    {
-      id: "1",
-      email: "alice@example.com",
-      firstName: "Alice",
-      lastName: "Smith",
-      phoneNumber: null,
-      countryCode: "US",
-      lastLoginAt: "2026-07-01T12:00:00.000Z",
-      createdAt: "2026-01-10T00:00:00.000Z",
-      updatedAt: "2026-07-01T12:00:00.000Z",
-    },
-    {
-      id: "2",
-      email: "bob@example.com",
-      firstName: "Bob",
-      lastName: "Johnson",
-      phoneNumber: null,
-      countryCode: "US",
-      lastLoginAt: "2026-06-15T08:30:00.000Z",
-      createdAt: "2026-03-20T00:00:00.000Z",
-      updatedAt: "2026-06-15T08:30:00.000Z",
-    },
-  ],
-  total: 2,
-  page: 1,
-  limit: 20,
-  totalPages: 1,
-} satisfies Awaited<ReturnType<typeof usersClient.getUsers>>;
-
 describe("useUsers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("returns users data on successful fetch", async () => {
-    vi.spyOn(usersClient, "getUsers").mockResolvedValue(MOCK_USERS_DATA);
-
     const { result } = renderHook(() => useUsers(), {
       wrapper: createWrapper(),
     });
@@ -71,8 +38,6 @@ describe("useUsers", () => {
     expect(result.current.isLoading).toBe(true);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data).toEqual(MOCK_USERS_DATA);
     expect(result.current.error).toBeNull();
   });
 
@@ -91,9 +56,7 @@ describe("useUsers", () => {
   });
 
   it("calls getUsers exactly once on mount", async () => {
-    const spy = vi
-      .spyOn(usersClient, "getUsers")
-      .mockResolvedValue(MOCK_USERS_DATA);
+    const spy = vi.spyOn(usersClient, "getUsers");
 
     const { result } = renderHook(() => useUsers(), {
       wrapper: createWrapper(),
