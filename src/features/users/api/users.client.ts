@@ -1,7 +1,11 @@
 import { fetcher } from "@/shared/lib/http";
-import { UsersResponseSchema } from "../contracts/users.contract";
+import {
+  UsersApiResponseSchema,
+  UsersListData,
+} from "../contracts/users.contract";
 
-export const getUsers = async () => {
-  const raw = await fetcher<unknown>("/api/users");
-  return UsersResponseSchema.parse(raw); // throws ZodError if backend drifts
+export const getUsers = async (): Promise<UsersListData> => {
+  const raw = await fetcher<unknown>("/api/v1/users");
+  const parsed = UsersApiResponseSchema.parse(raw);
+  return parsed.data;
 };
