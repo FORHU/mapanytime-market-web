@@ -1,6 +1,8 @@
 import { fetcher } from "@/shared/lib/http";
 import {
   CatalogRole,
+  Permission,
+  PermissionsResponseSchema,
   RolesCatalogResponseSchema,
   User,
   UserResponseSchema,
@@ -18,6 +20,22 @@ export const getRoles = async (): Promise<CatalogRole[]> => {
   const raw = await fetcher<unknown>("/api/v1/rbac/roles");
   const parsed = RolesCatalogResponseSchema.parse(raw);
   return parsed.data;
+};
+
+export const getPermissions = async (): Promise<Permission[]> => {
+  const raw = await fetcher<unknown>("/api/v1/rbac/permissions");
+  const parsed = PermissionsResponseSchema.parse(raw);
+  return parsed.data;
+};
+
+export const updateRolePermissions = async (
+  roleId: string,
+  permissionCodes: string[],
+): Promise<void> => {
+  await fetcher<unknown>(`/api/v1/rbac/roles/${roleId}/permissions`, {
+    method: "PUT",
+    body: JSON.stringify({ permissionCodes }),
+  });
 };
 
 export const getUser = async (userId: string): Promise<User> => {

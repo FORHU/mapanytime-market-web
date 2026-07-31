@@ -37,12 +37,26 @@ export const CatalogRoleSchema = z.object({
   id: z.string().optional(),
   roleName: z.string(),
   description: z.string().nullable().optional(),
+  permissionCodes: z.array(z.string()).default([]),
 });
 
 export const RolesCatalogResponseSchema = z.object({
   status: z.string().optional(),
   statusCode: z.number().optional(),
   data: z.array(CatalogRoleSchema),
+});
+
+export const PermissionSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+});
+
+export const PermissionsResponseSchema = z.object({
+  status: z.string().optional(),
+  statusCode: z.number().optional(),
+  data: z.array(PermissionSchema),
 });
 
 export const UserResponseSchema = z.object({
@@ -58,3 +72,5 @@ export type UsersApiResponse = z.infer<typeof UsersApiResponseSchema>;
 export type CatalogRole = z.infer<typeof CatalogRoleSchema>;
 export type RolesCatalogResponse = z.infer<typeof RolesCatalogResponseSchema>;
 export type UserResponse = z.infer<typeof UserResponseSchema>;
+export type Permission = z.infer<typeof PermissionSchema>;
+export type PermissionsResponse = z.infer<typeof PermissionsResponseSchema>;

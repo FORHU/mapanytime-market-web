@@ -117,7 +117,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         },
         {
           name: "Permissions Matrix",
-          href: "/admin/users?view=RBAC_MATRIX",
+          href: "/admin/permissions",
           icon: Key,
           roles: ["ADMIN"],
         },
