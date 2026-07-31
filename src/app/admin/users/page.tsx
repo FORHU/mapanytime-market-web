@@ -1,21 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
-  Users,
   Shield,
   Search,
   CheckCircle2,
-  Lock,
   Plus,
-  Grid,
   Check,
   Key,
-  Layers,
-  Sparkles,
+  Pencil,
 } from "lucide-react";
-import { getUsers } from "@/features/users/api/users.client";
-import { User as ApiUser } from "@/features/users/contracts/users.contract";
+import {
+  getUsers,
+  getRoles,
+  getUser,
+  replaceUserRoles,
+} from "@/features/users/api/users.client";
+import {
+  User as ApiUser,
+  CatalogRole,
+} from "@/features/users/contracts/users.contract";
+import { ApiError } from "@/shared/errors/api-error";
 
 interface SystemPermission {
   code: string;
@@ -61,6 +67,51 @@ const SYSTEM_PERMISSIONS: SystemPermission[] = [
   },
 ];
 
+// Custom Hook to trap focus inside modals
+function useFocusTrap(isActive: boolean) {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isActive || !modalRef.current) return;
+
+    // Find all focusable elements inside the modal
+    const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+
+    if (focusableElements.length === 0) return;
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    // Auto-focus the first element when the modal opens
+    firstElement.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+
+      if (e.shiftKey) {
+        // Shift + Tab: If on the first element, jump to the last
+        if (document.activeElement === firstElement) {
+          lastElement.focus();
+          e.preventDefault();
+        }
+      } else {
+        // Tab: If on the last element, jump to the first
+        if (document.activeElement === lastElement) {
+          firstElement.focus();
+          e.preventDefault();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isActive]);
+
+  return modalRef;
+}
+
 export default function AdminUsersPage() {
   const [activeView, setActiveView] = useState<"USERS" | "RBAC_MATRIX">(
     "USERS",
@@ -70,8 +121,16 @@ export default function AdminUsersPage() {
   const [showCreateRoleModal, setShowCreateRoleModal] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleDesc, setNewRoleDesc] = useState("");
+  const [showChangeRoleModal, setShowChangeRoleModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [isSavingRoles, setIsSavingRoles] = useState(false);
+  const [roleSaveError, setRoleSaveError] = useState<string | null>(null);
+  const [roleCatalog, setRoleCatalog] = useState<CatalogRole[]>([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
+  const [roleLoadError, setRoleLoadError] = useState<string | null>(null);
+  const changeRoleModalRef = useFocusTrap(showChangeRoleModal);
 
-  // Role permissions state mapping
   const [rolePermissions, setRolePermissions] = useState<
     Record<string, string[]>
   >({
@@ -116,6 +175,63 @@ export default function AdminUsersPage() {
   useEffect(() => {
     fetchUser();
   }, []);
+
+  const toggleSelectedRole = (roleName: string) => {
+    setSelectedRoles((prev) =>
+      prev.includes(roleName)
+        ? prev.filter((r) => r !== roleName)
+        : [...prev, roleName],
+    );
+  };
+
+  const openChangeRoleModal = (usr: ApiUser) => {
+    setSelectedUser(usr);
+    setSelectedRoles([]);
+    setRoleSaveError(null);
+    setRoleLoadError(null);
+    setIsLoadingRoles(true);
+    setShowChangeRoleModal(true);
+
+    Promise.all([getRoles(), getUser(usr.id)])
+      .then(([catalog, user]) => {
+        setRoleCatalog(catalog);
+        setSelectedUser(user);
+        setSelectedRoles((user.roles ?? []).map((role) => role.roleName));
+      })
+      .catch((error) => {
+        console.error("Failed to load roles", error);
+        setRoleLoadError(
+          error instanceof ApiError ? error.message : "Failed to load roles.",
+        );
+      })
+      .finally(() => setIsLoadingRoles(false));
+  };
+
+  const handleSaveRoles = async () => {
+    if (!selectedUser) return;
+
+    setRoleSaveError(null);
+    setIsSavingRoles(true);
+    try {
+      const updatedUser = await replaceUserRoles(
+        selectedUser.id,
+        selectedRoles,
+      );
+      setUsers((prev) =>
+        prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)),
+      );
+      setShowChangeRoleModal(false);
+    } catch (error) {
+      console.error("Failed to save roles", error);
+      setRoleSaveError(
+        error instanceof ApiError
+          ? error.message
+          : "Failed to save role(s). Please try again.",
+      );
+    } finally {
+      setIsSavingRoles(false);
+    }
+  };
 
   const togglePermission = (roleName: string, permCode: string) => {
     setRolePermissions((prev) => {
@@ -314,7 +430,13 @@ export default function AdminUsersPage() {
                         {usr.createdAt}
                       </td>
                       <td className="py-4 px-4 text-right text-xs text-[var(--text-tertiary)]">
-                        pencil
+                        <button
+                          onClick={() => openChangeRoleModal(usr)}
+                          title="Change Roles"
+                          className="group"
+                        >
+                          <Pencil className="w-4 h-4 text-slate-400 hover:text-sky-400 transition-colors" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -409,60 +531,100 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* Modal to Create Role */}
-      {showCreateRoleModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full p-6 rounded-3xl border border-[var(--border-default)] bg-[var(--background-primary)] space-y-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-[var(--text-primary)]">
-              Create New Custom Role
-            </h3>
-            <form onSubmit={handleCreateRole} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[var(--text-secondary)]">
-                  Role Identifer
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. COMPLIANCE_OFFICER"
-                  value={newRoleName}
-                  onChange={(e) => setNewRoleName(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[var(--border-default)] bg-[var(--background-secondary)] text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)]"
-                />
+      {/* Modal to Change User Roles */}
+      {showChangeRoleModal &&
+        selectedUser &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div
+              ref={changeRoleModalRef}
+              className="max-w-md w-full p-6 rounded-3xl border border-[var(--border-default)] bg-[var(--background-primary)] space-y-6 shadow-2xl"
+            >
+              <div>
+                <h3 className="text-xl font-bold text-[var(--text-primary)]">
+                  Change Roles
+                </h3>
+                <p className="text-xs text-[var(--text-secondary)] mt-1">
+                  {(selectedUser.firstName || "") +
+                    " " +
+                    (selectedUser.lastName || "")}
+                  {selectedUser.email ? ` · ${selectedUser.email}` : ""}
+                </p>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[var(--text-secondary)]">
-                  Description
-                </label>
-                <input
-                  type="text"
-                  placeholder="Responsibilities & scope"
-                  value={newRoleDesc}
-                  onChange={(e) => setNewRoleDesc(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[var(--border-default)] bg-[var(--background-secondary)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)]"
-                />
+              <div className="space-y-2">
+                {isLoadingRoles ? (
+                  <p className="text-xs font-bold text-[var(--text-tertiary)] text-center py-4">
+                    Loading roles...
+                  </p>
+                ) : roleLoadError ? (
+                  <p className="text-xs font-bold text-red-400">
+                    {roleLoadError}
+                  </p>
+                ) : (
+                  roleCatalog.map((role) => {
+                    const isChecked = selectedRoles.includes(role.roleName);
+                    return (
+                      <label
+                        key={role.roleName}
+                        className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition-colors ${
+                          isChecked
+                            ? "border-[var(--brand-core)] bg-[var(--brand-core)]/5"
+                            : "border-[var(--border-default)] hover:bg-[var(--background-tertiary)]"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelectedRole(role.roleName)}
+                          disabled={isSavingRoles}
+                          className="mt-1 accent-[var(--brand-core)]"
+                        />
+                        <div>
+                          <p className="text-xs font-bold text-[var(--text-primary)]">
+                            {role.roleName}
+                          </p>
+                          {role.description && (
+                            <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+                              {role.description}
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })
+                )}
               </div>
+
+              {roleSaveError && (
+                <p className="text-xs font-bold text-red-400">
+                  {roleSaveError}
+                </p>
+              )}
 
               <div className="flex items-center justify-end gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowCreateRoleModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-[var(--text-tertiary)] hover:bg-[var(--background-tertiary)] transition-colors"
+                  onClick={() => setShowChangeRoleModal(false)}
+                  disabled={isSavingRoles}
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-[var(--text-tertiary)] hover:bg-[var(--background-tertiary)] transition-colors disabled:opacity-40"
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-[var(--brand-core)] text-white text-xs font-bold shadow-md hover:bg-sky-400 transition-colors"
+                  type="button"
+                  onClick={handleSaveRoles}
+                  disabled={isSavingRoles || isLoadingRoles}
+                  className="px-5 py-2 rounded-xl bg-[var(--brand-core)] text-white text-xs font-bold shadow-md hover:bg-sky-400 transition-colors disabled:opacity-40"
                 >
-                  Save Custom Role
+                  {isSavingRoles ? "Saving..." : "Save Roles"}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
