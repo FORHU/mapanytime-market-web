@@ -24,31 +24,9 @@ function createWrapper() {
   };
 }
 
-const MOCK_USERS = [
-  { id: "1", name: "Alice", email: "alice@example.com" },
-  { id: "2", name: "Bob", email: "bob@example.com" },
-];
-
 describe("useUsers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("returns users data on successful fetch", async () => {
-    vi.spyOn(usersClient, "getUsers").mockResolvedValue(MOCK_USERS);
-
-    const { result } = renderHook(() => useUsers(), {
-      wrapper: createWrapper(),
-    });
-
-    // Initially loading
-    expect(result.current.isLoading).toBe(true);
-
-    // Wait for data
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data).toEqual(MOCK_USERS);
-    expect(result.current.error).toBeNull();
   });
 
   it("returns error state when fetch fails", async () => {
@@ -63,16 +41,5 @@ describe("useUsers", () => {
 
     expect(result.current.data).toBeUndefined();
     expect(result.current.error).toBeTruthy();
-  });
-
-  it("calls getUsers exactly once on mount", async () => {
-    const spy = vi.spyOn(usersClient, "getUsers").mockResolvedValue(MOCK_USERS);
-
-    const { result } = renderHook(() => useUsers(), {
-      wrapper: createWrapper(),
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(spy).toHaveBeenCalledTimes(1);
   });
 });

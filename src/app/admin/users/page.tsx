@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Users,
   Shield,
@@ -14,6 +14,8 @@ import {
   Layers,
   Sparkles,
 } from "lucide-react";
+import { getUsers } from "@/features/users/api/users.client";
+import { User as ApiUser } from "@/features/users/contracts/users.contract";
 
 interface SystemPermission {
   code: string;
@@ -94,48 +96,26 @@ export default function AdminUsersPage() {
     { name: "BUYER", desc: "Standard marketplace buyer account" },
   ]);
 
-  const [users, setUsers] = useState([
-    {
-      id: "usr_01",
-      name: "Alex Dev",
-      email: "alex@mapanytime.io",
-      role: "ADMIN",
-      verified: true,
-      joined: "2026-01-10",
-    },
-    {
-      id: "usr_02",
-      name: "Elena Rostova",
-      email: "elena@organicharvest.com",
-      role: "SELLER",
-      verified: true,
-      joined: "2026-03-14",
-    },
-    {
-      id: "usr_03",
-      name: "Marco Silva",
-      email: "marco@metrobakery.io",
-      role: "SELLER",
-      verified: true,
-      joined: "2026-04-02",
-    },
-    {
-      id: "usr_04",
-      name: "Sarah Jenkins",
-      email: "sarah@downtowncoffee.com",
-      role: "SUPPORT_AGENT",
-      verified: true,
-      joined: "2026-02-18",
-    },
-    {
-      id: "usr_05",
-      name: "David Miller",
-      email: "david@buyer.com",
-      role: "BUYER",
-      verified: true,
-      joined: "2026-05-20",
-    },
-  ]);
+  const [users, setUsers] = useState<ApiUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+
+  const fetchUser = async () => {
+    try {
+      const response = await getUsers();
+      setUsers(response.users);
+      setIsError(false);
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
 
   const togglePermission = (roleName: string, permCode: string) => {
     setRolePermissions((prev) => {
@@ -162,16 +142,15 @@ export default function AdminUsersPage() {
     setShowCreateRoleModal(false);
   };
 
-  const handleRoleChange = (id: string, newRole: string) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, role: newRole } : u)),
-    );
-  };
-
   const filteredUsers = users.filter((u) => {
-    const matchesRole = roleFilter === "ALL" || u.role === roleFilter;
+    const roleNames = u.roles?.map((role) => role.roleName) ?? [];
+    const matchesRole = roleFilter === "ALL" || roleNames.includes(roleFilter);
     const matchesSearch =
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
+      (u.firstName || "")
+        .concat(" ", u.lastName || "")
+        .trim()
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase());
     return matchesRole && matchesSearch;
   });
@@ -240,7 +219,13 @@ export default function AdminUsersPage() {
                       : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
                   }`}
                 >
-                  {r.name} ({users.filter((u) => u.role === r.name).length})
+                  {r.name} (
+                  {
+                    users.filter((u) =>
+                      (u.roles ?? []).some((role) => role.roleName === r.name),
+                    ).length
+                  }
+                  )
                 </button>
               ))}
             </div>
@@ -258,64 +243,84 @@ export default function AdminUsersPage() {
           </div>
 
           <div className="p-6 rounded-3xl border border-[var(--border-default)] bg-[var(--background-secondary)]/50 backdrop-blur-md overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[var(--border-light)] text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-                  <th className="pb-3 px-4">User</th>
-                  <th className="pb-3 px-4">Email</th>
-                  <th className="pb-3 px-4">Assigned Role</th>
-                  <th className="pb-3 px-4">Active Permissions</th>
-                  <th className="pb-3 px-4">Status</th>
-                  <th className="pb-3 px-4 text-right">Joined</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-light)] text-sm">
-                {filteredUsers.map((usr) => (
-                  <tr
-                    key={usr.id}
-                    className="hover:bg-[var(--background-tertiary)]/40 transition-colors"
-                  >
-                    <td className="py-4 px-4 font-bold text-[var(--text-primary)] flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center text-white text-xs font-black shadow-sm">
-                        {usr.name.charAt(0)}
-                      </div>
-                      {usr.name}
-                    </td>
-                    <td className="py-4 px-4 text-[var(--text-secondary)] text-xs">
-                      {usr.email}
-                    </td>
-                    <td className="py-4 px-4">
-                      <select
-                        value={usr.role}
-                        onChange={(e) =>
-                          handleRoleChange(usr.id, e.target.value)
-                        }
-                        className="px-2.5 py-1 rounded-xl border border-[var(--border-default)] bg-[var(--background-primary)] text-xs font-bold text-cyan-400 focus:outline-none"
-                      >
-                        {customRoles.map((r) => (
-                          <option key={r.name} value={r.name}>
-                            {r.name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                        {(rolePermissions[usr.role] || []).length} Granted
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Active
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-right text-xs text-[var(--text-tertiary)]">
-                      {usr.joined}
-                    </td>
+            {isLoading ? (
+              <div className="text-center py-12">
+                <p className="text-sm font-bold text-[var(--text-tertiary)]">
+                  Loading users...
+                </p>
+              </div>
+            ) : isError ? (
+              <div className="text-center py-12">
+                <p className="text-sm font-bold text-red-400">
+                  Failed to load users. Please try again later.
+                </p>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[var(--border-light)] text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+                    <th className="pb-3 px-4">User</th>
+                    <th className="pb-3 px-4">Email</th>
+                    <th className="pb-3 px-4">Assigned Role</th>
+                    <th className="pb-3 px-4">Active Permissions</th>
+                    <th className="pb-3 px-4">Status</th>
+                    <th className="pb-3 px-4 text-right">Joined</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[var(--border-light)] text-sm">
+                  {filteredUsers.map((usr) => (
+                    <tr
+                      key={usr.id}
+                      className="hover:bg-[var(--background-tertiary)]/40 transition-colors"
+                    >
+                      <td className="py-4 px-4 font-bold text-[var(--text-primary)] flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center text-white text-xs font-black shadow-sm">
+                          {((usr.firstName || "") + " " + (usr.lastName || ""))
+                            .trim()
+                            .charAt(0) || "U"}
+                        </div>
+                        {(
+                          (usr.firstName || "") +
+                          " " +
+                          (usr.lastName || "")
+                        ).trim() || usr.email}
+                      </td>
+                      <td className="py-4 px-4 text-[var(--text-secondary)] text-xs">
+                        {usr.email}
+                      </td>
+                      <td className="py-4 px-4 text-xs font-semibold text-[var(--text-secondary)]">
+                        {(usr.roles ?? [])
+                          .map((role) => role.roleName)
+                          .join(", ") || "—"}
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                          {
+                            (
+                              rolePermissions[
+                                (usr.roles ?? [])[0]?.roleName ?? ""
+                              ] || []
+                            ).length
+                          }{" "}
+                          Granted
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Active
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-right text-xs text-[var(--text-tertiary)]">
+                        {usr.createdAt}
+                      </td>
+                      <td className="py-4 px-4 text-right text-xs text-[var(--text-tertiary)]">
+                        pencil
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
