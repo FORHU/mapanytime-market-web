@@ -1,23 +1,5 @@
 import { z } from "zod";
 
-const AccountStatusSchema = z
-  .union([z.string(), z.number(), z.boolean(), z.null(), z.undefined()])
-  .transform((value) => (value == null ? "" : String(value)));
-
-const BooleanLikeSchema = z
-  .union([z.boolean(), z.string(), z.number(), z.null(), z.undefined()])
-  .transform((value) => {
-    if (typeof value === "boolean") return value;
-    if (typeof value === "string") {
-      const normalized = value.trim().toLowerCase();
-      return (
-        normalized === "true" || normalized === "1" || normalized === "yes"
-      );
-    }
-    if (typeof value === "number") return value === 1;
-    return false;
-  });
-
 export const UserRoleSchema = z.object({
   id: z.string(),
   roleName: z.string(),
@@ -51,7 +33,44 @@ export const UsersApiResponseSchema = z.object({
   data: UsersListDataSchema,
 });
 
+export const CatalogRoleSchema = z.object({
+  id: z.string().optional(),
+  roleName: z.string(),
+  description: z.string().nullable().optional(),
+  permissionCodes: z.array(z.string()).default([]),
+});
+
+export const RolesCatalogResponseSchema = z.object({
+  status: z.string().optional(),
+  statusCode: z.number().optional(),
+  data: z.array(CatalogRoleSchema),
+});
+
+export const PermissionSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+});
+
+export const PermissionsResponseSchema = z.object({
+  status: z.string().optional(),
+  statusCode: z.number().optional(),
+  data: z.array(PermissionSchema),
+});
+
+export const UserResponseSchema = z.object({
+  status: z.string().optional(),
+  statusCode: z.number().optional(),
+  data: UserSchema,
+});
+
 export type UserRole = z.infer<typeof UserRoleSchema>;
 export type User = z.infer<typeof UserSchema>;
 export type UsersListData = z.infer<typeof UsersListDataSchema>;
 export type UsersApiResponse = z.infer<typeof UsersApiResponseSchema>;
+export type CatalogRole = z.infer<typeof CatalogRoleSchema>;
+export type RolesCatalogResponse = z.infer<typeof RolesCatalogResponseSchema>;
+export type UserResponse = z.infer<typeof UserResponseSchema>;
+export type Permission = z.infer<typeof PermissionSchema>;
+export type PermissionsResponse = z.infer<typeof PermissionsResponseSchema>;
