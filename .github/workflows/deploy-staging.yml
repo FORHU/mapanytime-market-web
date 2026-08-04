@@ -34,6 +34,12 @@ jobs:
       ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
       ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
       IMAGE_TAG: staging-${{ github.sha }}
+      # Runtime-only (never build args): the presign route handler at
+      # src/app/api/file-uploads/presigned-url reads these on the server. They
+      # must NOT be NEXT_PUBLIC_ or they would ship to the browser.
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
 
     steps:
       - name: Checkout
@@ -54,15 +60,19 @@ jobs:
       - name: Build application
         run: pnpm build
 
-      - name: Configure AWS credentials (OIDC / Access Keys)
+      # Static access keys, exactly as mapanytime-api authenticates — those keys
+      # already have ECR push rights, which is why the API deploys today.
+      #
+      # Do NOT add `role-to-assume` back: AWS_ROLE_ARN points at
+      # `mapanytime-role`, the EC2 *instance* profile, whose policy is pull-only.
+      # Assuming it discards these keys' push rights and the push fails with
+      # "not authorized to perform ecr:InitiateLayerUpload".
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY || secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-          audience: sts.amazonaws.com
-          role-session-name: mapanytime-web-deploy-staging
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -96,7 +106,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
 
-          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV,NEXT_PUBLIC_SOCKET_SERVER_URL
+          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV,NEXT_PUBLIC_SOCKET_SERVER_URL,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_S3_BUCKET_NAME
 
           script: |
             set -euo pipefail
@@ -129,6 +139,10 @@ jobs:
               -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
               -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
               -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
+              -e AWS_REGION="${AWS_REGION:-}" \
+              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
+              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
+              -e AWS_S3_BUCKET_NAME="${AWS_S3_BUCKET_NAME:-}" \
               "$IMAGE"
 
             healthy=false
@@ -170,6 +184,10 @@ jobs:
               -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
               -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
               -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
+              -e AWS_REGION="${AWS_REGION:-}" \
+              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
+              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
+              -e AWS_S3_BUCKET_NAME="${AWS_S3_BUCKET_NAME:-}" \
               "$IMAGE"
 
             sleep 2
