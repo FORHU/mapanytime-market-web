@@ -37,8 +37,15 @@ jobs:
       # Runtime-only (never build args): the presign route handler at
       # src/app/api/file-uploads/presigned-url reads these on the server. They
       # must NOT be NEXT_PUBLIC_ or they would ship to the browser.
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #
+      # Deliberately NOT named AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY here.
+      # `configure-aws-credentials` exports those names for later steps, and a
+      # job-level env of the same name shadows them — the ECR login would then
+      # use these S3-only upload keys instead of the assumed deploy role and
+      # fail with "not authorized to perform ecr:GetAuthorizationToken".
+      # They are renamed back to the standard names on the `docker run` line.
+      UPLOAD_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      UPLOAD_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
 
     steps:
@@ -60,19 +67,18 @@ jobs:
       - name: Build application
         run: pnpm build
 
-      # Static access keys, exactly as mapanytime-api authenticates — those keys
-      # already have ECR push rights, which is why the API deploys today.
+      # OIDC role assumption for the deploy itself — same approach mirror-app
+      # uses. The AWS_ACCESS_KEY_ID secret belongs to `style-mirror-s3-dev`,
+      # an S3-only user with no ECR rights at all, so it cannot be used here.
       #
-      # Do NOT add `role-to-assume` back: AWS_ROLE_ARN points at
-      # `mapanytime-role`, the EC2 *instance* profile, whose policy is pull-only.
-      # Assuming it discards these keys' push rights and the push fails with
-      # "not authorized to perform ecr:InitiateLayerUpload".
-      - name: Configure AWS credentials
+      # AWS_ROLE_ARN must point at a role allowed to push to ECR.
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          audience: sts.amazonaws.com
+          role-session-name: mapanytime-web-deploy-staging
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -106,7 +112,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
 
-          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV,NEXT_PUBLIC_SOCKET_SERVER_URL,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_S3_BUCKET_NAME
+          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV,NEXT_PUBLIC_SOCKET_SERVER_URL,UPLOAD_AWS_ACCESS_KEY_ID,UPLOAD_AWS_SECRET_ACCESS_KEY,AWS_S3_BUCKET_NAME
 
           script: |
             set -euo pipefail
@@ -140,8 +146,8 @@ jobs:
               -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
               -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
               -e AWS_REGION="${AWS_REGION:-}" \
-              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
-              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
+              -e AWS_ACCESS_KEY_ID="${UPLOAD_AWS_ACCESS_KEY_ID:-}" \
+              -e AWS_SECRET_ACCESS_KEY="${UPLOAD_AWS_SECRET_ACCESS_KEY:-}" \
               -e AWS_S3_BUCKET_NAME="${AWS_S3_BUCKET_NAME:-}" \
               "$IMAGE"
 
@@ -185,8 +191,8 @@ jobs:
               -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
               -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
               -e AWS_REGION="${AWS_REGION:-}" \
-              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
-              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
+              -e AWS_ACCESS_KEY_ID="${UPLOAD_AWS_ACCESS_KEY_ID:-}" \
+              -e AWS_SECRET_ACCESS_KEY="${UPLOAD_AWS_SECRET_ACCESS_KEY:-}" \
               -e AWS_S3_BUCKET_NAME="${AWS_S3_BUCKET_NAME:-}" \
               "$IMAGE"
 
