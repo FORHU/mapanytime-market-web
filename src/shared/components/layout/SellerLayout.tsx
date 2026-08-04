@@ -19,6 +19,7 @@ import { Button } from "../ui/Button";
 import { io, Socket } from "socket.io-client";
 import { toast } from "sonner";
 import { getToken } from "@/shared/lib/token";
+import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 
 interface SellerLayoutProps {
   children: React.ReactNode;
@@ -48,25 +49,7 @@ export function SellerLayout({
 
   const router = useRouter();
   const pathname = usePathname();
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const token = getToken();
-    if (token) {
-      try {
-        const base64Url = token.split(".")[1];
-        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-        const jsonPayload = decodeURIComponent(
-          window
-            .atob(base64)
-            .split("")
-            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-            .join(""),
-        );
-        setUserId(JSON.parse(jsonPayload).userId || null);
-      } catch {}
-    }
-  }, []);
+  const { userId } = useCurrentUser();
 
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
 
@@ -196,21 +179,18 @@ export function SellerLayout({
               <Menu className="w-4 h-4" />
             </button>
             <div className="text-left hidden sm:block">
-              <span className="text-xs font-bold tracking-wider text-zinc-400 uppercase flex items-center gap-1.5">
-                MapAnytime Ecosystem
-                {activeStoreId ? (
-                  <span className="text-emerald-500 font-extrabold flex items-center gap-0.5 normal-case text-[10px]">
-                    <Unlock className="w-2.5 h-2.5" /> Context Isolated
-                  </span>
-                ) : (
-                  <span className="text-rose-500 font-extrabold flex items-center gap-0.5 normal-case text-[10px]">
-                    <Lock className="w-2.5 h-2.5" /> Workspace Locked
-                  </span>
-                )}
-              </span>
-              <h2 className="text-sm font-black text-[var(--text-primary)]">
-                Verified Merchant Dashboard
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                Seller dashboard
               </h2>
+              {activeStoreId ? (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <Unlock className="w-3 h-3" /> Managing your store
+                </span>
+              ) : (
+                <span className="text-xs text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> Choose a store to continue
+                </span>
+              )}
             </div>
           </div>
 
@@ -219,9 +199,9 @@ export function SellerLayout({
               <Button
                 variant="dark"
                 onClick={handleClearContext}
-                className="!h-9 !px-4 !rounded-xl !text-[10px]"
+                className="!h-9 !px-4 !rounded-xl !text-xs"
               >
-                <RefreshCw className="w-3 h-3" /> Switch Store
+                <RefreshCw className="w-3.5 h-3.5" /> Switch store
               </Button>
             )}
 
@@ -248,24 +228,24 @@ export function SellerLayout({
                   style={{ borderColor: "var(--border-default)" }}
                 >
                   <div className="flex items-center justify-between border-b pb-2 border-[var(--border-light)]">
-                    <span className="text-xs font-black text-[var(--text-primary)] flex items-center gap-1.5">
-                      <ShoppingBag className="w-3.5 h-3.5 text-sky-400" /> Order
-                      Notifications
+                    <span className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                      <ShoppingBag className="w-4 h-4 text-sky-500" /> Order
+                      alerts
                     </span>
                     {unreadCount > 0 && (
                       <button
                         onClick={markAllAsRead}
-                        className="text-[10px] text-sky-400 font-bold hover:underline flex items-center gap-0.5"
+                        className="text-xs text-sky-600 dark:text-sky-400 font-medium hover:underline flex items-center gap-0.5"
                       >
-                        <Check className="w-3 h-3" /> Mark read
+                        <Check className="w-3.5 h-3.5" /> Mark all read
                       </button>
                     )}
                   </div>
 
-                  <div className="max-h-64 overflow-y-auto space-y-2 text-xs">
+                  <div className="max-h-64 overflow-y-auto space-y-2 text-sm">
                     {notifications.length === 0 ? (
-                      <div className="py-6 text-center text-zinc-400 font-medium text-[11px]">
-                        No incoming order alerts yet.
+                      <div className="py-6 text-center text-[var(--text-secondary)] text-sm">
+                        No new orders yet.
                       </div>
                     ) : (
                       notifications.map((n) => (
@@ -277,13 +257,13 @@ export function SellerLayout({
                               : "bg-[var(--background-secondary)] border-[var(--border-light)] text-zinc-400"
                           }`}
                         >
-                          <div className="flex items-center justify-between font-bold text-[11px]">
+                          <div className="flex items-center justify-between font-semibold text-sm">
                             <span>{n.title}</span>
-                            <span className="text-[9px] text-zinc-400">
+                            <span className="text-xs text-[var(--text-tertiary)] shrink-0 ml-2">
                               {n.timestamp}
                             </span>
                           </div>
-                          <p className="text-[10px] text-zinc-400 mt-1">
+                          <p className="text-xs text-[var(--text-secondary)] mt-1">
                             {n.message}
                           </p>
                         </div>
@@ -318,9 +298,8 @@ export function SellerLayout({
           <div className="flex-1">
             {isLocked ? (
               <div className="p-12 text-center py-24">
-                <p className="text-sm text-zinc-400">
-                  Rerouting environment securely into your store selection
-                  frame...
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Taking you to your store list…
                 </p>
               </div>
             ) : (
@@ -329,15 +308,11 @@ export function SellerLayout({
           </div>
 
           <footer
-            className="pt-12 pb-4 mt-auto border-t text-center text-[11px] text-zinc-400 font-medium flex flex-col sm:flex-row items-center justify-between gap-2"
+            className="pt-12 pb-4 mt-auto border-t text-center text-xs text-[var(--text-secondary)] flex flex-col sm:flex-row items-center justify-between gap-2"
             style={{ borderColor: "var(--border-light)" }}
           >
-            <span>
-              © 2026 MapAnytime Ecosystem — Merchant Control Workspace
-            </span>
-            <span className="font-mono text-[10px] text-zinc-400">
-              v1.1.0 · Context Isolated
-            </span>
+            <span>© 2026 MapAnytime — Seller tools</span>
+            <span className="font-mono text-xs">v1.1.0</span>
           </footer>
         </main>
       </div>
