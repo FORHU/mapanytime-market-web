@@ -1,6 +1,5 @@
 import { useMutation, UseMutationResult } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { fetcher } from "@/shared/lib/http";
 import {
   PresignedUrlResponse,
   UploadFolder,
@@ -9,12 +8,13 @@ import {
 
 /**
  * Two-step direct-to-S3 upload:
- *   1. ask the API for a presigned PUT URL (authenticated, 15-minute expiry)
+ *   1. ask our own Next route handler for a presigned PUT URL (15-min expiry)
  *   2. PUT the file straight to S3, bypassing our servers
  *
- * The presign step goes through `fetcher` so it carries the bearer token and
- * participates in refresh-token rotation. The PUT deliberately does not — it
- * targets S3's origin, and the signature is the authorization.
+ * The presign step is a same-origin call to `/api/file-uploads/presigned-url`,
+ * which builds the S3 client server-side — AWS credentials never reach the
+ * browser. The PUT targets S3's origin directly; the signature is the
+ * authorization, so no bearer token is attached.
  */
 const executeCloudUpload = async (
   file: File,
@@ -26,9 +26,16 @@ const executeCloudUpload = async (
     folder,
   });
 
-  const { data } = await fetcher<{ data: PresignedUrlResponse }>(
-    `/api/v1/file-uploads/presigned-url?${query.toString()}`,
+  const presignRes = await fetch(
+    `/api/file-uploads/presigned-url?${query.toString()}`,
   );
+
+  if (!presignRes.ok) {
+    const body = await presignRes.json().catch(() => ({}));
+    throw new Error(body?.error || "Couldn't prepare the upload. Try again.");
+  }
+
+  const { data }: { data: PresignedUrlResponse } = await presignRes.json();
 
   const transferRes = await fetch(data.uploadUrl, {
     method: "PUT",
@@ -36,8 +43,9 @@ const executeCloudUpload = async (
     body: file,
   });
 
-  if (!transferRes.ok)
-    throw new Error("S3 failed to register content data package.");
+  if (!transferRes.ok) {
+    throw new Error("Upload to storage failed. Try again.");
+  }
 
   return { fileKey: data.fileKey, fileName: file.name };
 };
@@ -52,10 +60,10 @@ export function useS3AssetUpload(
   return useMutation<UploadSuccessResult, Error, File>({
     mutationFn: (file) => executeCloudUpload(file, folder),
     onSuccess: (data) => {
-      toast.success(`Successfully uploaded ${data.fileName}!`);
+      toast.success(`Uploaded ${data.fileName}`);
     },
     onError: (error) => {
-      toast.error(error.message || "Cloud pipeline process collapsed.");
+      toast.error(error.message || "Upload failed. Try again.");
     },
   });
 }
