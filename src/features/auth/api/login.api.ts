@@ -7,7 +7,7 @@ import {
 } from "../contracts/auth.contract";
 
 // Unified type definitions
-export type UserRole = "BUYER" | "SELLER" | "ADMIN";
+export type UserRole = "BUYER" | "SELLER" | "ADMIN" | "SUPPORT_AGENT";
 
 interface AuthResponse {
   accessToken: string;
