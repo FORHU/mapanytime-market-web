@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import LoginForm from "@/features/auth/components/LoginForm";
 import type { LoginRole } from "@/features/auth/types";
 import { Card } from "@/shared/components/ui/Card";
-import { Smartphone } from "lucide-react";
+import { SmartphoneIcon } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function LoginPage() {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-[var(--background-primary)]">
         <Card className="w-full max-w-md p-6 text-center">
-          <Smartphone className="mx-auto mb-4 h-12 w-12 text-[var(--brand-core)]" />
+          <SmartphoneIcon className="mx-auto mb-4 h-12 w-12 text-[var(--brand-core)]" />
           <h2 className="text-lg font-semibold mb-2">Login Successful!</h2>
           <p className="text-sm text-[var(--text-secondary)]">
             You have successfully logged in as a buyer. Please check your email

@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  Headset,
-  ShoppingBag,
-  Store,
-  Sparkles,
-  ArrowRight,
+  HeadsetIcon,
+  ShoppingBagIcon,
+  StoreIcon,
+  SparklesIcon,
+  ArrowRightIcon,
 } from "lucide-react";
 
 export default function AgentDashboardPage() {
@@ -14,7 +14,7 @@ export default function AgentDashboardPage() {
       title: "Order Oversight",
       description:
         "Track, review, and resolve marketplace orders across all stores.",
-      icon: ShoppingBag,
+      icon: ShoppingBagIcon,
       color: "text-sky-400",
       bg: "bg-sky-400/10",
       border: "border-sky-500/20",
@@ -23,7 +23,7 @@ export default function AgentDashboardPage() {
       title: "Store Support",
       description:
         "Assist merchants with onboarding, verifications, and store issues.",
-      icon: Store,
+      icon: StoreIcon,
       color: "text-cyan-400",
       bg: "bg-cyan-400/10",
       border: "border-cyan-500/20",
@@ -37,7 +37,7 @@ export default function AgentDashboardPage() {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-400/10 border border-cyan-400/30 text-cyan-400 text-xs font-bold uppercase tracking-wider">
-              <Headset className="w-3.5 h-3.5" /> Agent Support Console
+              <HeadsetIcon className="w-3.5 h-3.5" /> Agent Support Console
             </div>
             <h1 className="text-3xl font-black tracking-tight text-[var(--text-primary)]">
               Welcome, Agent!
@@ -49,7 +49,7 @@ export default function AgentDashboardPage() {
           </div>
           <div className="flex items-center gap-3">
             <span className="px-3 py-1.5 rounded-full bg-emerald-400/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold inline-flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" /> Active Workspace
+              <SparklesIcon className="w-3.5 h-3.5" /> Active Workspace
             </span>
           </div>
         </div>
@@ -83,7 +83,7 @@ export default function AgentDashboardPage() {
                 </p>
               </div>
               <button className="text-xs font-bold text-cyan-400 hover:underline inline-flex items-center gap-1">
-                Preview <ArrowRight className="w-3 h-3" />
+                Preview <ArrowRightIcon className="w-3 h-3" />
               </button>
             </div>
           );

@@ -5,14 +5,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { AgentAuthGate } from "@/features/auth/components/AgentAuthGate";
 import {
-  LayoutDashboard,
-  Sun,
-  Moon,
-  ChevronLeft,
-  LogOut,
-  Bell,
-  Search,
-  ExternalLink,
+  LayoutDashboardIcon,
+  SunIcon,
+  MoonIcon,
+  ChevronLeftIcon,
+  LogOutIcon,
+  BellIcon,
+  SearchIcon,
+  ExternalLinkIcon,
 } from "lucide-react";
 
 import Link from "next/link";
@@ -56,7 +56,7 @@ function AgentLayoutContent({ children }: { children: React.ReactNode }) {
     {
       name: "Dashboard",
       href: "/agent",
-      icon: LayoutDashboard,
+      icon: LayoutDashboardIcon,
       roles: ["SUPPORT_AGENT"],
     },
   ];
@@ -113,7 +113,7 @@ function AgentLayoutContent({ children }: { children: React.ReactNode }) {
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="hidden lg:flex p-1.5 rounded-lg border border-[var(--border-light)] hover:bg-[var(--background-tertiary)] text-[var(--text-secondary)] transition-colors"
             >
-              <ChevronLeft
+              <ChevronLeftIcon
                 className={`w-4 h-4 transition-transform duration-300 ${
                   !sidebarOpen ? "rotate-180" : ""
                 }`}
@@ -156,14 +156,14 @@ function AgentLayoutContent({ children }: { children: React.ReactNode }) {
             onClick={() => router.push("/")}
             className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--background-tertiary)] transition-colors"
           >
-            <ExternalLink className="w-4 h-4 text-sky-400 shrink-0" />
+            <ExternalLinkIcon className="w-4 h-4 text-sky-400 shrink-0" />
             {sidebarOpen && <span>View Marketplace</span>}
           </button>
           <button
             onClick={() => router.push("/login")}
             className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
           >
-            <LogOut className="w-4 h-4 shrink-0" />
+            <LogOutIcon className="w-4 h-4 shrink-0" />
             {sidebarOpen && <span>Sign Out</span>}
           </button>
         </div>
@@ -175,7 +175,7 @@ function AgentLayoutContent({ children }: { children: React.ReactNode }) {
         <header className="h-20 border-b border-[var(--border-default)] bg-[var(--background-secondary)]/50 backdrop-blur-md sticky top-0 z-20 px-6 sm:px-8 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4 flex-1 max-w-md">
             <div className="relative w-full">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+              <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
               <input
                 type="text"
                 placeholder="Search stores, orders, support tickets..."
@@ -191,14 +191,14 @@ function AgentLayoutContent({ children }: { children: React.ReactNode }) {
               title="Toggle Theme"
             >
               {isDark ? (
-                <Sun className="w-4 h-4 text-amber-400" />
+                <SunIcon className="w-4 h-4 text-amber-400" />
               ) : (
-                <Moon className="w-4 h-4 text-indigo-500" />
+                <MoonIcon className="w-4 h-4 text-indigo-500" />
               )}
             </button>
 
             <button className="relative p-2.5 rounded-xl border border-[var(--border-default)] bg-[var(--background-primary)] hover:bg-[var(--background-tertiary)] text-[var(--text-secondary)] transition-colors">
-              <Bell className="w-4 h-4" />
+              <BellIcon className="w-4 h-4" />
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
             </button>
 
