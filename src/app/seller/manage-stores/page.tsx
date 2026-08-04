@@ -25,13 +25,16 @@ export default function ManageStoresPage() {
       {view === "LIST" ? (
         <>
           {isLoading && (
-            <div className="p-8 text-center text-xs text-zinc-400 font-semibold animate-pulse">
-              Loading your stores...
+            <div className="p-8 text-center text-sm text-[var(--text-secondary)] animate-pulse">
+              Loading your stores…
             </div>
           )}
           {isError && (
-            <div className="p-4 border border-red-200 bg-red-50 rounded-xl text-left text-xs text-red-600">
-              <strong>Could not load stores:</strong> {error?.message}
+            <div className="p-4 border border-rose-200 dark:border-rose-900 bg-rose-50/60 dark:bg-rose-950/20 rounded-xl text-left text-sm text-rose-700 dark:text-rose-300">
+              <strong className="font-semibold">
+                We couldn&apos;t load your stores.
+              </strong>{" "}
+              {error?.message}
             </div>
           )}
           {!isLoading && !isError && (
@@ -52,9 +55,9 @@ export default function ManageStoresPage() {
         <div className="space-y-4">
           <button
             onClick={() => setView("LIST")}
-            className="text-xs font-bold underline text-zinc-400 hover:text-zinc-600 block text-left mb-2"
+            className="text-sm font-medium underline text-[var(--text-secondary)] hover:text-[var(--text-primary)] block text-left mb-2"
           >
-            ← Back to Store Selector Node
+            ← Back to my stores
           </button>
           <StoreOnboardingForm onComplete={handleCreateStoreSuccess} />
         </div>

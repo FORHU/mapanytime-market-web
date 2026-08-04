@@ -19,8 +19,8 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { getToken, clearToken } from "@/shared/lib/token";
-import { useEffect } from "react";
+import { clearToken } from "@/shared/lib/token";
+import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -48,31 +48,14 @@ export function Sidebar({
   const router = useRouter();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {
-      "Catalog & Stock": true,
-      "Sales & Orders": true,
-      "Store Management": true,
+      "Products & stock": true,
+      Sales: true,
+      "Store settings": true,
     },
   );
 
-  const [userRole, setUserRole] = useState("SELLER");
-
-  useEffect(() => {
-    const token = getToken();
-    if (token) {
-      try {
-        const base64Url = token.split(".")[1];
-        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-        const jsonPayload = decodeURIComponent(
-          window
-            .atob(base64)
-            .split("")
-            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-            .join(""),
-        );
-        setUserRole(JSON.parse(jsonPayload).roles?.[0] || "SELLER");
-      } catch {}
-    }
-  }, []);
+  const { roles } = useCurrentUser();
+  const userRole = roles[0] || "SELLER";
 
   const toggleGroup = (groupLabel: string) => {
     if (isLocked) return;
@@ -90,70 +73,72 @@ export function Sidebar({
       roles: ["SELLER", "ADMIN"],
     },
     {
-      label: "Catalog & Stock",
+      label: "Products & stock",
       icon: Package,
       roles: ["SELLER", "ADMIN"],
       children: [
         {
-          label: "My Products",
+          label: "My products",
           href: "/seller/products",
           icon: Package,
           roles: ["SELLER", "ADMIN"],
         },
         {
-          label: "AI Catalog Import",
+          label: "Import products",
           href: "/seller/ai-upload",
           icon: Sparkles,
           roles: ["SELLER", "ADMIN"],
           badge: "AI",
         },
         {
-          label: "Inventory Stock",
+          label: "Stock levels",
           href: "/seller/inventory",
           icon: Boxes,
           roles: ["SELLER", "ADMIN"],
+          badge: "Soon",
         },
       ],
     },
     {
-      label: "Sales & Orders",
+      label: "Sales",
       icon: ShoppingBag,
       roles: ["SELLER", "ADMIN"],
       children: [
         {
-          label: "Orders Stream",
+          label: "Orders",
           href: "/seller/orders",
           icon: ShoppingBag,
           roles: ["SELLER", "ADMIN"],
-          badge: "Live",
         },
         {
-          label: "Analytics Matrix",
+          label: "Sales reports",
           href: "/seller/analytics",
           icon: BarChart3,
           roles: ["SELLER", "ADMIN"],
+          badge: "Soon",
         },
         {
-          label: "Store Reviews",
+          label: "Customer reviews",
           href: "/seller/reviews",
           icon: MessageSquare,
           roles: ["SELLER", "ADMIN"],
+          badge: "Soon",
         },
       ],
     },
     {
-      label: "Store Management",
+      label: "Store settings",
       icon: Settings,
       roles: ["SELLER", "ADMIN"],
       children: [
         {
-          label: "Store Profile",
-          href: "/seller/profile",
+          label: "Store details",
+          href: "/seller/store-profile",
           icon: Store,
           roles: ["SELLER", "ADMIN"],
         },
         {
-          label: "System Settings",
+          label: "Preferences",
           href: "/seller/settings",
           icon: Settings,
           roles: ["SELLER", "ADMIN"],
@@ -161,7 +146,7 @@ export function Sidebar({
       ],
     },
     {
-      label: "Manage Stores",
+      label: "Switch store",
       href: "/seller/manage-stores",
       icon: Store,
       roles: ["SELLER", "ADMIN"],
@@ -186,7 +171,12 @@ export function Sidebar({
   };
 
   const linkBaseClasses =
-    "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 select-none cursor-pointer";
+    "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 select-none cursor-pointer";
+
+  const badgeClasses = (badge: string) =>
+    badge === "Soon"
+      ? "px-1.5 py-0.5 rounded-full text-xs font-medium bg-[var(--background-tertiary)] text-[var(--text-tertiary)] border border-[var(--border-light)]"
+      : "px-1.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-400/20 text-cyan-600 dark:text-cyan-400 border border-cyan-400/30";
 
   return (
     <>
@@ -217,12 +207,11 @@ export function Sidebar({
                 MA
               </div>
               <div className="flex flex-col text-left">
-                <span className="text-base font-black tracking-tight leading-none text-[var(--text-primary)]">
-                  Map
-                  <span style={{ color: "var(--brand-core)" }}>Merchant</span>
+                <span className="text-base font-semibold tracking-tight leading-none text-[var(--text-primary)]">
+                  Map<span style={{ color: "var(--brand-core)" }}>Anytime</span>
                 </span>
-                <span className="text-[9px] font-mono font-bold text-[var(--brand-core)] uppercase tracking-wider mt-0.5">
-                  Role: {userRole}
+                <span className="text-xs text-[var(--text-secondary)] mt-0.5">
+                  Seller tools
                 </span>
               </div>
             </div>
@@ -306,18 +295,18 @@ export function Sidebar({
                               href={child.href || "#"}
                               prefetch={true}
                               onClick={onClose}
-                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-all ${
                                 isChildSelected
                                   ? "bg-[var(--brand-core)] text-white shadow-sm"
                                   : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
                               }`}
                             >
                               <div className="flex items-center gap-2.5">
-                                <ChildIcon className="w-3.5 h-3.5" />
+                                <ChildIcon className="w-4 h-4" />
                                 <span>{child.label}</span>
                               </div>
                               {child.badge && (
-                                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-cyan-400/20 text-cyan-400 border border-cyan-400/30">
+                                <span className={badgeClasses(child.badge)}>
                                   {child.badge}
                                 </span>
                               )}
@@ -364,7 +353,7 @@ export function Sidebar({
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
-                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-cyan-400/20 text-cyan-400 border border-cyan-400/30">
+                    <span className={badgeClasses(item.badge)}>
                       {item.badge}
                     </span>
                   )}
@@ -381,7 +370,7 @@ export function Sidebar({
             className={`${linkBaseClasses} text-rose-400 hover:bg-rose-500/10`}
           >
             <LogOut className="w-4 h-4" />
-            <span>Sign Out Workspace</span>
+            <span>Sign out</span>
           </div>
         </div>
       </aside>
