@@ -22,7 +22,11 @@ import type { LoginRole } from "../types";
 export default function LoginForm({
   onLoginSuccess,
 }: {
-  onLoginSuccess: (role: LoginRole, hasStores: boolean) => void;
+  onLoginSuccess: (
+    role: LoginRole,
+    hasStores: boolean,
+    seller?: { isOnboarded: boolean; onboardingStep: number },
+  ) => void;
 }) {
   const [role, setRole] = useState<LoginRole>("seller");
   const [credentials, setCredentials] = useState({ email: "", password: "" });
@@ -60,7 +64,7 @@ export default function LoginForm({
       });
 
       setTimeout(() => {
-        onLoginSuccess(role, result.hasStores);
+        onLoginSuccess(role, result.hasStores, result.seller ?? undefined);
       }, 500);
     } catch (err) {
       setLoadingStep("");

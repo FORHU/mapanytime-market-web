@@ -11,13 +11,21 @@ export default function LoginPage() {
   const router = useRouter();
   const [buyerLoggedIn, setBuyerLoggedIn] = useState(false);
 
-  const handleLoginSuccess = (role: LoginRole, hasStores: boolean) => {
+  const handleLoginSuccess = (
+    role: LoginRole,
+    hasStores: boolean,
+    seller?: { isOnboarded: boolean; onboardingStep: number },
+  ) => {
     if (role === "admin") {
       router.push("/admin");
       return;
     }
     if (role === "seller") {
-      router.push(hasStores ? "/seller/manage-stores" : "/seller/onboarding");
+      router.push(
+        hasStores && seller?.isOnboarded
+          ? "/seller/manage-stores"
+          : "/seller/onboarding",
+      );
       return;
     }
     if (role === "support_agent") {
