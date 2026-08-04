@@ -1,3 +1,4 @@
+// not used - superseded by categories.client.ts
 import { API_BASE_URL } from "@/shared/config/api";
 
 export const createCategory = async (payload: {

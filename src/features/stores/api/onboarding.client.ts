@@ -8,6 +8,15 @@ import {
 
 const DAYS_OF_WEEK = [0, 1, 2, 3, 4, 5, 6];
 
+/**
+ * The form collects `"HH:MM"` from `<input type="time">`, but StoreHours
+ * persists minutes since midnight (`480` = 08:00). Convert at the wire edge.
+ */
+const toMinutesSinceMidnight = (value: string): number => {
+  const [hours, minutes] = value.split(":");
+  return (Number(hours) || 0) * 60 + (Number(minutes) || 0);
+};
+
 export const submitOnboarding = async (
   values: OnboardingFormValues,
 ): Promise<CreateStoreResponse> => {
@@ -57,8 +66,8 @@ export const submitOnboarding = async (
       },
       hoursData: DAYS_OF_WEEK.map((dayOfWeek) => ({
         dayOfWeek,
-        openTime: values.openTime,
-        closeTime: values.closeTime,
+        openMinutes: toMinutesSinceMidnight(values.openTime),
+        closeMinutes: toMinutesSinceMidnight(values.closeTime),
       })),
       ...(Object.keys(documents).length > 0 ? { documents } : {}),
     }),

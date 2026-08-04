@@ -1,3 +1,4 @@
+// not used - backend reviews endpoint (/api/v1/reviews) not implemented
 import { API_BASE_URL } from "@/shared/config/api";
 
 export const getReviews = async (storeId: string) => {

@@ -1,3 +1,4 @@
+// not used - backend REST route /api/channels/:id/messages not implemented
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, Socket } from "socket.io-client";

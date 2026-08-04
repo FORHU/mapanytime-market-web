@@ -9,11 +9,13 @@ import { z } from "zod";
 
 export const OrderStatusSchema = z.enum(["PENDING", "SHIPPED", "CANCELLED"]);
 
+// Money columns are Prisma `Decimal`, which serializes to a JSON string
+// ("1950"), so response-side numerics are coerced rather than asserted.
 export const OrderItemSchema = z.object({
   productId: z.string(),
   name: z.string(),
-  quantity: z.number().int().positive(),
-  price: z.number().nonnegative(),
+  quantity: z.coerce.number().int().positive(),
+  price: z.coerce.number().nonnegative(),
 });
 
 export const OrderSchema = z.object({
@@ -21,7 +23,7 @@ export const OrderSchema = z.object({
   storeId: z.string(),
   status: OrderStatusSchema,
   items: z.array(OrderItemSchema),
-  totalAmount: z.number().nonnegative(),
+  totalAmount: z.coerce.number().nonnegative(),
   customerName: z.string(),
   createdAt: z.string(),
 });

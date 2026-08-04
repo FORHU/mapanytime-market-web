@@ -1,3 +1,4 @@
+// not used - superseded by useProductsPipeline.ts and seller-catalog feature
 import { API_BASE_URL } from "@/shared/config/api";
 
 export const getProducts = async (storeId: string) => {
