@@ -1,3 +1,4 @@
+// not used - backend AI parser endpoint (/api/v1/ai/analyze-product) not implemented
 "use client";
 
 export interface AIAnalysisPayload {

@@ -53,7 +53,7 @@ export const useStoreOverviewStats = (params: {
     queryKey,
     queryFn: async () => {
       const endpoint = activeStoreId
-        ? `/api/v1/orders/seller?storeId=${activeStoreId}&status=ALL&limit=1000`
+        ? `/api/v1/orders/store?storeId=${activeStoreId}&status=ALL&limit=1000`
         : `/api/v1/orders?status=ALL&limit=1000`;
       const res: any = await fetcher(endpoint);
       const rawList: any[] = Array.isArray(res) ? res : res?.data || [];
@@ -146,7 +146,7 @@ export const useOrdersPipeline = (params: OrdersPipelineParams) => {
       });
 
       const endpoint = activeStoreId
-        ? `/api/v1/orders/seller?storeId=${activeStoreId}&${searchParams.toString()}`
+        ? `/api/v1/orders/store?storeId=${activeStoreId}&${searchParams.toString()}`
         : `/api/v1/orders?${searchParams.toString()}`;
 
       const res: any = await fetcher(endpoint);
@@ -240,9 +240,10 @@ export const useOrdersPipeline = (params: OrdersPipelineParams) => {
       orderId: string;
       status: string;
     }) => {
-      return fetcher(`/api/v1/orders/${orderId}/fulfill`, {
-        method: "POST",
-        body: JSON.stringify({ status }),
+      // Backend exposes a single body-driven endpoint, not a per-order path.
+      return fetcher(`/api/v1/orders/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ orderId, status }),
       });
     },
     onMutate: async ({ orderId, status }) => {

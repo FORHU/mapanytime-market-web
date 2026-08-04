@@ -1,3 +1,4 @@
+// not used - superseded by dashboard.client.ts
 import { API_BASE_URL } from "@/shared/config/api";
 
 export const getDashboard = async (storeId: string) => {

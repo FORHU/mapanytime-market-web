@@ -1,3 +1,4 @@
+// not used - FAOS architecture template demo mock (backend /api/posts not implemented)
 import { fetcher } from "@/shared/lib/http";
 import {
   PostsResponseSchema,

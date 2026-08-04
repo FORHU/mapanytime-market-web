@@ -10,7 +10,7 @@ import {
 } from "../contracts/orders.contract";
 
 export const getOrders = async (storeId: string): Promise<OrdersResponse> => {
-  const raw = await fetcher<any>(`/api/v1/orders/seller?storeId=${storeId}`);
+  const raw = await fetcher<any>(`/api/v1/orders/store?storeId=${storeId}`);
   const ordersList = raw?.data || [];
   const mapped = ordersList.map((order: any) => ({
     id: order.id,
@@ -57,6 +57,7 @@ export const createOrder = async (input: CreateOrderInput): Promise<Order> => {
   });
 };
 
+// not used - backend endpoint GET /api/v1/orders/:orderId/status not implemented
 export const getOrderStatus = async (
   orderId: string,
 ): Promise<OrderStatusResponse> => {
