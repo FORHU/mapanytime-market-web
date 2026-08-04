@@ -17,8 +17,7 @@ import {
 import Link from "next/link";
 import { useAuth } from "../hooks/useAuth";
 import type { UserRole as ApiUserRole } from "../api/login.api";
-
-type LoginRole = "buyer" | "seller" | "admin";
+import type { LoginRole } from "../types";
 
 export default function LoginForm({
   onLoginSuccess,
@@ -122,14 +121,14 @@ export default function LoginForm({
         <button
           type="button"
           disabled={isLoggingIn}
-          onClick={() => setRole("buyer")}
+          onClick={() => setRole("support_agent")}
           className={`py-2 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1 ${
-            role === "buyer"
+            role === "support_agent"
               ? "bg-[var(--brand-core)] text-white shadow-md"
               : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
           }`}
         >
-          Buyer
+          Agent
         </button>
       </div>
 

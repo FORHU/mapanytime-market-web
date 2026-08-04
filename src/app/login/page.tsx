@@ -3,10 +3,9 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import LoginForm from "@/features/auth/components/LoginForm";
+import type { LoginRole } from "@/features/auth/types";
 import { Card } from "@/shared/components/ui/Card";
-import { Smartphone } from "lucide-react";
-
-type LoginRole = "buyer" | "seller" | "admin";
+import { SmartphoneIcon } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,38 +20,23 @@ export default function LoginPage() {
       router.push(hasStores ? "/seller/manage-stores" : "/seller/onboarding");
       return;
     }
+    if (role === "support_agent") {
+      router.push("/agent");
+      return;
+    }
     setBuyerLoggedIn(true);
   };
 
   if (buyerLoggedIn) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-[var(--background-primary)]">
-        <Card className="p-6 text-center space-y-4 py-8 max-w-md w-full">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 flex items-center justify-center mx-auto">
-            <Smartphone className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-base font-black">Download MapAnytime Mobile</h2>
-            <p className="text-xs text-zinc-400 max-w-xs mx-auto mt-1">
-              You&apos;re signed in! To browse store pins and check out locally,
-              use our native mobile companion app.
-            </p>
-          </div>
-          <div className="pt-2 flex flex-col gap-2">
-            <a
-              href="#app-store"
-              className="w-full py-2 text-center text-xs font-bold border rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-900"
-              style={{ borderColor: "var(--border-light)" }}
-            >
-              Download on iOS App Store
-            </a>
-            <a
-              href="#google-play"
-              className="w-full py-2 text-center text-xs font-bold text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 rounded-xl hover:opacity-90"
-            >
-              Get it on Google Play
-            </a>
-          </div>
+        <Card className="w-full max-w-md p-6 text-center">
+          <SmartphoneIcon className="mx-auto mb-4 h-12 w-12 text-[var(--brand-core)]" />
+          <h2 className="text-lg font-semibold mb-2">Login Successful!</h2>
+          <p className="text-sm text-[var(--text-secondary)]">
+            You have successfully logged in as a buyer. Please check your email
+            for further instructions to access the buyer dashboard.
+          </p>
         </Card>
       </div>
     );
