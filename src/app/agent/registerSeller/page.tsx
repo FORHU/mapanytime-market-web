@@ -11,19 +11,19 @@ import type { SellerRegistrationResult } from "@/features/agents/types";
 import { MapSelection } from "@/features/stores/components/MapSelection";
 import { useCategories } from "@/features/stores/hooks/useCategories";
 import {
-  User,
-  Store,
-  Mail,
-  Phone,
-  ShieldCheck,
-  FileText,
-  Building2,
-  BadgeCheck,
-  LayoutGrid,
-  ArrowLeft,
-  ArrowRight,
-  Copy,
-  KeyRound,
+  UserIcon,
+  StoreIcon,
+  MailIcon,
+  PhoneIcon,
+  ShieldCheckIcon,
+  FileTextIcon,
+  Building2Icon,
+  BadgeCheckIcon,
+  LayoutGridIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CopyIcon,
+  KeyRoundIcon,
 } from "lucide-react";
 
 type WorkflowStep = "registration" | "credentials" | "onboarding";
@@ -169,7 +169,7 @@ export default function AgentRegisterSellerPage() {
           <Card className="mb-5 space-y-5 p-6 sm:p-8 shadow-xl border border-[var(--border-default)] bg-[var(--background-elevated)]/95 backdrop-blur-xl rounded-2xl">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500/10">
-                <KeyRound className="h-5 w-5 text-cyan-400" />
+                <KeyRoundIcon className="h-5 w-5 text-cyan-400" />
               </div>
               <div>
                 <h2 className="text-lg font-black text-[var(--text-primary)]">
@@ -204,7 +204,7 @@ export default function AgentRegisterSellerPage() {
                 }}
                 className="inline-flex items-center gap-1.5 font-bold text-cyan-400"
               >
-                <Copy className="h-3.5 w-3.5" /> Copy credentials
+                <CopyIcon className="h-3.5 w-3.5" /> Copy credentials
               </button>
             </div>
             <div className="flex items-center justify-between gap-3">
@@ -213,7 +213,7 @@ export default function AgentRegisterSellerPage() {
                 onClick={() => setWorkflowStep("registration")}
                 className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold text-[var(--text-tertiary)] hover:bg-[var(--background-tertiary)]"
               >
-                <ArrowLeft className="h-3.5 w-3.5" /> Back to Registration
+                <ArrowLeftIcon className="h-3.5 w-3.5" /> Back to Registration
               </button>
               <Button
                 onClick={() => {
@@ -221,7 +221,7 @@ export default function AgentRegisterSellerPage() {
                   setWorkflowStep("onboarding");
                 }}
               >
-                Continue to Onboarding <ArrowRight className="h-4 w-4" />
+                Continue to Onboarding <ArrowRightIcon className="h-4 w-4" />
               </Button>
             </div>
           </Card>
@@ -284,7 +284,7 @@ export default function AgentRegisterSellerPage() {
                     LIVE
                   </span>
                 </div>
-                <BadgeCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <BadgeCheckIcon className="w-4 h-4 text-emerald-400 shrink-0" />
               </div>
 
               <div className="p-6 sm:p-8">
@@ -292,7 +292,7 @@ export default function AgentRegisterSellerPage() {
                 <div className="mb-8 flex items-start justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-cyan-500 to-sky-400 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                      <Store className="w-5 h-5 text-white" />
+                      <StoreIcon className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <h2 className="text-lg font-black tracking-tight text-[var(--text-primary)]">
@@ -318,7 +318,7 @@ export default function AgentRegisterSellerPage() {
                   <div>
                     <div className="flex items-center gap-2.5 mb-5">
                       <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-                        <User className="w-4 h-4 text-cyan-400" />
+                        <UserIcon className="w-4 h-4 text-cyan-400" />
                       </div>
                       <h3 className="text-sm font-black tracking-tight text-[var(--text-primary)]">
                         Personal Details
@@ -330,7 +330,7 @@ export default function AgentRegisterSellerPage() {
                           First Name <span className="text-cyan-400">*</span>
                         </label>
                         <div className="relative">
-                          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                          <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                           <input
                             type="text"
                             name="firstName"
@@ -348,7 +348,7 @@ export default function AgentRegisterSellerPage() {
                           Last Name <span className="text-cyan-400">*</span>
                         </label>
                         <div className="relative">
-                          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                          <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                           <input
                             type="text"
                             name="lastName"
@@ -366,7 +366,7 @@ export default function AgentRegisterSellerPage() {
                           Email <span className="text-cyan-400">*</span>
                         </label>
                         <div className="relative">
-                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                          <MailIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                           <input
                             type="email"
                             name="email"
@@ -384,7 +384,7 @@ export default function AgentRegisterSellerPage() {
                           Phone
                         </label>
                         <div className="relative">
-                          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                          <PhoneIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                           <input
                             type="tel"
                             name="phoneNumber"
@@ -403,7 +403,7 @@ export default function AgentRegisterSellerPage() {
                   <div className="pt-2">
                     <div className="flex items-center gap-2.5 mb-5">
                       <div className="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
-                        <Building2 className="w-4 h-4 text-sky-400" />
+                        <Building2Icon className="w-4 h-4 text-sky-400" />
                       </div>
                       <h3 className="text-sm font-black tracking-tight text-[var(--text-primary)]">
                         Business Details
@@ -415,7 +415,7 @@ export default function AgentRegisterSellerPage() {
                           Store Name <span className="text-cyan-400">*</span>
                         </label>
                         <div className="relative">
-                          <Store className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                          <StoreIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                           <input
                             type="text"
                             name="storeName"
@@ -434,7 +434,7 @@ export default function AgentRegisterSellerPage() {
                           <span className="text-cyan-400">*</span>
                         </label>
                         <div className="relative">
-                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                          <MailIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                           <input
                             type="email"
                             name="businessEmail"
@@ -453,7 +453,7 @@ export default function AgentRegisterSellerPage() {
                           <span className="text-cyan-400">*</span>
                         </label>
                         <div className="relative">
-                          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                          <PhoneIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                           <input
                             type="tel"
                             name="businessPhone"
@@ -471,7 +471,7 @@ export default function AgentRegisterSellerPage() {
                           Seller Plan <span className="text-cyan-400">*</span>
                         </label>
                         <div className="relative">
-                          <LayoutGrid className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                          <LayoutGridIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                           <select
                             name="sellerPlan"
                             required
@@ -503,7 +503,7 @@ export default function AgentRegisterSellerPage() {
                   <div className="pt-2">
                     <div className="flex items-center gap-2.5 mb-5">
                       <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                        <FileText className="w-4 h-4 text-amber-400" />
+                        <FileTextIcon className="w-4 h-4 text-amber-400" />
                       </div>
                       <h3 className="text-sm font-black tracking-tight text-[var(--text-primary)]">
                         Agent Notes
@@ -520,7 +520,7 @@ export default function AgentRegisterSellerPage() {
                         className="w-full px-4 py-3 rounded-xl border border-[var(--border-default)] bg-[var(--background-primary)] text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-core)]/20 focus:border-[var(--brand-core)] transition-all duration-200 resize-none"
                       />
                       <p className="text-[10px] text-[var(--text-tertiary)] flex items-center gap-1.5">
-                        <BadgeCheck className="w-3 h-3 text-amber-400/60" />
+                        <BadgeCheckIcon className="w-3 h-3 text-amber-400/60" />
                         These notes are internal only and will not be visible to
                         the seller.
                       </p>
@@ -538,9 +538,9 @@ export default function AgentRegisterSellerPage() {
                       className="!h-12 text-sm font-extrabold rounded-xl shadow-lg shadow-[var(--brand-core)]/25 hover:shadow-xl hover:shadow-[var(--brand-core)]/30 transition-all"
                     >
                       {registration ? (
-                        <ArrowRight className="w-4 h-4" />
+                        <ArrowRightIcon className="w-4 h-4" />
                       ) : (
-                        <ShieldCheck className="w-4 h-4" />
+                        <ShieldCheckIcon className="w-4 h-4" />
                       )}
                       {registration
                         ? "Continue to Credentials"

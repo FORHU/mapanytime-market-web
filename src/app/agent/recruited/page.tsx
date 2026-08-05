@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Card } from "@/shared/components/ui/Card";
-import { Building2 } from "lucide-react";
+import { Building2Icon } from "lucide-react";
 import { getAgentRecruits } from "@/features/agents/api/agent.client";
 import type { AgentRecruit } from "@/features/agents/types";
 
@@ -68,7 +68,7 @@ export default function AgentRecruitedPage() {
           <div className="p-6 sm:p-8">
             <div className="flex items-center gap-2.5 mb-1">
               <div className="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-sky-400" />
+                <Building2Icon className="w-4 h-4 text-sky-400" />
               </div>
               <h2 className="text-lg font-black tracking-tight text-[var(--text-primary)]">
                 My Recruits
