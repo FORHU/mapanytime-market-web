@@ -4,9 +4,8 @@ import { useState, type ChangeEvent, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
-import { MapSelection } from "@/features/stores/components/MapSelection";
-import { useCategories } from "@/features/stores/hooks/useCategories";
 import { completeSellerOnboarding } from "../api/agent.client";
+import type { ReactNode } from "react";
 import type {
   AgentOnboardingInput,
   AgentOnboardingResult,
@@ -38,11 +37,21 @@ export default function AgentOnboardingForm({
   onComplete,
   onBack,
   initialStep = "store",
+  categories,
+  categoriesLoading = false,
+  mapSlot,
+  mapLat = 16.4164,
+  mapLng = 120.5931,
 }: {
   seller: SellerRegistrationResult;
   onComplete: (result: AgentOnboardingResult) => void;
   onBack?: () => void;
   initialStep?: Step;
+  categories?: { id: string; name: string }[];
+  categoriesLoading?: boolean;
+  mapSlot?: ReactNode;
+  mapLat?: number;
+  mapLng?: number;
 }) {
   const [step, setStep] = useState<Step>(initialStep);
   const [result, setResult] = useState<AgentOnboardingResult | null>(null);
@@ -51,8 +60,6 @@ export default function AgentOnboardingForm({
     businessEmail: seller.businessEmail,
     businessPhone: seller.businessPhone,
     categoryId: "",
-    lat: 16.4164,
-    lng: 120.5931,
     currentAddress: "",
     homeAddress: "",
     city: "",
@@ -63,7 +70,6 @@ export default function AgentOnboardingForm({
     closeTime: "20:00",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { data: categories, isLoading: categoriesLoading } = useCategories();
 
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -107,8 +113,8 @@ export default function AgentOnboardingForm({
         province: formData.province,
         zipCode: formData.zipCode,
         country: formData.country,
-        latitude: formData.lat,
-        longitude: formData.lng,
+        latitude: mapLat,
+        longitude: mapLng,
       },
       hoursData: DAYS_OF_WEEK.map((dayOfWeek) => ({
         dayOfWeek,
@@ -349,13 +355,7 @@ export default function AgentOnboardingForm({
             <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] mb-2 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5" /> Store Location
             </p>
-            <MapSelection
-              initialLat={formData.lat}
-              initialLng={formData.lng}
-              onChange={(lat, lng) =>
-                setFormData((current) => ({ ...current, lat, lng }))
-              }
-            />
+            {mapSlot}
           </div>
           <label className="space-y-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
             <span className="flex items-center gap-1.5">

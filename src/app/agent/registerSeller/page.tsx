@@ -8,6 +8,8 @@ import { Button } from "@/shared/components/ui/Button";
 import { registerSeller } from "@/features/agents/api/agent.client";
 import AgentOnboardingForm from "@/features/agents/components/AgentOnboardingForm";
 import type { SellerRegistrationResult } from "@/features/agents/types";
+import { MapSelection } from "@/features/stores/components/MapSelection";
+import { useCategories } from "@/features/stores/hooks/useCategories";
 import {
   User,
   Store,
@@ -34,6 +36,9 @@ export default function AgentRegisterSellerPage() {
     useState<WorkflowStep>("registration");
   const [maxStepReached, setMaxStepReached] = useState(0);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [mapLat, setMapLat] = useState(16.4164);
+  const [mapLng, setMapLng] = useState(120.5931);
+  const { data: categories, isLoading: categoriesLoading } = useCategories();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -229,6 +234,20 @@ export default function AgentRegisterSellerPage() {
               initialStep="store"
               onBack={() => setWorkflowStep("credentials")}
               onComplete={() => router.push("/agent")}
+              categories={categories}
+              categoriesLoading={categoriesLoading}
+              mapLat={mapLat}
+              mapLng={mapLng}
+              mapSlot={
+                <MapSelection
+                  initialLat={mapLat}
+                  initialLng={mapLng}
+                  onChange={(lat, lng) => {
+                    setMapLat(lat);
+                    setMapLng(lng);
+                  }}
+                />
+              }
             />
           </div>
         )}
