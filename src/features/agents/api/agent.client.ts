@@ -5,7 +5,19 @@ import type {
   AgentOnboardingResult,
   SellerRegistrationInput,
   SellerRegistrationResult,
+  AgentRecruit,
 } from "../types";
+
+const recruitsResponseSchema = z.object({
+  data: z.array(
+    z.object({
+      sellerId: z.string(),
+      sellerName: z.string(),
+      dateRecruited: z.string(),
+      status: z.enum(["Pending Onboarding", "Active", "Incomplete"]),
+    }),
+  ),
+});
 
 const registrationResponseSchema = z.object({
   data: z.object({
@@ -39,6 +51,11 @@ export async function registerSeller(
   });
 
   return registrationResponseSchema.parse(raw).data;
+}
+
+export async function getAgentRecruits(): Promise<AgentRecruit[]> {
+  const raw = await fetcher<unknown>("/api/v1/agent/recruits");
+  return recruitsResponseSchema.parse(raw).data;
 }
 
 export async function completeSellerOnboarding(

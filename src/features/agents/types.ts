@@ -21,6 +21,13 @@ export interface SellerRegistrationResult {
   requiresOnboarding: boolean;
 }
 
+export interface AgentRecruit {
+  sellerId: string;
+  sellerName: string;
+  dateRecruited: string;
+  status: "Pending Onboarding" | "Active" | "Incomplete";
+}
+
 export interface AgentOnboardingInput {
   storeData: {
     storeName: string;

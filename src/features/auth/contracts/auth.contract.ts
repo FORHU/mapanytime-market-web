@@ -19,6 +19,7 @@ export const LoginResponseEnvelopeSchema = z.object({
     seller: z
       .object({
         id: z.string(),
+        applicationStatus: z.string().optional(),
         isOnboarded: z.boolean(),
         onboardingStep: z.number(),
         hasStores: z.boolean(),
@@ -36,6 +37,7 @@ export const AuthResultSchema = z.object({
   seller: z
     .object({
       id: z.string(),
+      applicationStatus: z.string().optional(),
       isOnboarded: z.boolean(),
       onboardingStep: z.number(),
       hasStores: z.boolean(),

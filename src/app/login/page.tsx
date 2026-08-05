@@ -21,10 +21,10 @@ export default function LoginPage() {
       return;
     }
     if (role === "seller") {
+      const isReadyForDashboard = hasStores && seller?.isOnboarded === true;
+
       router.push(
-        hasStores && seller?.isOnboarded
-          ? "/seller/manage-stores"
-          : "/seller/onboarding",
+        isReadyForDashboard ? "/seller/manage-stores" : "/seller/onboarding",
       );
       return;
     }
