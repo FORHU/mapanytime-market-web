@@ -22,6 +22,7 @@ interface AgentNavItem {
   href?: string;
   icon: React.ComponentType<{ className?: string }>;
   roles?: string[];
+  children?: AgentNavItem[];
 }
 
 export default function AgentLayout({
@@ -56,6 +57,18 @@ function AgentLayoutContent({ children }: { children: React.ReactNode }) {
     {
       name: "Dashboard",
       href: "/agent",
+      icon: LayoutDashboardIcon,
+      roles: ["SUPPORT_AGENT"],
+    },
+    {
+      name: "Register Seller",
+      href: "/agent/registerSeller",
+      icon: LayoutDashboardIcon,
+      roles: ["SUPPORT_AGENT"],
+    },
+    {
+      name: "Recruited Sellers",
+      href: "/agent/recruited",
       icon: LayoutDashboardIcon,
       roles: ["SUPPORT_AGENT"],
     },
