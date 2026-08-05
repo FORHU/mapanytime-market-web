@@ -37,14 +37,10 @@ jobs:
       # src/app/api/file-uploads/presigned-url reads these on the server. They
       # must NOT be NEXT_PUBLIC_ or they would ship to the browser.
       #
-      # Deliberately NOT named AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY here.
-      # `configure-aws-credentials` exports those names for later steps, and a
-      # job-level env of the same name shadows them — the ECR login would then
-      # use these S3-only upload keys instead of the assumed deploy role and
-      # fail with "not authorized to perform ecr:GetAuthorizationToken".
-      # They are renamed back to the standard names on the `docker run` line.
-      UPLOAD_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      UPLOAD_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # Do NOT set AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY at job level —
+      # that would shadow `configure-aws-credentials`. That action exports
+      # the existing secrets.AWS_ACCESS_KEY_ID pair for later steps; the
+      # Deploy to EC2 step forwards those same vars over SSH (no second key).
       AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
 
     steps:
@@ -122,7 +118,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
 
-          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV,NEXT_PUBLIC_SOCKET_SERVER_URL,UPLOAD_AWS_ACCESS_KEY_ID,UPLOAD_AWS_SECRET_ACCESS_KEY,AWS_S3_BUCKET_NAME
+          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV,NEXT_PUBLIC_SOCKET_SERVER_URL,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_S3_BUCKET_NAME
 
           script: |
             set -euo pipefail
@@ -134,8 +130,11 @@ jobs:
 
             HEALTH_PORT=3001
 
-            # Amazon ECR Login — the EC2 host authenticates independently of
-            # the GitHub Actions runner (requires its own IAM instance role).
+            # Amazon ECR Login on the EC2 host.
+            # Uses secrets.AWS_ACCESS_KEY_ID already exported by
+            # configure-aws-credentials and forwarded over SSH. No second key.
+            # Prefer an instance role long-term.
+            AWS_DEFAULT_REGION="$AWS_REGION" \
             aws ecr get-login-password \
               --region "$AWS_REGION" \
               | docker login \
@@ -156,8 +155,8 @@ jobs:
               -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
               -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
               -e AWS_REGION="${AWS_REGION:-}" \
-              -e AWS_ACCESS_KEY_ID="${UPLOAD_AWS_ACCESS_KEY_ID:-}" \
-              -e AWS_SECRET_ACCESS_KEY="${UPLOAD_AWS_SECRET_ACCESS_KEY:-}" \
+              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
+              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
               -e AWS_S3_BUCKET_NAME="${AWS_S3_BUCKET_NAME:-}" \
               "$IMAGE"
 
@@ -201,8 +200,8 @@ jobs:
               -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
               -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
               -e AWS_REGION="${AWS_REGION:-}" \
-              -e AWS_ACCESS_KEY_ID="${UPLOAD_AWS_ACCESS_KEY_ID:-}" \
-              -e AWS_SECRET_ACCESS_KEY="${UPLOAD_AWS_SECRET_ACCESS_KEY:-}" \
+              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
+              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
               -e AWS_S3_BUCKET_NAME="${AWS_S3_BUCKET_NAME:-}" \
               "$IMAGE"
 
