@@ -2,12 +2,13 @@
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import { Card } from "@/shared/components/ui/Card";
-import { Store, UploadCloud, CheckCircle2 } from "lucide-react";
+import { Home, KeyRound, Store, UploadCloud, CheckCircle2 } from "lucide-react";
 import { MapSelection } from "./MapSelection";
 import { Button } from "@/shared/components/ui/Button";
 import { useS3AssetUpload } from "@/shared/hooks/useS3AssetUpload";
 import { useCategories } from "../hooks/useCategories";
 import { useCreateStore } from "../hooks/useCreateStore";
+import type { StoreType } from "../types";
 
 type DocumentField =
   "mayorsPermit" | "dtiCertificate" | "birCertificate" | "secCertificate";
@@ -23,8 +24,10 @@ const SHOW_DOCUMENT_UPLOAD_SECTION = false;
 
 export default function StoreOnboardingForm({
   onComplete,
+  storeType,
 }: {
   onComplete: () => void;
+  storeType?: StoreType;
 }) {
   const [formData, setFormData] = useState({
     storeName: "",
@@ -72,6 +75,18 @@ export default function StoreOnboardingForm({
   const uploadingField = (Object.keys(uploadsByField) as DocumentField[]).find(
     (field) => uploadsByField[field].isPending,
   );
+
+  const storeTypeLabel = {
+    store: "Store",
+    "house-lot": "House or Lot",
+    renting: "Renting",
+  } satisfies Record<StoreType, string>;
+  const StoreTypeIcon =
+    storeType === "house-lot"
+      ? Home
+      : storeType === "renting"
+        ? KeyRound
+        : Store;
 
   const onboardMutation = useCreateStore({
     onValidationError: setFieldErrors,
@@ -146,6 +161,18 @@ export default function StoreOnboardingForm({
             </p>
           </div>
         </div>
+
+        {storeType && (
+          <div className="mb-5 flex items-center gap-2 rounded-xl border border-[var(--brand-core)]/20 bg-[var(--brand-core)]/5 px-3 py-2 text-xs text-[var(--text-secondary)]">
+            <StoreTypeIcon className="h-4 w-4 text-[var(--brand-core)]" />
+            <span>
+              Setting up:{" "}
+              <strong className="text-[var(--text-primary)]">
+                {storeTypeLabel[storeType]}
+              </strong>
+            </span>
+          </div>
+        )}
 
         <form onSubmit={handleOnboardSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

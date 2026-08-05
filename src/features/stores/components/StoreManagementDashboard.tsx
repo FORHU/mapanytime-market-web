@@ -42,7 +42,7 @@ export default function StoreManagementDashboard({
           onClick={onCreateNewStore}
           className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 transition-opacity whitespace-nowrap"
         >
-          <Plus className="w-4 h-4" /> Create New Store
+          <Plus className="w-4 h-4" /> Add New Business
         </button>
       </div>
 
