@@ -38,6 +38,7 @@ export const login = async (
       ? envelope.data.stores.length > 0
       : false,
     user: envelope.data.user,
+    seller: envelope.data.seller,
   });
 };
 
