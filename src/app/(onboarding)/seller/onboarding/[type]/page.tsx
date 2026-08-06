@@ -27,6 +27,7 @@ export default function SellerOnboardingTypePage({
   return (
     <StoreOnboardingForm
       storeType={storeType}
+      onBack={() => router.push("/seller/manage-stores")}
       onComplete={() => router.push("/seller/manage-stores")}
     />
   );

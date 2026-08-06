@@ -1,10 +1,17 @@
 "use client";
 
-import React, { useState, ChangeEvent, FormEvent } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  ChangeEvent,
+  FormEvent,
+} from "react";
 import { Card } from "@/shared/components/ui/Card";
 import { Home, KeyRound, Store, UploadCloud, CheckCircle2 } from "lucide-react";
 import { MapSelection } from "./MapSelection";
 import { Button } from "@/shared/components/ui/Button";
+import { BackButton } from "@/shared/components/ui/BackButton";
 import { useS3AssetUpload } from "@/shared/hooks/useS3AssetUpload";
 import { useCategories } from "../hooks/useCategories";
 import { useCreateStore } from "../hooks/useCreateStore";
@@ -22,38 +29,66 @@ const DOCUMENT_LABELS: Record<DocumentField, string> = {
 
 const SHOW_DOCUMENT_UPLOAD_SECTION = false;
 
+const DEFAULT_FORM_DATA = {
+  storeName: "",
+  categoryId: "",
+  lat: 16.4164,
+  lng: 120.5931,
+  currentAddress: "",
+  homeAddress: "",
+  city: "",
+  province: "",
+  zipCode: "",
+  country: "Philippines",
+  openTime: "08:00",
+  closeTime: "20:00",
+  mayorsPermitKey: "",
+  mayorsPermitFileName: "",
+  dtiCertificateKey: "",
+  dtiCertificateFileName: "",
+  birCertificateKey: "",
+  birCertificateFileName: "",
+  secCertificateKey: "",
+  secCertificateFileName: "",
+};
+
 export default function StoreOnboardingForm({
   onComplete,
   storeType,
+  onBack,
 }: {
   onComplete: () => void;
   storeType?: StoreType;
+  onBack?: () => void;
 }) {
-  const [formData, setFormData] = useState({
-    storeName: "",
-    categoryId: "",
-    lat: 16.4164,
-    lng: 120.5931,
-    currentAddress: "",
-    homeAddress: "",
-    city: "",
-    province: "",
-    zipCode: "",
-    country: "Philippines",
-    openTime: "08:00",
-    closeTime: "20:00",
-    mayorsPermitKey: "",
-    mayorsPermitFileName: "",
-    dtiCertificateKey: "",
-    dtiCertificateFileName: "",
-    birCertificateKey: "",
-    birCertificateFileName: "",
-    secCertificateKey: "",
-    secCertificateFileName: "",
-  });
+  const draftStorageKey = storeType
+    ? `seller-onboarding-draft:${storeType}`
+    : "seller-onboarding-draft";
+  const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const draftLoadedRef = useRef(false);
 
   const [isDone, setIsDone] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    try {
+      const savedDraft = window.sessionStorage.getItem(draftStorageKey);
+      if (savedDraft) {
+        setFormData({ ...DEFAULT_FORM_DATA, ...JSON.parse(savedDraft) });
+      }
+    } catch {
+      // Ignore unavailable or malformed browser storage and use empty defaults.
+    } finally {
+      draftLoadedRef.current = true;
+      setIsDraftLoaded(true);
+    }
+  }, [draftStorageKey]);
+
+  useEffect(() => {
+    if (!isDraftLoaded || !draftLoadedRef.current) return;
+    window.sessionStorage.setItem(draftStorageKey, JSON.stringify(formData));
+  }, [draftStorageKey, formData, isDraftLoaded]);
 
   const {
     data: categories,
@@ -91,6 +126,7 @@ export default function StoreOnboardingForm({
   const onboardMutation = useCreateStore({
     onValidationError: setFieldErrors,
     onSuccess: () => {
+      window.sessionStorage.removeItem(draftStorageKey);
       setIsDone(true);
       setTimeout(onComplete, 1500);
     },
@@ -143,6 +179,7 @@ export default function StoreOnboardingForm({
   return (
     <div className="max-w-xl mx-auto p-4 text-left">
       <Card className="p-6">
+        {onBack && <BackButton onClick={onBack} className="-ml-2 mb-3" />}
         <div
           className="mb-6 flex items-center gap-3 pb-4 border-b"
           style={{ borderColor: "var(--border-light)" }}
