@@ -5,11 +5,17 @@ import { useRouter } from "next/navigation";
 import { StoreTypeSelectionModal, type StoreType } from "@/features/stores";
 import StoreManagementDashboard from "@/features/stores/components/StoreManagementDashboard";
 import { useStores } from "@/features/stores/hooks/useStores";
+import { useProperties } from "@/features/properties/hooks/useProperties";
 
 export default function ManageStoresPage() {
   const [showTypeModal, setShowTypeModal] = useState(false);
-  const { data: stores, isLoading, isError, error } = useStores();
+  const storesQuery = useStores();
+  const propertiesQuery = useProperties();
   const router = useRouter();
+
+  const isLoading = storesQuery.isLoading || propertiesQuery.isLoading;
+  const isError = storesQuery.isError || propertiesQuery.isError;
+  const error = storesQuery.error ?? propertiesQuery.error;
 
   const handleSelectStore = (storeId: string) => {
     localStorage.setItem("active_store_context_id", storeId);
@@ -38,13 +44,14 @@ export default function ManageStoresPage() {
       )}
       {!isLoading && !isError && (
         <StoreManagementDashboard
-          stores={(stores ?? []).map((store) => ({
+          stores={(storesQuery.data ?? []).map((store) => ({
             id: store.id,
             storeName: store.storeName,
             isActive: store.isActive,
             city: store.storeLocations?.city,
             province: store.storeLocations?.province,
           }))}
+          properties={propertiesQuery.data ?? []}
           onSelectStore={handleSelectStore}
           onCreateNewStore={() => setShowTypeModal(true)}
         />

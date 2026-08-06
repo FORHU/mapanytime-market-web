@@ -23,7 +23,26 @@ export const CreatePropertyResponseEnvelopeSchema = z.object({
     .passthrough(),
 });
 
+export const PropertySchema = z
+  .object({
+    id: z.string(),
+    propertyType: z.enum(["HOUSE_LOT", "RAW_LAND"]),
+    status: z.enum(["DRAFT", "PENDING_REVIEW"]),
+    address: z.string(),
+    subdivision: z.string().nullable().optional(),
+    latitude: z.number(),
+    longitude: z.number(),
+    legalName: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .passthrough();
+
+export const PropertiesResponseSchema = z.array(PropertySchema);
+
 export type HouseLotDraft = z.infer<typeof HouseLotDraftSchema>;
 export type CreatePropertyResponse = z.infer<
   typeof CreatePropertyResponseEnvelopeSchema
 >["data"];
+export type Property = z.infer<typeof PropertySchema>;
+export type PropertiesResponse = z.infer<typeof PropertiesResponseSchema>;
