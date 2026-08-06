@@ -6,5 +6,7 @@ export function useProperties() {
   return useSafeQuery<PropertiesResponse, Error>({
     queryKey: ["properties", "mine"],
     queryFn: listMyProperties,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 }

@@ -17,6 +17,8 @@ interface StoreItem {
   id: string;
   storeName: string;
   isActive: boolean;
+  approvalStatus?: "PENDING" | "ACTIVE" | "REJECTED";
+  rejectionReason?: string | null;
   city?: string;
   province?: string;
 }
@@ -107,9 +109,16 @@ export default function StoreManagementDashboard({
                             {store.storeName}
                           </h3>
                         </div>
-                        {store.isActive ? (
+                        {(store.approvalStatus ??
+                          (store.isActive ? "ACTIVE" : "PENDING")) ===
+                        "ACTIVE" ? (
                           <span className="flex items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
                             <ShieldCheck className="h-3 w-3" /> Active
+                          </span>
+                        ) : (store.approvalStatus ?? "PENDING") ===
+                          "REJECTED" ? (
+                          <span className="rounded-md border border-rose-500/20 bg-rose-500/5 px-2 py-0.5 text-[10px] font-bold text-rose-500">
+                            Rejected
                           </span>
                         ) : (
                           <span className="rounded-md border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 text-[10px] font-bold text-amber-500">
@@ -127,6 +136,12 @@ export default function StoreManagementDashboard({
                           </span>
                         </div>
                       )}
+                      {store.approvalStatus === "REJECTED" &&
+                        store.rejectionReason && (
+                          <p className="text-xs text-rose-400">
+                            Reason: {store.rejectionReason}
+                          </p>
+                        )}
                     </div>
                     <div
                       className="mt-4 flex items-center justify-between border-t pt-4 text-[11px] font-bold text-zinc-500"
@@ -176,8 +191,20 @@ export default function StoreManagementDashboard({
                               {isHouseLot ? "House & Lot" : "Raw Land"}
                             </h3>
                           </div>
-                          <span className="rounded-md border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 text-[10px] font-bold text-amber-500">
-                            Pending
+                          <span
+                            className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${
+                              property.status === "REJECTED"
+                                ? "border-rose-500/20 bg-rose-500/5 text-rose-500"
+                                : property.status === "ACTIVE"
+                                  ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-500"
+                                  : "border-amber-500/20 bg-amber-500/5 text-amber-500"
+                            }`}
+                          >
+                            {property.status === "REJECTED"
+                              ? "Rejected"
+                              : property.status === "ACTIVE"
+                                ? "Active"
+                                : "Pending"}
                           </span>
                         </div>
                         <div className="flex items-start gap-1 text-[10px] text-zinc-400">
@@ -195,8 +222,13 @@ export default function StoreManagementDashboard({
                         style={{ borderColor: "var(--border-light)" }}
                       >
                         <span>Property onboarding draft</span>
-                        <span className="text-[10px] font-medium text-zinc-400">
-                          Saved for review
+                        <span className="max-w-[60%] text-right text-[10px] font-medium text-zinc-400">
+                          {property.status === "REJECTED" &&
+                          property.rejectionReason
+                            ? `Reason: ${property.rejectionReason}`
+                            : property.status === "ACTIVE"
+                              ? "Verified"
+                              : "Saved for review"}
                         </span>
                       </div>
                     </Card>

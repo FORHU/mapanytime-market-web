@@ -15,6 +15,8 @@ export const StoreSchema = z
     storeName: z.string(),
     description: z.string().nullable(),
     isActive: z.boolean(),
+    approvalStatus: z.enum(["PENDING", "ACTIVE", "REJECTED"]).optional(),
+    rejectionReason: z.string().nullable().optional(),
     createdAt: z.string(),
     updatedAt: z.string(),
     storeLocations: StoreLocationSchema.optional(),

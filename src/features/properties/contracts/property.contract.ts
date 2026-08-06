@@ -18,7 +18,7 @@ export const CreatePropertyResponseEnvelopeSchema = z.object({
   data: z
     .object({
       id: z.string(),
-      status: z.enum(["DRAFT", "PENDING_REVIEW"]),
+      status: z.enum(["DRAFT", "PENDING_REVIEW", "ACTIVE", "REJECTED"]),
     })
     .passthrough(),
 });
@@ -27,7 +27,8 @@ export const PropertySchema = z
   .object({
     id: z.string(),
     propertyType: z.enum(["HOUSE_LOT", "RAW_LAND"]),
-    status: z.enum(["DRAFT", "PENDING_REVIEW"]),
+    status: z.enum(["DRAFT", "PENDING_REVIEW", "ACTIVE", "REJECTED"]),
+    rejectionReason: z.string().nullable().optional(),
     address: z.string(),
     subdivision: z.string().nullable().optional(),
     latitude: z.number(),

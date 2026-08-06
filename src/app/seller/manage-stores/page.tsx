@@ -48,6 +48,8 @@ export default function ManageStoresPage() {
             id: store.id,
             storeName: store.storeName,
             isActive: store.isActive,
+            approvalStatus: store.approvalStatus,
+            rejectionReason: store.rejectionReason,
             city: store.storeLocations?.city,
             province: store.storeLocations?.province,
           }))}
