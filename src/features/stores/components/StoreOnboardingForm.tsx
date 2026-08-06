@@ -12,10 +12,15 @@ import { Home, KeyRound, Store, UploadCloud, CheckCircle2 } from "lucide-react";
 import { MapSelection } from "./MapSelection";
 import { Button } from "@/shared/components/ui/Button";
 import { BackButton } from "@/shared/components/ui/BackButton";
+import { ClearFormButton } from "@/shared/components/ui/ClearFormButton";
 import { useS3AssetUpload } from "@/shared/hooks/useS3AssetUpload";
 import { useCategories } from "../hooks/useCategories";
 import { useCreateStore } from "../hooks/useCreateStore";
 import type { StoreType } from "../types";
+import {
+  clearOnboardingDraft,
+  getOnboardingDraftKey,
+} from "../utils/onboardingDraft";
 
 type DocumentField =
   "mayorsPermit" | "dtiCertificate" | "birCertificate" | "secCertificate";
@@ -61,19 +66,18 @@ export default function StoreOnboardingForm({
   storeType?: StoreType;
   onBack?: () => void;
 }) {
-  const draftStorageKey = storeType
-    ? `seller-onboarding-draft:${storeType}`
-    : "seller-onboarding-draft";
+  const draftStorageKey = getOnboardingDraftKey(storeType);
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const draftLoadedRef = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const [isDone, setIsDone] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     try {
-      const savedDraft = window.sessionStorage.getItem(draftStorageKey);
+      const savedDraft = localStorage.getItem(draftStorageKey);
       if (savedDraft) {
         setFormData({ ...DEFAULT_FORM_DATA, ...JSON.parse(savedDraft) });
       }
@@ -87,8 +91,20 @@ export default function StoreOnboardingForm({
 
   useEffect(() => {
     if (!isDraftLoaded || !draftLoadedRef.current) return;
-    window.sessionStorage.setItem(draftStorageKey, JSON.stringify(formData));
+    localStorage.setItem(draftStorageKey, JSON.stringify(formData));
   }, [draftStorageKey, formData, isDraftLoaded]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      clearOnboardingDraft(storeType);
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [storeType]);
 
   const {
     data: categories,
@@ -126,11 +142,20 @@ export default function StoreOnboardingForm({
   const onboardMutation = useCreateStore({
     onValidationError: setFieldErrors,
     onSuccess: () => {
-      window.sessionStorage.removeItem(draftStorageKey);
+      clearForm();
       setIsDone(true);
       setTimeout(onComplete, 1500);
     },
   });
+
+  const clearForm = () => {
+    setFormData(DEFAULT_FORM_DATA);
+    setFieldErrors({});
+    setIsDone(false);
+    formRef.current?.reset();
+    clearOnboardingDraft(storeType);
+    onboardMutation.reset();
+  };
 
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -211,7 +236,11 @@ export default function StoreOnboardingForm({
           </div>
         )}
 
-        <form onSubmit={handleOnboardSubmit} className="space-y-4">
+        <form
+          ref={formRef}
+          onSubmit={handleOnboardSubmit}
+          className="space-y-4"
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
@@ -480,6 +509,9 @@ export default function StoreOnboardingForm({
               ? "Submitting..."
               : "Submit Store Onboarding Data"}
           </Button>
+          <div className="flex justify-center pt-1">
+            <ClearFormButton onClear={clearForm} />
+          </div>
         </form>
       </Card>
     </div>

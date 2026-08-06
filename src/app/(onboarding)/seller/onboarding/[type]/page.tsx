@@ -2,6 +2,8 @@
 
 import { use, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import HouseLotOnboardingStub from "@/features/stores/components/HouseLotOnboardingStub";
+import RentingOnboardingStub from "@/features/stores/components/RentingOnboardingStub";
 import StoreOnboardingForm from "@/features/stores/components/StoreOnboardingForm";
 import { STORE_TYPE_SLUGS, type StoreType } from "@/features/stores/types";
 
@@ -23,6 +25,22 @@ export default function SellerOnboardingTypePage({
   if (!isValidType) return null;
 
   const storeType = type as StoreType;
+
+  if (storeType === "house-lot") {
+    return (
+      <HouseLotOnboardingStub
+        onBack={() => router.push("/seller/manage-stores")}
+      />
+    );
+  }
+
+  if (storeType === "renting") {
+    return (
+      <RentingOnboardingStub
+        onBack={() => router.push("/seller/manage-stores")}
+      />
+    );
+  }
 
   return (
     <StoreOnboardingForm
