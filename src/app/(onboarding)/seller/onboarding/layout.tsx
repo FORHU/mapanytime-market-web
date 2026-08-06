@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 
@@ -11,14 +11,19 @@ export default function OnboardingLayout({
 }) {
   const token = useAuthStore((state) => state.token);
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      router.push("/login");
-    }
-  }, [router, token]);
+    setMounted(true);
+  }, []);
 
-  if (!token) {
+  useEffect(() => {
+    if (mounted && !token) {
+      router.replace("/login");
+    }
+  }, [mounted, router, token]);
+
+  if (!mounted || !token) {
     return null;
   }
 

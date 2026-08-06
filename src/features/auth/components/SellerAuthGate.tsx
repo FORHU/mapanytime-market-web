@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SellerLayout } from "@/shared/components/layout/SellerLayout";
 import { useAuthStore } from "../stores/auth.store";
@@ -10,12 +10,17 @@ export function SellerAuthGate({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
   const { logout } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      router.push("/login");
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !token) {
+      router.replace("/login");
     }
-  }, [router, token]);
+  }, [mounted, router, token]);
 
   const handleSignOut = async () => {
     try {
@@ -24,6 +29,10 @@ export function SellerAuthGate({ children }: { children: React.ReactNode }) {
       router.push("/login");
     }
   };
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <SellerLayout isAuthenticated={!!token} onSignOut={handleSignOut}>

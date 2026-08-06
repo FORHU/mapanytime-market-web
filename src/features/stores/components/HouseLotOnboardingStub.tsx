@@ -4,6 +4,7 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import {
   Camera,
   Check,
+  CheckCircle2,
   FileText,
   Home,
   LandPlot,
@@ -18,6 +19,7 @@ import { BackButton } from "@/shared/components/ui/BackButton";
 import { Button } from "@/shared/components/ui/Button";
 import { Card } from "@/shared/components/ui/Card";
 import { ClearFormButton } from "@/shared/components/ui/ClearFormButton";
+import { useCreateProperty } from "@/features/properties/hooks/useCreateProperty";
 import { MapSelection } from "./MapSelection";
 import {
   clearOnboardingDraft,
@@ -110,6 +112,7 @@ export default function HouseLotOnboardingStub({
   const [step, setStep] = useState<1 | 2>(1);
   const [draft, setDraft] = useState<HouseLotDraft>(DEFAULT_DRAFT);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -151,11 +154,20 @@ export default function HouseLotOnboardingStub({
     value: HouseLotDraft[K],
   ) => setDraft((current) => ({ ...current, [field]: value }));
 
+  const propertyMutation = useCreateProperty({
+    onSuccess: () => {
+      clearForm();
+      setIsSubmitted(true);
+    },
+  });
+
   const clearForm = () => {
     setDraft(DEFAULT_DRAFT);
     setStep(1);
+    setIsSubmitted(false);
     formRef.current?.reset();
     clearOnboardingDraft("house-lot");
+    propertyMutation.reset();
   };
 
   const handleGovernmentId = (event: ChangeEvent<HTMLInputElement>) => {
@@ -167,6 +179,40 @@ export default function HouseLotOnboardingStub({
     event.preventDefault();
     setStep(2);
   };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    propertyMutation.mutate(draft);
+  };
+
+  if (isSubmitted) {
+    return (
+      <div className="w-full max-w-lg p-2 sm:p-4">
+        <Card className="overflow-hidden border-[var(--border-light)] p-0 shadow-xl shadow-black/5">
+          <div className="h-2 bg-emerald-500" />
+          <div className="px-6 py-10 text-center sm:px-10 sm:py-12">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-500/10 text-emerald-500 ring-8 ring-emerald-500/5">
+              <CheckCircle2 className="h-10 w-10" aria-hidden="true" />
+            </div>
+            <span className="mt-7 inline-flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">
+              Draft saved
+            </span>
+            <h2 className="mt-4 text-2xl font-black tracking-tight text-[var(--text-primary)]">
+              Property Saved
+            </h2>
+            <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[var(--text-secondary)]">
+              Your house or lot onboarding details are safely saved as a draft
+              and ready for the next review step.
+            </p>
+            <div className="my-8 border-t border-[var(--border-light)]" />
+            <Button type="button" fullWidth onClick={onBack}>
+              Back to Manage Your Storefronts
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-3xl p-2 text-left sm:p-4">
@@ -398,11 +444,7 @@ export default function HouseLotOnboardingStub({
               </div>
             </form>
           ) : (
-            <form
-              ref={formRef}
-              onSubmit={(event) => event.preventDefault()}
-              className="space-y-7"
-            >
+            <form ref={formRef} onSubmit={handleSubmit} className="space-y-7">
               <div>
                 <SectionLabel>Property basics & location</SectionLabel>
                 <h2 className="mt-2 text-lg font-black text-[var(--text-primary)]">
@@ -539,20 +581,20 @@ export default function HouseLotOnboardingStub({
 
               <div className="flex w-full justify-end">
                 <Button
-                  type="button"
+                  type="submit"
                   fullWidth
                   className="!h-12 rounded-2xl text-sm sm:w-auto sm:min-w-48"
-                  onClick={() => undefined}
+                  disabled={propertyMutation.isPending}
                 >
-                  Done
+                  {propertyMutation.isPending ? "Saving..." : "Done"}
                 </Button>
               </div>
               <div className="flex justify-center">
                 <ClearFormButton onClear={clearForm} />
               </div>
               <p className="flex items-center justify-center gap-2 text-center text-[10px] text-[var(--text-tertiary)]">
-                <FileText className="h-3.5 w-3.5" /> Frontend preview only. No
-                property will be submitted yet.
+                <FileText className="h-3.5 w-3.5" /> Property data is saved as a
+                backend draft for testing.
               </p>
             </form>
           )}
