@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Home, KeyRound, Store, X } from "lucide-react";
+import { HomeIcon, KeyRoundIcon, StoreIcon, XIcon } from "lucide-react";
 import type { StoreType } from "../types";
 
 interface StoreTypeSelectionModalProps {
@@ -15,25 +15,25 @@ const STORE_TYPE_OPTIONS: Array<{
   type: StoreType;
   label: string;
   description: string;
-  icon: typeof Store;
+  icon: typeof StoreIcon;
 }> = [
   {
     type: "store",
     label: "Store",
     description: "Standard retail / e-commerce",
-    icon: Store,
+    icon: StoreIcon,
   },
   {
     type: "house-lot",
     label: "House or Lot",
     description: "Real estate / property selling",
-    icon: Home,
+    icon: HomeIcon,
   },
   {
     type: "renting",
     label: "Renting",
     description: "Leasing / rental properties or items",
-    icon: KeyRound,
+    icon: KeyRoundIcon,
   },
 ];
 
@@ -74,7 +74,7 @@ export function StoreTypeSelectionModal({
           aria-label="Close store type selection"
           className="absolute right-4 top-4 rounded-xl p-2 text-[var(--text-tertiary)] transition-colors hover:bg-[var(--background-tertiary)] hover:text-[var(--text-primary)]"
         >
-          <X className="h-5 w-5" />
+          <XIcon className="h-5 w-5" />
         </button>
 
         <div className="pr-10 text-left">

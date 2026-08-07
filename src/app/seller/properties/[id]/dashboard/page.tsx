@@ -6,7 +6,12 @@ import { usePropertyDashboard } from "@/features/properties/hooks/usePropertyDas
 import { ApiError } from "@/shared/errors/api-error";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
-import { Home, LandPlot, MapPin, ShieldCheck } from "lucide-react";
+import {
+  HomeIcon,
+  LandPlotIcon,
+  MapPinIcon,
+  ShieldCheckIcon,
+} from "lucide-react";
 
 interface PropertyDashboardPageProps {
   params: Promise<{ id: string }>;
@@ -64,7 +69,7 @@ export default function PropertyDashboardPage({
           </p>
         </div>
         <span className="inline-flex w-fit items-center gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-1 text-xs font-bold text-emerald-500">
-          <ShieldCheck className="h-4 w-4" /> Verified
+          <ShieldCheckIcon className="h-4 w-4" /> Verified
         </span>
       </div>
 
@@ -73,9 +78,9 @@ export default function PropertyDashboardPage({
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-core)]/10 text-[var(--brand-core)]">
               {isHouseLot ? (
-                <Home className="h-5 w-5" />
+                <HomeIcon className="h-5 w-5" />
               ) : (
-                <LandPlot className="h-5 w-5" />
+                <LandPlotIcon className="h-5 w-5" />
               )}
             </div>
             <div>
@@ -88,7 +93,7 @@ export default function PropertyDashboardPage({
             </div>
           </div>
           <div className="mt-6 flex items-start gap-2 text-sm text-[var(--text-secondary)]">
-            <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+            <MapPinIcon className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
               {property.address}
               {property.subdivision ? `, ${property.subdivision}` : ""}

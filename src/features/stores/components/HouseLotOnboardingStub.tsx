@@ -2,18 +2,18 @@
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import {
-  Camera,
-  Check,
-  CheckCircle2,
-  FileText,
-  Home,
-  LandPlot,
-  Mail,
-  MapPin,
-  Phone,
-  ShieldCheck,
-  UploadCloud,
-  UserRound,
+  CameraIcon,
+  CheckIcon,
+  CheckCircle2Icon,
+  FileTextIcon,
+  HomeIcon,
+  LandPlotIcon,
+  MailIcon,
+  MapPinIcon,
+  PhoneIcon,
+  ShieldCheckIcon,
+  UploadCloudIcon,
+  UserRoundIcon,
 } from "lucide-react";
 import { BackButton } from "@/shared/components/ui/BackButton";
 import { Button } from "@/shared/components/ui/Button";
@@ -187,7 +187,7 @@ export default function HouseLotOnboardingStub({
           <div className="h-2 bg-emerald-500" />
           <div className="px-6 py-10 text-center sm:px-10 sm:py-12">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-500/10 text-emerald-500 ring-8 ring-emerald-500/5">
-              <CheckCircle2 className="h-10 w-10" aria-hidden="true" />
+              <CheckCircle2Icon className="h-10 w-10" aria-hidden="true" />
             </div>
             <span className="mt-7 inline-flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">
               Draft saved
@@ -219,7 +219,7 @@ export default function HouseLotOnboardingStub({
           />
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10">
-              <Home className="h-6 w-6" />
+              <HomeIcon className="h-6 w-6" />
             </div>
             <div>
               <p className="mb-1 text-[10px] font-black uppercase tracking-[0.2em] text-white/60">
@@ -332,7 +332,7 @@ export default function HouseLotOnboardingStub({
                     htmlFor="phone"
                     className="mb-2 block text-sm font-bold text-[var(--text-primary)]"
                   >
-                    <Phone className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
+                    <PhoneIcon className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
                     Phone number <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -352,7 +352,7 @@ export default function HouseLotOnboardingStub({
                     htmlFor="email"
                     className="mb-2 block text-sm font-bold text-[var(--text-primary)]"
                   >
-                    <Mail className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
+                    <MailIcon className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
                     Email address <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -382,9 +382,9 @@ export default function HouseLotOnboardingStub({
                       className="sr-only"
                     />
                     {draft.governmentIdName ? (
-                      <Check className="mb-2 h-6 w-6 text-emerald-500" />
+                      <CheckIcon className="mb-2 h-6 w-6 text-emerald-500" />
                     ) : (
-                      <UploadCloud className="mb-2 h-6 w-6 text-[var(--brand-core)]" />
+                      <UploadCloudIcon className="mb-2 h-6 w-6 text-[var(--brand-core)]" />
                     )}
                     <span className="text-xs font-bold text-[var(--text-primary)]">
                       {draft.governmentIdName || "Upload Government ID"}
@@ -407,9 +407,9 @@ export default function HouseLotOnboardingStub({
                     className={`flex min-h-32 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 text-center transition-colors ${draft.selfieCaptured ? "border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20" : "border-[var(--border-light)] hover:border-[var(--brand-core)] hover:bg-[var(--brand-core)]/5"}`}
                   >
                     {draft.selfieCaptured ? (
-                      <Check className="mb-2 h-6 w-6 text-emerald-500" />
+                      <CheckIcon className="mb-2 h-6 w-6 text-emerald-500" />
                     ) : (
-                      <Camera className="mb-2 h-6 w-6 text-[var(--brand-core)]" />
+                      <CameraIcon className="mb-2 h-6 w-6 text-[var(--brand-core)]" />
                     )}
                     <span className="text-xs font-bold text-[var(--text-primary)]">
                       {draft.selfieCaptured
@@ -461,13 +461,13 @@ export default function HouseLotOnboardingStub({
                       [
                         "house-lot",
                         "House & Lot",
-                        Home,
+                        HomeIcon,
                         "A home with its land included",
                       ],
                       [
                         "raw-land",
                         "Raw Land",
-                        LandPlot,
+                        LandPlotIcon,
                         "An undeveloped parcel of land",
                       ],
                     ] as const
@@ -509,7 +509,7 @@ export default function HouseLotOnboardingStub({
                   htmlFor="address"
                   className="mb-2 block text-sm font-bold text-[var(--text-primary)]"
                 >
-                  <MapPin className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
+                  <MapPinIcon className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
                   Complete address <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -531,10 +531,10 @@ export default function HouseLotOnboardingStub({
               <div>
                 <div className="mb-2 flex items-center gap-2">
                   <label className="text-sm font-bold text-[var(--text-primary)]">
-                    <MapPin className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
+                    <MapPinIcon className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
                     Interactive map pin <span className="text-rose-500">*</span>
                   </label>
-                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                  <ShieldCheckIcon className="h-4 w-4 text-emerald-500" />
                 </div>
                 <MapSelection
                   initialLat={draft.lat}
@@ -588,8 +588,8 @@ export default function HouseLotOnboardingStub({
                 <ClearFormButton onClear={clearForm} />
               </div>
               <p className="flex items-center justify-center gap-2 text-center text-[10px] text-[var(--text-tertiary)]">
-                <FileText className="h-3.5 w-3.5" /> Property data is saved as a
-                backend draft for testing.
+                <FileTextIcon className="h-3.5 w-3.5" /> Property data is saved
+                as a backend draft for testing.
               </p>
             </form>
           )}

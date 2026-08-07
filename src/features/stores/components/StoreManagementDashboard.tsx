@@ -3,13 +3,13 @@
 import React from "react";
 import { Card } from "@/shared/components/ui/Card";
 import {
-  Store,
-  Plus,
-  ArrowRight,
-  ShieldCheck,
-  MapPin,
-  Home,
-  LandPlot,
+  StoreIcon,
+  PlusIcon,
+  ArrowRightIcon,
+  ShieldCheckIcon,
+  MapPinIcon,
+  HomeIcon,
+  LandPlotIcon,
 } from "lucide-react";
 import type { StoreProperty } from "../contracts/manage-stores.contract";
 
@@ -57,14 +57,14 @@ export default function StoreManagementDashboard({
           onClick={onCreateNewStore}
           className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 transition-opacity whitespace-nowrap"
         >
-          <Plus className="w-4 h-4" /> Add New Business
+          <PlusIcon className="w-4 h-4" /> Add New Business
         </button>
       </div>
 
       {stores.length === 0 && properties.length === 0 ? (
         <Card className="p-12 text-center py-20 border-dashed">
           <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4 text-zinc-400">
-            <Store className="w-6 h-6" />
+            <StoreIcon className="w-6 h-6" />
           </div>
           <h2 className="text-sm font-black mb-1">
             No Businesses or Properties Registered
@@ -105,7 +105,7 @@ export default function StoreManagementDashboard({
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-center gap-2.5">
                           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                            <Store className="h-4 w-4" />
+                            <StoreIcon className="h-4 w-4" />
                           </div>
                           <h3 className="text-sm font-black tracking-tight text-text-primary transition-colors group-hover:text-brand-core">
                             {store.storeName}
@@ -115,7 +115,7 @@ export default function StoreManagementDashboard({
                           (store.isActive ? "ACTIVE" : "PENDING")) ===
                         "ACTIVE" ? (
                           <span className="flex items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
-                            <ShieldCheck className="h-3 w-3" /> Active
+                            <ShieldCheckIcon className="h-3 w-3" /> Active
                           </span>
                         ) : (store.approvalStatus ?? "PENDING") ===
                           "REJECTED" ? (
@@ -130,7 +130,7 @@ export default function StoreManagementDashboard({
                       </div>
                       {(store.city || store.province) && (
                         <div className="flex items-center gap-1 text-[10px] text-zinc-400">
-                          <MapPin className="h-3 w-3 shrink-0" />
+                          <MapPinIcon className="h-3 w-3 shrink-0" />
                           <span className="truncate">
                             {[store.city, store.province]
                               .filter(Boolean)
@@ -150,7 +150,7 @@ export default function StoreManagementDashboard({
                       style={{ borderColor: "var(--border-light)" }}
                     >
                       <span>Initialize Management Node</span>
-                      <ArrowRight className="h-3.5 w-3.5 transform transition-transform group-hover:translate-x-1" />
+                      <ArrowRightIcon className="h-3.5 w-3.5 transform transition-transform group-hover:translate-x-1" />
                     </div>
                   </Card>
                 ))}
@@ -193,9 +193,9 @@ export default function StoreManagementDashboard({
                           <div className="flex items-center gap-2.5">
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--brand-core)]/10 text-[var(--brand-core)]">
                               {isHouseLot ? (
-                                <Home className="h-4 w-4" />
+                                <HomeIcon className="h-4 w-4" />
                               ) : (
-                                <LandPlot className="h-4 w-4" />
+                                <LandPlotIcon className="h-4 w-4" />
                               )}
                             </div>
                             <h3 className="text-sm font-black tracking-tight text-text-primary">
@@ -219,7 +219,7 @@ export default function StoreManagementDashboard({
                           </span>
                         </div>
                         <div className="flex items-start gap-1 text-[10px] text-zinc-400">
-                          <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+                          <MapPinIcon className="mt-0.5 h-3 w-3 shrink-0" />
                           <span>
                             {property.address}
                             {property.subdivision

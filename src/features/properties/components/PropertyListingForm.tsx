@@ -2,19 +2,19 @@
 
 import React, { useMemo, useState } from "react";
 import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  FileCheck2,
-  FileText,
-  Home,
-  LandPlot,
-  Minus,
-  Plus,
-  Ruler,
-  Scale,
-  UploadCloud,
-  UserRound,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  FileCheck2Icon,
+  FileTextIcon,
+  HomeIcon,
+  LandPlotIcon,
+  MinusIcon,
+  PlusIcon,
+  RulerIcon,
+  ScaleIcon,
+  UploadCloudIcon,
+  UserRoundIcon,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import { Card } from "@/shared/components/ui/Card";
@@ -99,7 +99,7 @@ function ToggleOption({
 }: {
   active: boolean;
   onClick: () => void;
-  icon: typeof Home;
+  icon: typeof HomeIcon;
   label: string;
   description: string;
 }) {
@@ -153,7 +153,7 @@ function Stepper({
           className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border-light)] bg-[var(--background-secondary)] text-[var(--text-primary)] transition-colors hover:border-[var(--brand-core)] disabled:opacity-40"
           disabled={value <= 0}
         >
-          <Minus className="h-4 w-4" />
+          <MinusIcon className="h-4 w-4" />
         </button>
         <span className="w-12 text-center text-lg font-black text-[var(--text-primary)]">
           {value}
@@ -164,7 +164,7 @@ function Stepper({
           onClick={() => step(1)}
           className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border-light)] bg-[var(--background-secondary)] text-[var(--text-primary)] transition-colors hover:border-[var(--brand-core)]"
         >
-          <Plus className="h-4 w-4" />
+          <PlusIcon className="h-4 w-4" />
         </button>
       </div>
       {hint && <FieldHint>{hint}</FieldHint>}
@@ -200,14 +200,14 @@ function FileUpload({
         />
         {fileName ? (
           <>
-            <Check className="mb-1.5 h-5 w-5 text-emerald-500" />
+            <CheckIcon className="mb-1.5 h-5 w-5 text-emerald-500" />
             <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
               File selected: {fileName}
             </span>
           </>
         ) : (
           <>
-            <UploadCloud className="mb-1.5 h-5 w-5 text-[var(--brand-core)]" />
+            <UploadCloudIcon className="mb-1.5 h-5 w-5 text-[var(--brand-core)]" />
             <span className="text-xs font-bold text-[var(--text-primary)]">
               Upload file
             </span>
@@ -298,7 +298,7 @@ export default function PropertyListingForm() {
             htmlFor="lotArea"
             className="mb-2 block text-sm font-bold text-[var(--text-primary)]"
           >
-            <Ruler className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
+            <RulerIcon className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
             Lot area (sqm) <span className="text-rose-500">*</span>
           </label>
           <input
@@ -350,7 +350,7 @@ export default function PropertyListingForm() {
                 htmlFor="floorArea"
                 className="mb-2 block text-sm font-bold text-[var(--text-primary)]"
               >
-                <Home className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
+                <HomeIcon className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
                 Floor area (sqm) <span className="text-rose-500">*</span>
               </label>
               <input
@@ -481,7 +481,7 @@ export default function PropertyListingForm() {
             htmlFor="titleNumber"
             className="mb-2 block text-sm font-bold text-[var(--text-primary)]"
           >
-            <FileText className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
+            <FileTextIcon className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
             Title number <span className="text-rose-500">*</span>
           </label>
           <input
@@ -558,7 +558,7 @@ export default function PropertyListingForm() {
             htmlFor="sellingPrice"
             className="mb-2 block text-sm font-bold text-[var(--text-primary)]"
           >
-            <Scale className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
+            <ScaleIcon className="mr-1.5 inline h-3.5 w-3.5 text-[var(--brand-core)]" />{" "}
             Selling price (₱) <span className="text-rose-500">*</span>
           </label>
           <input
@@ -691,7 +691,7 @@ export default function PropertyListingForm() {
           fullWidth
           className="!h-12 rounded-2xl text-sm sm:w-auto sm:min-w-48"
         >
-          <FileCheck2 className="h-4 w-4" /> Finish (stub)
+          <FileCheck2Icon className="h-4 w-4" /> Finish (stub)
         </Button>
       </div>
     </form>
@@ -724,14 +724,14 @@ export default function PropertyListingForm() {
                 <ToggleOption
                   active={isHouseLot}
                   onClick={() => setPropertyType("house-lot")}
-                  icon={Home}
+                  icon={HomeIcon}
                   label="House & Lot"
                   description="Home with its land included"
                 />
                 <ToggleOption
                   active={!isHouseLot}
                   onClick={() => setPropertyType("raw-land")}
-                  icon={LandPlot}
+                  icon={LandPlotIcon}
                   label="Raw Land"
                   description="Undeveloped parcel of land"
                 />
@@ -745,21 +745,21 @@ export default function PropertyListingForm() {
                 <ToggleOption
                   active={sellerRole === "owner"}
                   onClick={() => setSellerRole("owner")}
-                  icon={UserRound}
+                  icon={UserRoundIcon}
                   label="Owner"
                   description="I own the property"
                 />
                 <ToggleOption
                   active={sellerRole === "broker"}
                   onClick={() => setSellerRole("broker")}
-                  icon={UserRound}
+                  icon={UserRoundIcon}
                   label="Broker"
                   description="I represent the owner"
                 />
                 <ToggleOption
                   active={sellerRole === "proxy"}
                   onClick={() => setSellerRole("proxy")}
-                  icon={UserRound}
+                  icon={UserRoundIcon}
                   label="Proxy"
                   description="I have permission to list"
                 />
@@ -828,13 +828,13 @@ function StepNav({
           onClick={onBack}
           className="!h-12 rounded-2xl px-5 text-sm"
         >
-          <ArrowLeft className="h-4 w-4" /> Back
+          <ArrowLeftIcon className="h-4 w-4" /> Back
         </Button>
       ) : (
         <span />
       )}
       <Button type="submit" className="!h-12 rounded-2xl px-5 text-sm">
-        Next <ArrowRight className="h-4 w-4" />
+        Next <ArrowRightIcon className="h-4 w-4" />
       </Button>
     </div>
   );

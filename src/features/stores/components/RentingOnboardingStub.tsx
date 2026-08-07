@@ -2,12 +2,12 @@
 
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import {
-  Building2,
-  Camera,
-  Check,
-  Home,
-  KeyRound,
-  UploadCloud,
+  Building2Icon,
+  CameraIcon,
+  CheckIcon,
+  HomeIcon,
+  KeyRoundIcon,
+  UploadCloudIcon,
 } from "lucide-react";
 import { BackButton } from "@/shared/components/ui/BackButton";
 import { Button } from "@/shared/components/ui/Button";
@@ -106,9 +106,9 @@ function UploadStub({
         className="sr-only"
       />
       {value ? (
-        <Check className="mb-2 h-6 w-6 text-emerald-500" />
+        <CheckIcon className="mb-2 h-6 w-6 text-emerald-500" />
       ) : (
-        <UploadCloud className="mb-2 h-6 w-6 text-[var(--brand-core)]" />
+        <UploadCloudIcon className="mb-2 h-6 w-6 text-[var(--brand-core)]" />
       )}
       <span className="max-w-full truncate text-xs font-bold text-[var(--text-primary)]">
         {value || label}
@@ -191,7 +191,7 @@ export default function RentingOnboardingStub({
           />
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10">
-              <KeyRound className="h-6 w-6" />
+              <KeyRoundIcon className="h-6 w-6" />
             </div>
             <div>
               <p className="mb-1 text-[10px] font-black uppercase tracking-[0.2em] text-white/60">
@@ -348,9 +348,9 @@ export default function RentingOnboardingStub({
                     className={`flex min-h-32 flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 text-center transition-colors ${draft.selfieCaptured ? "border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20" : "border-[var(--border-light)] hover:border-[var(--brand-core)] hover:bg-[var(--brand-core)]/5"}`}
                   >
                     {draft.selfieCaptured ? (
-                      <Check className="mb-2 h-6 w-6 text-emerald-500" />
+                      <CheckIcon className="mb-2 h-6 w-6 text-emerald-500" />
                     ) : (
-                      <Camera className="mb-2 h-6 w-6 text-[var(--brand-core)]" />
+                      <CameraIcon className="mb-2 h-6 w-6 text-[var(--brand-core)]" />
                     )}
                     <span className="text-xs font-bold text-[var(--text-primary)]">
                       {draft.selfieCaptured ? "Selfie captured" : "Take Selfie"}
@@ -416,9 +416,9 @@ export default function RentingOnboardingStub({
                 <div className="grid gap-3 rounded-2xl border border-[var(--border-light)] p-3 sm:grid-cols-3">
                   {(
                     [
-                      ["house", "House", Home],
-                      ["apartment", "Apartment/Condo", Building2],
-                      ["room", "Room for Rent", KeyRound],
+                      ["house", "House", HomeIcon],
+                      ["apartment", "Apartment/Condo", Building2Icon],
+                      ["room", "Room for Rent", KeyRoundIcon],
                     ] as const
                   ).map(([value, label, Icon]) => (
                     <label

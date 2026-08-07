@@ -8,7 +8,13 @@ import React, {
   FormEvent,
 } from "react";
 import { Card } from "@/shared/components/ui/Card";
-import { Home, KeyRound, Store, UploadCloud, CheckCircle2 } from "lucide-react";
+import {
+  HomeIcon,
+  KeyRoundIcon,
+  StoreIcon,
+  UploadCloudIcon,
+  CheckCircle2Icon,
+} from "lucide-react";
 import { MapSelection } from "./MapSelection";
 import { Button } from "@/shared/components/ui/Button";
 import { BackButton } from "@/shared/components/ui/BackButton";
@@ -134,10 +140,10 @@ export default function StoreOnboardingForm({
   } satisfies Record<StoreType, string>;
   const StoreTypeIcon =
     storeType === "house-lot"
-      ? Home
+      ? HomeIcon
       : storeType === "renting"
-        ? KeyRound
-        : Store;
+        ? KeyRoundIcon
+        : StoreIcon;
 
   const onboardMutation = useCreateStore({
     onValidationError: setFieldErrors,
@@ -192,7 +198,7 @@ export default function StoreOnboardingForm({
   if (isDone) {
     return (
       <Card className="max-w-xl mx-auto p-8 text-center space-y-4 py-16">
-        <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto animate-bounce" />
+        <CheckCircle2Icon className="w-12 h-12 text-emerald-500 mx-auto animate-bounce" />
         <h2 className="text-lg font-black">Store Created!</h2>
         <p className="text-xs text-zinc-400 max-w-sm mx-auto">
           Your store details and spatial node configuration are locked in.
@@ -213,7 +219,7 @@ export default function StoreOnboardingForm({
             className="w-9 h-9 rounded-xl flex items-center justify-center text-white transition-colors"
             style={{ backgroundColor: "var(--brand-dark)" }}
           >
-            <Store className="w-4 h-4" />
+            <StoreIcon className="w-4 h-4" />
           </div>
           <div>
             <h2 className="text-sm font-black">Merchant Store Onboarding</h2>
@@ -467,7 +473,7 @@ export default function StoreOnboardingForm({
                           disabled={Boolean(uploadingField)}
                         />
                         <div className="text-center text-[11px] text-zinc-500 flex items-center gap-2">
-                          <UploadCloud className="w-4 h-4 text-zinc-400" />
+                          <UploadCloudIcon className="w-4 h-4 text-zinc-400" />
                           <span>
                             {uploadingField === field
                               ? "Streaming..."
