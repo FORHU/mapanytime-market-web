@@ -11,7 +11,7 @@ import {
   Home,
   LandPlot,
 } from "lucide-react";
-import type { Property } from "@/features/properties/contracts/property.contract";
+import type { StoreProperty } from "../contracts/manage-stores.contract";
 
 interface StoreItem {
   id: string;
@@ -25,9 +25,9 @@ interface StoreItem {
 
 interface StoreManagementDashboardProps {
   stores: StoreItem[];
-  properties: Property[];
+  properties: StoreProperty[];
   onSelectStore: (storeId: string) => void;
-  onSelectProperty: (property: Property) => void;
+  onSelectProperty: (property: StoreProperty) => void;
   onCreateNewStore: () => void;
 }
 

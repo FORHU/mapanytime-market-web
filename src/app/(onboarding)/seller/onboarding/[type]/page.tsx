@@ -1,14 +1,31 @@
 "use client";
 
-import { use, useEffect } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import HouseLotOnboardingStub from "@/features/stores/components/HouseLotOnboardingStub";
 import RentingOnboardingStub from "@/features/stores/components/RentingOnboardingStub";
 import StoreOnboardingForm from "@/features/stores/components/StoreOnboardingForm";
+import { useCreateProperty } from "@/features/properties/hooks/useCreateProperty";
 import { STORE_TYPE_SLUGS, type StoreType } from "@/features/stores/types";
 
 interface SellerOnboardingTypePageProps {
   params: Promise<{ type: string }>;
+}
+
+function HouseLotOnboardingRoute({ onBack }: { onBack: () => void }) {
+  const [submitted, setSubmitted] = useState(false);
+  const propertyMutation = useCreateProperty({
+    onSuccess: () => setSubmitted(true),
+  });
+
+  return (
+    <HouseLotOnboardingStub
+      onBack={onBack}
+      onSubmit={(draft) => propertyMutation.mutate(draft)}
+      isSubmitting={propertyMutation.isPending}
+      submitted={submitted}
+    />
+  );
 }
 
 export default function SellerOnboardingTypePage({
@@ -28,7 +45,7 @@ export default function SellerOnboardingTypePage({
 
   if (storeType === "house-lot") {
     return (
-      <HouseLotOnboardingStub
+      <HouseLotOnboardingRoute
         onBack={() => router.push("/seller/manage-stores")}
       />
     );

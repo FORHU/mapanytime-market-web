@@ -19,7 +19,6 @@ import { BackButton } from "@/shared/components/ui/BackButton";
 import { Button } from "@/shared/components/ui/Button";
 import { Card } from "@/shared/components/ui/Card";
 import { ClearFormButton } from "@/shared/components/ui/ClearFormButton";
-import { useCreateProperty } from "@/features/properties/hooks/useCreateProperty";
 import { MapSelection } from "./MapSelection";
 import {
   clearOnboardingDraft,
@@ -106,13 +105,18 @@ function Progress({ step }: { step: 1 | 2 }) {
 
 export default function HouseLotOnboardingStub({
   onBack,
+  onSubmit,
+  isSubmitting = false,
+  submitted = false,
 }: {
   onBack: () => void;
+  onSubmit: (draft: HouseLotDraft) => void;
+  isSubmitting?: boolean;
+  submitted?: boolean;
 }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [draft, setDraft] = useState<HouseLotDraft>(DEFAULT_DRAFT);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -154,20 +158,11 @@ export default function HouseLotOnboardingStub({
     value: HouseLotDraft[K],
   ) => setDraft((current) => ({ ...current, [field]: value }));
 
-  const propertyMutation = useCreateProperty({
-    onSuccess: () => {
-      clearForm();
-      setIsSubmitted(true);
-    },
-  });
-
   const clearForm = () => {
     setDraft(DEFAULT_DRAFT);
     setStep(1);
-    setIsSubmitted(false);
     formRef.current?.reset();
     clearOnboardingDraft("house-lot");
-    propertyMutation.reset();
   };
 
   const handleGovernmentId = (event: ChangeEvent<HTMLInputElement>) => {
@@ -182,10 +177,10 @@ export default function HouseLotOnboardingStub({
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    propertyMutation.mutate(draft);
+    onSubmit(draft);
   };
 
-  if (isSubmitted) {
+  if (submitted) {
     return (
       <div className="w-full max-w-lg p-2 sm:p-4">
         <Card className="overflow-hidden border-[var(--border-light)] p-0 shadow-xl shadow-black/5">
@@ -584,9 +579,9 @@ export default function HouseLotOnboardingStub({
                   type="submit"
                   fullWidth
                   className="!h-12 rounded-2xl text-sm sm:w-auto sm:min-w-48"
-                  disabled={propertyMutation.isPending}
+                  disabled={isSubmitting}
                 >
-                  {propertyMutation.isPending ? "Saving..." : "Done"}
+                  {isSubmitting ? "Saving..." : "Done"}
                 </Button>
               </div>
               <div className="flex justify-center">
