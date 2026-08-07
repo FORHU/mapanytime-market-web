@@ -11,12 +11,16 @@ interface MapSelectionProps {
   initialLat?: number;
   initialLng?: number;
   onChange: (lat: number, lng: number) => void;
+  label?: string;
+  hint?: string;
 }
 
 export function MapSelection({
   initialLat,
   initialLng,
   onChange,
+  label = "Mapbox Geo-Lock Node",
+  hint = "* Drag the marker or click on the map to target your storefront location inside Baguio City.",
 }: MapSelectionProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -95,7 +99,7 @@ export function MapSelection({
   return (
     <div className="col-span-2 flex flex-col gap-1 w-full">
       <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-        Mapbox Geo-Lock Node
+        {label}
       </label>
 
       {/* Target canvas mounting element */}
@@ -105,10 +109,7 @@ export function MapSelection({
         style={{ minHeight: "192px" }}
       />
 
-      <p className="text-[9px] text-zinc-400 mt-0.5 italic">
-        * Drag the marker or click on the map to target your storefront location
-        inside Baguio City.
-      </p>
+      <p className="text-[9px] text-zinc-400 mt-0.5 italic">{hint}</p>
     </div>
   );
 }

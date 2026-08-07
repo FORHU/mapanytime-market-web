@@ -11,5 +11,10 @@ export default function SellerOnboardingPage() {
     router.push("/seller/manage-stores");
   };
 
-  return <StoreOnboardingForm onComplete={handleComplete} />;
+  return (
+    <StoreOnboardingForm
+      onBack={() => router.push("/seller/manage-stores")}
+      onComplete={handleComplete}
+    />
+  );
 }

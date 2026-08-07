@@ -93,7 +93,6 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
           name: "Store Approvals",
           href: "/admin/stores",
           icon: Store,
-          badge: "3 Pending",
           roles: ["ADMIN"],
         },
         {

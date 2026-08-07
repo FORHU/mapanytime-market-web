@@ -2,66 +2,89 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { StoreOnboardingForm } from "@/features/stores";
+import { StoreTypeSelectionModal, type StoreType } from "@/features/stores";
 import StoreManagementDashboard from "@/features/stores/components/StoreManagementDashboard";
 import { useStores } from "@/features/stores/hooks/useStores";
+import { useProperties } from "@/features/properties/hooks/useProperties";
+import type { StoreProperty } from "@/features/stores/contracts/manage-stores.contract";
+import { toast } from "sonner";
 
 export default function ManageStoresPage() {
-  const [view, setView] = useState<"LIST" | "ONBOARDING">("LIST");
-  const { data: stores, isLoading, isError, error } = useStores();
+  const [showTypeModal, setShowTypeModal] = useState(false);
+  const storesQuery = useStores();
+  const propertiesQuery = useProperties();
   const router = useRouter();
+
+  const isLoading = storesQuery.isLoading || propertiesQuery.isLoading;
+  const isError = storesQuery.isError || propertiesQuery.isError;
+  const error = storesQuery.error ?? propertiesQuery.error;
 
   const handleSelectStore = (storeId: string) => {
     localStorage.setItem("active_store_context_id", storeId);
+    localStorage.removeItem("active_property_context_id");
     router.push("/seller/dashboard");
   };
 
-  const handleCreateStoreSuccess = () => {
-    setView("LIST");
+  const handleSelectStoreType = (type: StoreType) => {
+    setShowTypeModal(false);
+    router.push(`/seller/onboarding/${type}`);
+  };
+
+  const handleSelectProperty = (property: StoreProperty) => {
+    if (property.status !== "ACTIVE") {
+      toast.error("This property has not been verified yet.");
+      return;
+    }
+
+    localStorage.setItem("active_property_context_id", property.id);
+    localStorage.removeItem("active_store_context_id");
+    router.push(`/seller/properties/${property.id}/dashboard`);
   };
 
   return (
     <div className="py-4">
-      {view === "LIST" ? (
-        <>
-          {isLoading && (
-            <div className="p-8 text-center text-sm text-[var(--text-secondary)] animate-pulse">
-              Loading your stores…
-            </div>
-          )}
-          {isError && (
-            <div className="p-4 border border-rose-200 dark:border-rose-900 bg-rose-50/60 dark:bg-rose-950/20 rounded-xl text-left text-sm text-rose-700 dark:text-rose-300">
-              <strong className="font-semibold">
-                We couldn&apos;t load your stores.
-              </strong>{" "}
-              {error?.message}
-            </div>
-          )}
-          {!isLoading && !isError && (
-            <StoreManagementDashboard
-              stores={(stores ?? []).map((store) => ({
-                id: store.id,
-                storeName: store.storeName,
-                isActive: store.isActive,
-                city: store.storeLocations?.city,
-                province: store.storeLocations?.province,
-              }))}
-              onSelectStore={handleSelectStore}
-              onCreateNewStore={() => setView("ONBOARDING")}
-            />
-          )}
-        </>
-      ) : (
-        <div className="space-y-4">
-          <button
-            onClick={() => setView("LIST")}
-            className="text-sm font-medium underline text-[var(--text-secondary)] hover:text-[var(--text-primary)] block text-left mb-2"
-          >
-            ← Back to my stores
-          </button>
-          <StoreOnboardingForm onComplete={handleCreateStoreSuccess} />
+      {isLoading && (
+        <div className="p-8 text-center text-sm text-[var(--text-secondary)] animate-pulse">
+          Loading your stores…
         </div>
       )}
+      {isError && (
+        <div className="p-4 border border-rose-200 dark:border-rose-900 bg-rose-50/60 dark:bg-rose-950/20 rounded-xl text-left text-sm text-rose-700 dark:text-rose-300">
+          <strong className="font-semibold">
+            We couldn&apos;t load your stores.
+          </strong>{" "}
+          {error?.message}
+        </div>
+      )}
+      {!isLoading && !isError && (
+        <StoreManagementDashboard
+          stores={(storesQuery.data ?? []).map((store) => ({
+            id: store.id,
+            storeName: store.storeName,
+            isActive: store.isActive,
+            approvalStatus: store.approvalStatus,
+            rejectionReason: store.rejectionReason,
+            city: store.storeLocations?.city,
+            province: store.storeLocations?.province,
+          }))}
+          properties={(propertiesQuery.data ?? []).map((property) => ({
+            id: property.id,
+            propertyType: property.propertyType,
+            status: property.status,
+            rejectionReason: property.rejectionReason,
+            address: property.address,
+            subdivision: property.subdivision,
+          }))}
+          onSelectStore={handleSelectStore}
+          onSelectProperty={handleSelectProperty}
+          onCreateNewStore={() => setShowTypeModal(true)}
+        />
+      )}
+      <StoreTypeSelectionModal
+        open={showTypeModal}
+        onClose={() => setShowTypeModal(false)}
+        onSelect={handleSelectStoreType}
+      />
     </div>
   );
 }

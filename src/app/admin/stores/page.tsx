@@ -1,268 +1,287 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  Store,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Search,
-  Filter,
-  ShieldCheck,
   Building2,
+  CheckCircle2,
+  Clock,
+  Home,
+  LandPlot,
   MapPin,
-  ExternalLink,
-  Plus,
-  AlertTriangle,
-  MoreVertical,
+  Search,
+  Store,
+  XCircle,
 } from "lucide-react";
+import { Button } from "@/shared/components/ui/Button";
+import { useApprovals } from "@/features/adminApprovals/hooks/useApprovals";
+import { useApprovalActions } from "@/features/adminApprovals/hooks/useApprovalActions";
+import type {
+  ApprovalItem,
+  ApprovalStatus,
+} from "@/features/adminApprovals/contracts/approval.contract";
+
+type ApprovalFilter = "ALL" | ApprovalStatus;
 
 export default function AdminStoresPage() {
-  const [activeTab, setActiveTab] = useState<"ALL" | "PENDING" | "VERIFIED">(
-    "ALL",
-  );
+  const [activeFilter, setActiveFilter] = useState<ApprovalFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [rejectionTarget, setRejectionTarget] = useState<ApprovalItem | null>(
+    null,
+  );
+  const [rejectionReason, setRejectionReason] = useState("");
+  const { data: approvals = [], isLoading, isError, error } = useApprovals();
+  const { approve, reject } = useApprovalActions();
 
-  const [stores, setStores] = useState([
-    {
-      id: "st_01",
-      name: "Organic Harvest Market",
-      owner: "Elena Rostova",
-      email: "elena@organicharvest.com",
-      phone: "+1 (555) 234-5678",
-      category: "Grocery & Fresh Produce",
-      address: "742 Evergreen Terrace, Sector 4",
-      status: "PENDING",
-      productsCount: 48,
-      rating: 4.8,
-      createdAt: "2026-07-26",
-    },
-    {
-      id: "st_02",
-      name: "Metro Artisan Bakery",
-      owner: "Marco Silva",
-      email: "marco@metrobakery.io",
-      phone: "+1 (555) 876-5432",
-      category: "Bakery & Desserts",
-      address: "1088 Artisan Way, Downtown",
-      status: "PENDING",
-      productsCount: 19,
-      rating: 4.9,
-      createdAt: "2026-07-25",
-    },
-    {
-      id: "st_03",
-      name: "CyberGadget Hub",
-      owner: "Kenji Sato",
-      email: "kenji@cybergadgets.jp",
-      phone: "+1 (555) 432-1098",
-      category: "Electronics & Tech",
-      address: "42 Neon Strip, District 9",
-      status: "PENDING",
-      productsCount: 65,
-      rating: 4.7,
-      createdAt: "2026-07-24",
-    },
-    {
-      id: "st_04",
-      name: "Downtown Coffee Roasters",
-      owner: "Sarah Jenkins",
-      email: "sarah@downtowncoffee.com",
-      phone: "+1 (555) 998-1122",
-      category: "Café & Coffee",
-      address: "12 Central Square",
-      status: "VERIFIED",
-      productsCount: 32,
-      rating: 4.9,
-      createdAt: "2026-06-15",
-    },
-    {
-      id: "st_05",
-      name: "Urban Craft Apparel",
-      owner: "David Miller",
-      email: "david@urbancraft.co",
-      phone: "+1 (555) 334-7788",
-      category: "Fashion & Apparel",
-      address: "505 Fashion Boulevard",
-      status: "VERIFIED",
-      productsCount: 112,
-      rating: 4.6,
-      createdAt: "2026-05-10",
-    },
-  ]);
+  const filteredApprovals = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
 
-  const handleApprove = (id: string) => {
-    setStores((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: "VERIFIED" } : s)),
+    return approvals.filter((item) => {
+      const matchesFilter =
+        activeFilter === "ALL" || item.status === activeFilter;
+      const searchable = [item.name, item.owner, item.email, item.address]
+        .join(" ")
+        .toLowerCase();
+      return matchesFilter && (!query || searchable.includes(query));
+    });
+  }, [activeFilter, approvals, searchQuery]);
+
+  const handleReject = () => {
+    if (!rejectionTarget || rejectionReason.trim().length < 3) return;
+
+    reject.mutate(
+      { item: rejectionTarget, reason: rejectionReason.trim() },
+      {
+        onSuccess: () => {
+          setRejectionTarget(null);
+          setRejectionReason("");
+        },
+      },
     );
   };
-
-  const handleReject = (id: string) => {
-    setStores((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: "REJECTED" } : s)),
-    );
-  };
-
-  const filteredStores = stores.filter((store) => {
-    const matchesTab = activeTab === "ALL" || store.status === activeTab;
-    const matchesSearch =
-      store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      store.owner.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      store.category.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
 
   return (
     <div className="space-y-8">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--text-primary)] flex items-center gap-3">
-            <Building2 className="w-7 h-7 text-[var(--brand-core)]" />
-            Store Management & Approvals
-          </h1>
-          <p className="text-sm font-medium text-[var(--text-secondary)] mt-1">
-            Review seller store registration requests, verify physical shop
-            credentials, and manage active marketplace merchants.
-          </p>
-        </div>
-
-        <button className="px-5 py-2.5 rounded-2xl bg-[var(--brand-core)] hover:bg-sky-400 text-white font-bold text-sm shadow-md flex items-center gap-2 self-start sm:self-auto">
-          <Plus className="w-4 h-4" /> Add Merchant Store
-        </button>
+      <div>
+        <h1 className="flex items-center gap-3 text-2xl font-black tracking-tight text-[var(--text-primary)] sm:text-3xl">
+          <Building2 className="h-7 w-7 text-[var(--brand-core)]" />
+          Store Management &amp; Approvals
+        </h1>
+        <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
+          Review store and House/Lot submissions, verify their details, and
+          manage approval status.
+        </p>
       </div>
 
-      {/* Filter Tabs & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl border border-[var(--border-default)] bg-[var(--background-secondary)]/50 backdrop-blur-md">
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
-          <button
-            onClick={() => setActiveTab("ALL")}
-            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all ${
-              activeTab === "ALL"
-                ? "bg-[var(--brand-core)] text-white shadow-md"
-                : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
-            }`}
-          >
-            All Stores ({stores.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("PENDING")}
-            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 ${
-              activeTab === "PENDING"
-                ? "bg-amber-500 text-white shadow-md"
-                : "text-amber-400 hover:bg-amber-500/10"
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" /> Pending (
-            {stores.filter((s) => s.status === "PENDING").length})
-          </button>
-          <button
-            onClick={() => setActiveTab("VERIFIED")}
-            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 ${
-              activeTab === "VERIFIED"
-                ? "bg-emerald-500 text-white shadow-md"
-                : "text-emerald-400 hover:bg-emerald-500/10"
-            }`}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" /> Verified (
-            {stores.filter((s) => s.status === "VERIFIED").length})
-          </button>
+      <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-[var(--border-default)] bg-[var(--background-secondary)]/50 p-4 sm:flex-row">
+        <div className="flex w-full items-center gap-2 overflow-x-auto sm:w-auto">
+          {(["ALL", "PENDING", "ACTIVE", "REJECTED"] as const).map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+                activeFilter === filter
+                  ? "bg-[var(--brand-core)] text-white shadow-md"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
+              }`}
+            >
+              {filter === "ALL"
+                ? "All"
+                : filter === "PENDING"
+                  ? "Pending"
+                  : filter === "ACTIVE"
+                    ? "Active"
+                    : "Rejected"}{" "}
+              (
+              {filter === "ALL"
+                ? approvals.length
+                : approvals.filter((item) => item.status === filter).length}
+              )
+            </button>
+          ))}
         </div>
-
         <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]" />
           <input
             type="text"
             placeholder="Search stores or owners..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-[var(--border-default)] bg-[var(--background-primary)] text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--brand-core)]"
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--background-primary)] py-2 pl-10 pr-4 text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:border-[var(--brand-core)] focus:outline-none"
           />
         </div>
       </div>
 
-      {/* Stores List */}
-      <div className="grid grid-cols-1 gap-4">
-        {filteredStores.map((store) => (
-          <div
-            key={store.id}
-            className="p-6 rounded-3xl border border-[var(--border-default)] bg-[var(--background-secondary)]/50 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-sky-500/40 transition-all"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-cyan-400 flex items-center justify-center font-black text-white text-base shadow-md shrink-0">
-                {store.name.charAt(0)}
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h3 className="text-lg font-bold text-[var(--text-primary)]">
-                    {store.name}
-                  </h3>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 ${
-                      store.status === "VERIFIED"
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
-                        : store.status === "PENDING"
-                          ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
-                          : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
-                    }`}
-                  >
-                    {store.status === "VERIFIED" ? (
-                      <CheckCircle2 className="w-3 h-3" />
-                    ) : (
-                      <Clock className="w-3 h-3" />
-                    )}
-                    {store.status}
-                  </span>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-[var(--text-tertiary)] flex-wrap">
-                  <span className="font-semibold text-cyan-400">
-                    {store.category}
-                  </span>
-                  <span>•</span>
-                  <span>
-                    Owner:{" "}
-                    <strong className="text-[var(--text-secondary)]">
-                      {store.owner}
-                    </strong>{" "}
-                    ({store.email})
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)] pt-1">
-                  <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                  <span>{store.address}</span>
-                </div>
-              </div>
-            </div>
+      {isLoading && (
+        <div className="rounded-2xl border border-[var(--border-light)] p-10 text-center text-sm text-[var(--text-secondary)]">
+          Loading approval requests...
+        </div>
+      )}
 
-            <div className="flex items-center gap-3 border-t md:border-t-0 pt-4 md:pt-0 border-[var(--border-light)] justify-end">
-              {store.status === "PENDING" && (
-                <>
-                  <button
-                    onClick={() => handleApprove(store.id)}
-                    className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs transition-all shadow-md flex items-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-4 h-4" /> Approve Store
-                  </button>
-                  <button
-                    onClick={() => handleReject(store.id)}
-                    className="px-4 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold text-xs transition-all flex items-center gap-1.5"
-                  >
-                    <XCircle className="w-4 h-4" /> Reject
-                  </button>
-                </>
-              )}
-              {store.status === "VERIFIED" && (
-                <button
-                  onClick={() => handleReject(store.id)}
-                  className="px-4 py-2 rounded-xl border border-[var(--border-default)] bg-[var(--background-primary)] hover:bg-rose-500/10 text-xs font-bold text-rose-400 transition-colors"
-                >
-                  Suspend Store
-                </button>
-              )}
+      {isError && (
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-400">
+          Could not load approval requests: {error?.message}
+        </div>
+      )}
+
+      {!isLoading && !isError && filteredApprovals.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-[var(--border-light)] p-12 text-center text-sm text-[var(--text-secondary)]">
+          No approval requests match the current filter.
+        </div>
+      )}
+
+      {!isLoading && !isError && filteredApprovals.length > 0 && (
+        <div className="grid grid-cols-1 gap-4">
+          {filteredApprovals.map((item) => (
+            <ApprovalCard
+              key={`${item.entityType}:${item.id}`}
+              item={item}
+              isApproving={approve.isPending}
+              isRejecting={reject.isPending}
+              onApprove={() => approve.mutate(item)}
+              onReject={() => {
+                setRejectionTarget(item);
+                setRejectionReason(item.rejectionReason ?? "");
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {rejectionTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--border-light)] bg-[var(--background-elevated)] p-6 shadow-2xl">
+            <h2 className="text-lg font-black text-[var(--text-primary)]">
+              Reject {rejectionTarget.name}
+            </h2>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              Give the seller a clear reason for this decision.
+            </p>
+            <textarea
+              autoFocus
+              value={rejectionReason}
+              onChange={(event) => setRejectionReason(event.target.value)}
+              placeholder="Reason for rejection..."
+              rows={4}
+              className="mt-4 w-full resize-none rounded-xl border border-[var(--border-light)] bg-[var(--background-primary)] p-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand-core)]"
+            />
+            <div className="mt-5 flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setRejectionTarget(null);
+                  setRejectionReason("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={rejectionReason.trim().length < 3 || reject.isPending}
+                onClick={handleReject}
+              >
+                {reject.isPending ? "Rejecting..." : "Reject Submission"}
+              </Button>
             </div>
           </div>
-        ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ApprovalCard({
+  item,
+  isApproving,
+  isRejecting,
+  onApprove,
+  onReject,
+}: {
+  item: ApprovalItem;
+  isApproving: boolean;
+  isRejecting: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  const isProperty = item.entityType === "PROPERTY";
+  const isPending = item.status === "PENDING";
+  const Icon = isProperty
+    ? item.propertyType === "RAW_LAND"
+      ? LandPlot
+      : Home
+    : Store;
+
+  return (
+    <div className="flex flex-col justify-between gap-6 rounded-3xl border border-[var(--border-default)] bg-[var(--background-secondary)]/50 p-6 backdrop-blur-md transition-all hover:border-sky-500/40 md:flex-row md:items-center">
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-sky-500 to-cyan-400 text-white shadow-md">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="text-lg font-bold text-[var(--text-primary)]">
+              {item.name}
+            </h3>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
+                item.status === "ACTIVE"
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                  : item.status === "REJECTED"
+                    ? "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                    : "border-amber-500/30 bg-amber-500/10 text-amber-400"
+              }`}
+            >
+              {item.status === "ACTIVE" ? (
+                <CheckCircle2 className="h-3 w-3" />
+              ) : (
+                <Clock className="h-3 w-3" />
+              )}
+              {item.status === "PENDING" ? "Pending" : item.status}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-tertiary)]">
+            <span className="font-semibold text-cyan-400">
+              {isProperty ? "House/Lot" : "Store"}
+            </span>
+            <span>•</span>
+            <span>
+              Owner:{" "}
+              <strong className="text-[var(--text-secondary)]">
+                {item.owner}
+              </strong>{" "}
+              ({item.email})
+            </span>
+          </div>
+          <div className="flex items-center gap-2 pt-1 text-xs text-[var(--text-tertiary)]">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+            <span>{item.address || "No address provided"}</span>
+          </div>
+          {item.status === "REJECTED" && item.rejectionReason && (
+            <p className="pt-2 text-xs text-rose-400">
+              Reason: {item.rejectionReason}
+            </p>
+          )}
+        </div>
       </div>
+      {isPending && (
+        <div className="flex items-center justify-end gap-3 border-t border-[var(--border-light)] pt-4 md:border-t-0 md:pt-0">
+          <Button
+            type="button"
+            disabled={isApproving || isRejecting}
+            onClick={onApprove}
+          >
+            <CheckCircle2 className="h-4 w-4" /> Verify
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={isApproving || isRejecting}
+            onClick={onReject}
+          >
+            <XCircle className="h-4 w-4" /> Reject
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

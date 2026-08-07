@@ -1,0 +1,49 @@
+import { z } from "zod";
+
+export const HouseLotDraftSchema = z.object({
+  sellerCapacity: z.enum(["owner", "broker", "proxy"]),
+  legalName: z.string().min(1),
+  phone: z.string().min(1),
+  email: z.string().email(),
+  governmentIdName: z.string(),
+  propertyType: z.enum(["house-lot", "raw-land"]),
+  address: z.string().min(1),
+  lat: z.number(),
+  lng: z.number(),
+  subdivision: z.string(),
+  selfieCaptured: z.boolean(),
+});
+
+export const CreatePropertyResponseEnvelopeSchema = z.object({
+  data: z
+    .object({
+      id: z.string(),
+      status: z.enum(["DRAFT", "PENDING_REVIEW", "ACTIVE", "REJECTED"]),
+    })
+    .passthrough(),
+});
+
+export const PropertySchema = z
+  .object({
+    id: z.string(),
+    propertyType: z.enum(["HOUSE_LOT", "RAW_LAND"]),
+    status: z.enum(["DRAFT", "PENDING_REVIEW", "ACTIVE", "REJECTED"]),
+    rejectionReason: z.string().nullable().optional(),
+    address: z.string(),
+    subdivision: z.string().nullable().optional(),
+    latitude: z.number(),
+    longitude: z.number(),
+    legalName: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .passthrough();
+
+export const PropertiesResponseSchema = z.array(PropertySchema);
+
+export type HouseLotDraft = z.infer<typeof HouseLotDraftSchema>;
+export type CreatePropertyResponse = z.infer<
+  typeof CreatePropertyResponseEnvelopeSchema
+>["data"];
+export type Property = z.infer<typeof PropertySchema>;
+export type PropertiesResponse = z.infer<typeof PropertiesResponseSchema>;
