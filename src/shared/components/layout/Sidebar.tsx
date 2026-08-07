@@ -18,6 +18,7 @@ import {
   MessageSquare,
   ChevronDown,
   ChevronRight,
+  House,
 } from "lucide-react";
 import { clearToken } from "@/shared/lib/token";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
@@ -26,6 +27,8 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   isLocked?: boolean;
+  isPropertyContext?: boolean;
+  propertyId?: string | null;
   onSignOut?: () => void;
 }
 
@@ -42,6 +45,8 @@ export function Sidebar({
   isOpen,
   onClose,
   isLocked = false,
+  isPropertyContext = false,
+  propertyId,
   onSignOut,
 }: SidebarProps) {
   const pathname = usePathname();
@@ -153,12 +158,31 @@ export function Sidebar({
     },
   ];
 
+  const propertyNavLinks: NavItem[] = [
+    {
+      label: "Dashboard",
+      href: `/seller/properties/${propertyId}/dashboard`,
+      icon: LayoutDashboard,
+      roles: ["SELLER", "ADMIN"],
+    },
+    {
+      label: "Property",
+      href: propertyId
+        ? "/seller/properties/products"
+        : "/seller/manage-stores",
+      icon: House,
+      roles: ["SELLER", "ADMIN"],
+    },
+  ];
+
   const isRoleAllowed = (roles?: string[]) => {
     if (!roles) return true;
     return roles.includes(userRole);
   };
 
-  const filteredLinks = navLinks.filter((item) => isRoleAllowed(item.roles));
+  const filteredLinks = (
+    isPropertyContext ? propertyNavLinks : navLinks
+  ).filter((item) => isRoleAllowed(item.roles));
 
   const handleSignOutClick = () => {
     if (onSignOut) {

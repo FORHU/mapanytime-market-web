@@ -27,6 +27,7 @@ interface StoreManagementDashboardProps {
   stores: StoreItem[];
   properties: Property[];
   onSelectStore: (storeId: string) => void;
+  onSelectProperty: (property: Property) => void;
   onCreateNewStore: () => void;
 }
 
@@ -34,6 +35,7 @@ export default function StoreManagementDashboard({
   stores,
   properties,
   onSelectStore,
+  onSelectProperty,
   onCreateNewStore,
 }: StoreManagementDashboardProps) {
   return (
@@ -174,8 +176,17 @@ export default function StoreManagementDashboard({
                   return (
                     <Card
                       key={property.id}
-                      className="flex flex-col justify-between p-5"
+                      className={`flex flex-col justify-between p-5 ${
+                        property.status === "ACTIVE"
+                          ? "cursor-pointer transition-colors hover:border-emerald-400"
+                          : "cursor-not-allowed opacity-80"
+                      }`}
                       style={{ borderColor: "var(--border-light)" }}
+                      onClick={() => {
+                        if (property.status === "ACTIVE") {
+                          onSelectProperty(property);
+                        }
+                      }}
                     >
                       <div className="space-y-3">
                         <div className="flex items-start justify-between gap-4">

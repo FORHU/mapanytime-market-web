@@ -52,16 +52,21 @@ export function SellerLayout({
   const { userId } = useCurrentUser();
 
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
+  const [activePropertyId, setActivePropertyId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Sync activeStoreId from localStorage whenever route/pathname changes
+  // Sync the active seller context whenever the route changes.
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedActiveId = localStorage.getItem("active_store_context_id");
+      const storedPropertyId = localStorage.getItem(
+        "active_property_context_id",
+      );
       setActiveStoreId(storedActiveId);
+      setActivePropertyId(storedPropertyId);
     }
   }, [pathname]);
 
@@ -121,7 +126,9 @@ export function SellerLayout({
 
   const handleClearContext = () => {
     localStorage.removeItem("active_store_context_id");
+    localStorage.removeItem("active_property_context_id");
     setActiveStoreId(null);
+    setActivePropertyId(null);
     router.push("/seller/manage-stores");
   };
 
@@ -130,21 +137,27 @@ export function SellerLayout({
     setUnreadCount(0);
   };
 
+  const hasSellerContext = Boolean(activeStoreId || activePropertyId);
+  const isPropertyRoute = pathname.startsWith("/seller/properties/");
+  const isPropertyContext = Boolean(
+    (activePropertyId || isPropertyRoute) && !activeStoreId,
+  );
+  const hasContextForRoute = hasSellerContext || isPropertyRoute;
   const isLocked =
     mounted &&
     (!isAuthenticated ||
-      (!activeStoreId && pathname !== "/seller/manage-stores"));
+      (!hasContextForRoute && pathname !== "/seller/manage-stores"));
 
   useEffect(() => {
     if (
       mounted &&
       isAuthenticated &&
-      !activeStoreId &&
+      !hasContextForRoute &&
       pathname !== "/seller/manage-stores"
     ) {
       router.push("/seller/manage-stores");
     }
-  }, [router, activeStoreId, pathname, mounted, isAuthenticated]);
+  }, [router, hasContextForRoute, pathname, mounted, isAuthenticated]);
 
   return (
     <div
@@ -154,7 +167,9 @@ export function SellerLayout({
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        isLocked={!activeStoreId}
+        isLocked={!hasContextForRoute}
+        isPropertyContext={isPropertyContext}
+        propertyId={activePropertyId}
         onSignOut={onSignOut}
       />
 
@@ -169,7 +184,7 @@ export function SellerLayout({
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              disabled={!activeStoreId}
+              disabled={!hasSellerContext}
               className="p-2 border rounded-xl md:hidden transition-colors disabled:opacity-30"
               style={{
                 backgroundColor: "var(--background-tertiary)",
@@ -186,22 +201,27 @@ export function SellerLayout({
                 <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                   <Unlock className="w-3 h-3" /> Managing your store
                 </span>
+              ) : activePropertyId || isPropertyRoute ? (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <Unlock className="w-3 h-3" /> Managing your property
+                </span>
               ) : (
                 <span className="text-xs text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                  <Lock className="w-3 h-3" /> Choose a store to continue
+                  <Lock className="w-3 h-3" /> Choose a store or property to
+                  continue
                 </span>
               )}
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            {activeStoreId && (
+            {hasContextForRoute && pathname !== "/seller/manage-stores" && (
               <Button
                 variant="dark"
                 onClick={handleClearContext}
                 className="!h-9 !px-4 !rounded-xl !text-xs"
               >
-                <RefreshCw className="w-3.5 h-3.5" /> Switch store
+                <RefreshCw className="w-3.5 h-3.5" /> Switch context
               </Button>
             )}
 
@@ -299,7 +319,7 @@ export function SellerLayout({
             {isLocked ? (
               <div className="p-12 text-center py-24">
                 <p className="text-sm text-[var(--text-secondary)]">
-                  Taking you to your store list…
+                  Taking you to your store or property list…
                 </p>
               </div>
             ) : (

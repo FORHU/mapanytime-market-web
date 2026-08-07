@@ -2,9 +2,11 @@ import { fetcher } from "@/shared/lib/http";
 import {
   CreatePropertyResponseEnvelopeSchema,
   HouseLotDraftSchema,
+  PropertySchema,
   PropertiesResponseSchema,
   type HouseLotDraft,
   type CreatePropertyResponse,
+  type Property,
   type PropertiesResponse,
 } from "../contracts/property.contract";
 
@@ -14,6 +16,16 @@ export async function listMyProperties(): Promise<PropertiesResponse> {
   );
 
   return PropertiesResponseSchema.parse(response.data);
+}
+
+export async function getPropertyDashboard(
+  propertyId: string,
+): Promise<Property> {
+  const response = await fetcher<{ data: unknown }>(
+    `/api/v1/properties/${propertyId}/dashboard`,
+  );
+
+  return PropertySchema.parse(response.data);
 }
 
 export async function submitHouseLotProperty(

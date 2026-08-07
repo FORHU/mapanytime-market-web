@@ -6,6 +6,8 @@ import { StoreTypeSelectionModal, type StoreType } from "@/features/stores";
 import StoreManagementDashboard from "@/features/stores/components/StoreManagementDashboard";
 import { useStores } from "@/features/stores/hooks/useStores";
 import { useProperties } from "@/features/properties/hooks/useProperties";
+import type { Property } from "@/features/properties/contracts/property.contract";
+import { toast } from "sonner";
 
 export default function ManageStoresPage() {
   const [showTypeModal, setShowTypeModal] = useState(false);
@@ -19,12 +21,24 @@ export default function ManageStoresPage() {
 
   const handleSelectStore = (storeId: string) => {
     localStorage.setItem("active_store_context_id", storeId);
+    localStorage.removeItem("active_property_context_id");
     router.push("/seller/dashboard");
   };
 
   const handleSelectStoreType = (type: StoreType) => {
     setShowTypeModal(false);
     router.push(`/seller/onboarding/${type}`);
+  };
+
+  const handleSelectProperty = (property: Property) => {
+    if (property.status !== "ACTIVE") {
+      toast.error("This property has not been verified yet.");
+      return;
+    }
+
+    localStorage.setItem("active_property_context_id", property.id);
+    localStorage.removeItem("active_store_context_id");
+    router.push(`/seller/properties/${property.id}/dashboard`);
   };
 
   return (
@@ -55,6 +69,7 @@ export default function ManageStoresPage() {
           }))}
           properties={propertiesQuery.data ?? []}
           onSelectStore={handleSelectStore}
+          onSelectProperty={handleSelectProperty}
           onCreateNewStore={() => setShowTypeModal(true)}
         />
       )}
