@@ -16,7 +16,8 @@ import {
 import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "../ui/Button";
-import { io, Socket } from "socket.io-client";
+import { type Socket } from "socket.io-client";
+import { acquireSocket, releaseSocket } from "@/shared/lib/socket";
 import { toast } from "sonner";
 import { getToken } from "@/shared/lib/token";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
@@ -70,18 +71,18 @@ export function SellerLayout({
     const token = getToken();
     if (!userId || !token) return;
 
-    const socketUrl =
-      process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:4002";
-    const socket: Socket = io(socketUrl, {
-      transports: ["polling", "websocket"],
-      autoConnect: true,
-    });
+    const socket: Socket = acquireSocket();
 
-    socket.on("connect", () => {
+    const handleConnect = () => {
       socket.emit("subscribe_notifications", { userId });
-    });
+    };
 
-    socket.on("notification:new", (data: any) => {
+    // The shared socket may already be connected by another consumer, in which case no further
+    // "connect" event is coming and the subscription has to be sent right away.
+    if (socket.connected) handleConnect();
+    socket.on("connect", handleConnect);
+
+    const handleNotification = (data: any) => {
       const isOrder =
         data?.metadata?.type === "ORDER_CREATED" ||
         data?.metadata?.type === "ORDER_PAID" ||
@@ -112,10 +113,16 @@ export function SellerLayout({
 
       setNotifications((prev) => [newItem, ...prev]);
       setUnreadCount((prev) => prev + 1);
-    });
+    };
+
+    socket.on("notification:new", handleNotification);
 
     return () => {
-      socket.disconnect();
+      // Remove by reference — the connection outlives this component now, so leaving handlers
+      // attached would stack a duplicate toast per remount.
+      socket.off("connect", handleConnect);
+      socket.off("notification:new", handleNotification);
+      releaseSocket();
     };
   }, [userId]);
 

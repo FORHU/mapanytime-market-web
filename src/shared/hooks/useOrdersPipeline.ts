@@ -1,8 +1,10 @@
-import { io, Socket } from "socket.io-client";
+import { type Socket } from "socket.io-client";
+import { acquireSocket, releaseSocket } from "@/shared/lib/socket";
 import { useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetcher } from "@/shared/lib/http";
 import { getToken } from "@/shared/lib/token";
+import { socketBackedQueryOptions } from "@/shared/lib/query-options";
 
 export interface OrderRecord {
   id: string;
@@ -82,6 +84,7 @@ function useStoreOrdersQuery(userId: string | null, storeId?: string | null) {
     },
     enabled: Boolean(token),
     staleTime: 5000,
+    ...socketBackedQueryOptions,
   });
 }
 
@@ -199,18 +202,13 @@ export const useOrdersPipeline = (params: OrdersPipelineParams) => {
   useEffect(() => {
     if (!userId || !token) return;
 
-    const socketUrl =
-      process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:4002";
-    const socket: Socket = io(socketUrl, {
-      transports: ["polling", "websocket"],
-      autoConnect: true,
-    });
+    const socket: Socket = acquireSocket();
 
-    socket.on("connect", () => {
+    const handleConnect = () => {
       socket.emit("subscribe_notifications", { userId });
-    });
+    };
 
-    socket.on("notification:new", (notification: any) => {
+    const handleNotification = (notification: any) => {
       if (
         notification?.metadata?.type === "ORDER_CREATED" ||
         notification?.metadata?.type === "ORDER_PAID" ||
@@ -218,14 +216,23 @@ export const useOrdersPipeline = (params: OrdersPipelineParams) => {
       ) {
         queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
       }
-    });
+    };
 
-    socket.on("disconnect", () => {
+    const handleDisconnect = () => {
       queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
-    });
+    };
+
+    // Already-connected shared socket emits no further "connect" event.
+    if (socket.connected) handleConnect();
+    socket.on("connect", handleConnect);
+    socket.on("notification:new", handleNotification);
+    socket.on("disconnect", handleDisconnect);
 
     return () => {
-      socket.disconnect();
+      socket.off("connect", handleConnect);
+      socket.off("notification:new", handleNotification);
+      socket.off("disconnect", handleDisconnect);
+      releaseSocket();
     };
   }, [userId, token, queryClient]);
 
