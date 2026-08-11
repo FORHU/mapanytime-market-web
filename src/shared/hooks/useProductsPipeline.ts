@@ -1,6 +1,6 @@
-import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { API_BASE_URL } from "@/shared/config/api";
+import { fetcher } from "@/shared/lib/http";
+import { getToken } from "@/shared/lib/token";
 
 export interface ProductItem {
   id?: string;
@@ -10,6 +10,7 @@ export interface ProductItem {
   category: string;
   description: string;
   stock: number;
+  tags?: string[];
 }
 
 const PRODUCTS_QUERY_KEY = ["products"];
@@ -19,16 +20,7 @@ const fetchProducts = async (
 ): Promise<ProductItem[]> => {
   if (!storeId) return [];
 
-  const token = localStorage.getItem("token");
-  const response = await fetch(
-    `${API_BASE_URL}/api/v1/products?storeId=${storeId}`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    },
-  );
-  if (!response.ok) throw new Error("Failed to pull live catalog listings.");
-
-  const envelope = await response.json();
+  const envelope: any = await fetcher(`/api/v1/products?storeId=${storeId}`);
   const rawList = envelope.data || [];
 
   return rawList.map((prod: any) => ({
@@ -52,22 +44,15 @@ export const useProductsPipeline = (
     queryKey: [...PRODUCTS_QUERY_KEY, storeId],
     queryFn: () => fetchProducts(storeId),
     staleTime: 10000,
-    enabled: Boolean(storeId),
+    enabled: Boolean(getToken() && storeId),
   });
 
   const addProductMutation = useMutation({
     mutationFn: async (newProduct: ProductItem): Promise<ProductItem> => {
       if (!storeId) throw new Error("No active store branch selected.");
 
-      const token = localStorage.getItem("token");
-
       // 1. Fetch categories from backend to resolve name to ID
-      const catRes = await fetch(`${API_BASE_URL}/api/v1/categories`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!catRes.ok)
-        throw new Error("Failed to resolve category list from backend.");
-      const catEnvelope = await catRes.json();
+      const catEnvelope: any = await fetcher("/api/v1/categories");
       const categoriesList = catEnvelope.data || [];
 
       // 2. Map frontend dropdown category to seeded database category name
@@ -91,12 +76,8 @@ export const useProductsPipeline = (
       }
 
       // 3. Post to backend to create the product
-      const response = await fetch(`${API_BASE_URL}/api/v1/products`, {
+      const response: any = await fetcher("/api/v1/products", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           storeId,
           name: newProduct.name,
@@ -104,26 +85,30 @@ export const useProductsPipeline = (
           brand: newProduct.brand,
           description: newProduct.description,
           categoryId,
+          tags: newProduct.tags || [],
           isActive: true,
           initialStock: newProduct.stock || 0,
         }),
       });
 
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(
-          errorBody?.message ||
-            "Catalog mutation rejected by validation rules.",
-        );
-      }
-
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [...PRODUCTS_QUERY_KEY, storeId],
       });
       if (onMutationSuccess) onMutationSuccess();
+    },
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      return fetcher(`/api/v1/products/${productId}`, { method: "DELETE" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...PRODUCTS_QUERY_KEY, storeId],
+      });
     },
   });
 
@@ -134,5 +119,7 @@ export const useProductsPipeline = (
     error: query.error,
     addProduct: addProductMutation.mutateAsync,
     isAdding: addProductMutation.isPending,
+    deleteProduct: deleteProductMutation.mutateAsync,
+    isDeleting: deleteProductMutation.isPending,
   };
 };

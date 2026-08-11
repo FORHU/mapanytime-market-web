@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Card } from "@/shared/components/ui/Card";
 import ProductForm from "@/features/seller-catalog/components/ProductForm";
+import { ProductDetailDialog } from "@/features/seller-catalog/components/ProductDetailDialog";
 import {
   useProductsPipeline,
   ProductItem,
@@ -12,13 +13,24 @@ import { Plus, X, Tag, Layers } from "lucide-react";
 
 export default function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(
+    null,
+  );
   const { activeStoreId } = useActiveStore();
 
   // Consume orchestrated features and handle state updates via callbacks
-  const { products, isLoading, isError, error, addProduct, isAdding } =
-    useProductsPipeline(activeStoreId, () => {
-      setIsFormOpen(false); // Callback triggered on mutation success
-    });
+  const {
+    products,
+    isLoading,
+    isError,
+    error,
+    addProduct,
+    isAdding,
+    deleteProduct,
+    isDeleting,
+  } = useProductsPipeline(activeStoreId, () => {
+    setIsFormOpen(false); // Callback triggered on mutation success
+  });
 
   const handleAddProductSuccess = (newProduct: ProductItem) => {
     return addProduct(newProduct);
@@ -71,20 +83,10 @@ export default function ProductsPage() {
 
       {/* 1. SHOW THE FORM ONLY WHEN OPEN */}
       {isFormOpen && (
-        <Card className="p-6 transition-all animate-in fade-in-50 duration-200">
-          <h2 className="text-base font-semibold mb-4 text-left text-[var(--text-primary)]">
-            Add a new product
-          </h2>
-          <ProductForm
-            onSuccess={handleAddProductSuccess}
-            closeForm={() => setIsFormOpen(false)}
-          />
-          {isAdding && (
-            <p className="text-sm text-[var(--text-secondary)] mt-2 text-left">
-              Saving your product…
-            </p>
-          )}
-        </Card>
+        <ProductForm
+          onSuccess={handleAddProductSuccess}
+          closeForm={() => setIsFormOpen(false)}
+        />
       )}
 
       {/* 2. ONLY SHOW THE PRODUCTS GRID IF THE FORM IS CLOSED */}
@@ -100,8 +102,18 @@ export default function ProductsPage() {
               {products.map((product, idx) => (
                 <Card
                   key={product.id || idx}
-                  className="p-5 flex flex-col justify-between text-left border hover:shadow-sm"
+                  hoverable
+                  className="p-5 flex flex-col justify-between text-left"
                   style={{ borderColor: "var(--border-light)" }}
+                  onClick={() => setSelectedProduct(product)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedProduct(product);
+                    }
+                  }}
                 >
                   <div>
                     <div className="flex items-start justify-between gap-4 mb-2">
@@ -164,6 +176,18 @@ export default function ProductsPage() {
             </div>
           )}
         </>
+      )}
+
+      {selectedProduct && (
+        <ProductDetailDialog
+          product={selectedProduct}
+          open={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onDelete={(id) =>
+            deleteProduct(id).then(() => setSelectedProduct(null))
+          }
+          isDeleting={isDeleting}
+        />
       )}
     </div>
   );
