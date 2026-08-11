@@ -3,69 +3,143 @@
 @tailwind utilities;
 @import "mapbox-gl/dist/mapbox-gl.css";
 
-/* 2026 Theme Options:
-  Option 1: Cyberpunk Blue (Deep Blue & Electric Cyan) - ACTIVE
-  --brand-core: #0ea5e9; --brand-vibrant: #22d3ee; --brand-burgundy: #0c4a6e; --brand-dark: #082f49; --brand-light: #7dd3fc;
-*/
-
 @layer base {
   :root {
-    /* Cyberpunk Blue Light Mode */
-    --brand-core: #0ea5e9;
-    --brand-vibrant: #22d3ee;
-    --brand-burgundy: #0c4a6e;
-    --brand-dark: #082f49;
-    --brand-light: #7dd3fc;
+    /* Material 3 Light Mode Tokens (Generated) */
+    --md-sys-color-surface-tint: #00658d;
+    --md-sys-color-primary-fixed-dim: #82cfff;
+    --md-sys-color-secondary-container: #d1e5f6;
+    --md-sys-color-secondary-fixed-dim: #adcae5;
+    --md-sys-color-surface-container-high: #e2e8f0;
+    --md-sys-color-on-tertiary-fixed-variant: #454747;
+    --md-sys-color-on-tertiary-fixed: #1a1c1c;
+    --md-sys-color-primary-container: #c6e7ff;
+    --md-sys-color-error-container: #ffdad6;
+    --md-sys-color-surface-bright: #f8fafc;
+    --md-sys-color-inverse-surface: #20323f;
+    --md-sys-color-surface-container-highest: #cbd5e1;
+    --md-sys-color-on-secondary-fixed: #001e30;
+    --md-sys-color-secondary: #4f6170;
+    --md-sys-color-surface-dim: #d8dee4;
+    --md-sys-color-outline-variant: #c3c7cb;
+    --md-sys-color-surface-container-low: #f1f5f9;
+    --md-sys-color-on-secondary: #ffffff;
+    --md-sys-color-surface: #f8fafc;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-on-secondary-fixed-variant: #2d4960;
+    --md-sys-color-on-background: #021521;
+    --md-sys-color-background: #f8fafc;
+    --md-sys-color-on-surface: #021521;
+    --md-sys-color-inverse-primary: #82cfff;
+    --md-sys-color-primary-fixed: #c6e7ff;
+    --md-sys-color-secondary-fixed: #cbe6ff;
+    --md-sys-color-tertiary: #5e5e5f;
+    --md-sys-color-primary: #00658d;
+    --md-sys-color-on-tertiary-container: #1b1c1d;
+    --md-sys-color-on-surface-variant: #43474b;
+    --md-sys-color-on-primary-fixed: #001e2d;
+    --md-sys-color-on-error-container: #410002;
+    --md-sys-color-inverse-on-surface: #f1f5f9;
+    --md-sys-color-tertiary-fixed-dim: #c6c6c7;
+    --md-sys-color-surface-container: #e2e8f0;
+    --md-sys-color-outline: #73777a;
+    --md-sys-color-on-primary-fixed-variant: #004c6b;
+    --md-sys-color-on-secondary-container: #0a1d2a;
+    --md-sys-color-tertiary-fixed: #e2e2e2;
+    --md-sys-color-tertiary-container: #e2e2e2;
+    --md-sys-color-on-primary-container: #001e2d;
+    --md-sys-color-on-tertiary: #ffffff;
+    --md-sys-color-on-error: #ffffff;
+    --md-sys-color-error: #ba1a1a;
+    --md-sys-color-surface-container-lowest: #ffffff;
+    --md-sys-color-surface-variant: #dfe3e7;
 
-    --background-primary: #ffffff;
-    --background-secondary: #f0f9ff;
-    --background-tertiary: #e0f2fe;
-    --background-elevated: #ffffff;
+    /* Legacy Variables Mapped to New Tokens */
+    --brand-core: var(--md-sys-color-primary);
+    --brand-vibrant: var(--md-sys-color-inverse-primary);
+    --brand-burgundy: var(--md-sys-color-on-primary-container);
+    --brand-dark: var(--md-sys-color-surface-container-highest);
+    --brand-light: var(--md-sys-color-primary-container);
 
-    --text-primary: #082f49;
-    --text-secondary: #0c4a6e;
-    --text-tertiary: #0284c7;
-    --text-quaternary: #38bdf8;
+    --background-primary: var(--md-sys-color-background);
+    --background-secondary: var(--md-sys-color-surface-container-low);
+    --background-tertiary: var(--md-sys-color-surface-container);
+    --background-elevated: var(--md-sys-color-surface);
 
-    --border-default: rgba(14, 165, 233, 0.15);
-    --border-light: rgba(14, 165, 233, 0.08);
-    --border-strong: rgba(14, 165, 233, 0.3);
+    --text-primary: var(--md-sys-color-on-surface);
+    --text-secondary: var(--md-sys-color-on-surface-variant);
+    --text-tertiary: var(--md-sys-color-primary);
+    --text-quaternary: var(--md-sys-color-secondary);
+
+    --border-default: var(--md-sys-color-outline-variant);
+    --border-light: var(--md-sys-color-surface-variant);
+    --border-strong: var(--md-sys-color-outline);
   }
 
   .dark {
-    /* Cyberpunk Blue Dark Mode */
-    --brand-core: #0ea5e9;
-    --brand-vibrant: #22d3ee;
-    --brand-burgundy: #0c4a6e;
-    --brand-dark: #082f49;
-    --brand-light: #7dd3fc;
-
-    --background-primary: #082f49;
-    --background-secondary: #0c4a6e;
-    --background-tertiary: #0f172a;
-    --background-elevated: #0c4a6e;
-
-    --text-primary: #f0f9ff;
-    --text-secondary: #7dd3fc;
-    --text-tertiary: #38bdf8;
-    --text-quaternary: #0ea5e9;
-
-    --border-default: rgba(34, 211, 238, 0.2);
-    --border-light: rgba(34, 211, 238, 0.1);
-    --border-strong: rgba(34, 211, 238, 0.4);
+    /* Material 3 Dark Mode Tokens (From provided snippet) */
+    --md-sys-color-surface-tint: #82cfff;
+    --md-sys-color-primary-fixed-dim: #82cfff;
+    --md-sys-color-secondary-container: #2d4960;
+    --md-sys-color-secondary-fixed-dim: #adcae5;
+    --md-sys-color-surface-container-high: #192c39;
+    --md-sys-color-on-tertiary-fixed-variant: #454747;
+    --md-sys-color-on-tertiary-fixed: #1a1c1c;
+    --md-sys-color-primary-container: #00aeef;
+    --md-sys-color-error-container: #93000a;
+    --md-sys-color-surface-bright: #293b48;
+    --md-sys-color-inverse-surface: #d1e5f6;
+    --md-sys-color-surface-container-highest: #243744;
+    --md-sys-color-on-secondary-fixed: #001e30;
+    --md-sys-color-secondary: #adcae5;
+    --md-sys-color-surface-dim: #021521;
+    --md-sys-color-outline-variant: #3e4850;
+    --md-sys-color-surface-container-low: #0a1d2a;
+    --md-sys-color-on-secondary: #153348;
+    --md-sys-color-surface: #021521;
+    --md-sys-color-on-primary: #00344b;
+    --md-sys-color-on-secondary-fixed-variant: #2d4960;
+    --md-sys-color-on-background: #d1e5f6;
+    --md-sys-color-background: #021521;
+    --md-sys-color-on-surface: #d1e5f6;
+    --md-sys-color-inverse-primary: #00658d;
+    --md-sys-color-primary-fixed: #c6e7ff;
+    --md-sys-color-secondary-fixed: #cbe6ff;
+    --md-sys-color-tertiary: #c6c6c7;
+    --md-sys-color-primary: #82cfff;
+    --md-sys-color-on-tertiary-container: #37393a;
+    --md-sys-color-on-surface-variant: #bdc8d1;
+    --md-sys-color-on-primary-fixed: #001e2d;
+    --md-sys-color-on-error-container: #ffdad6;
+    --md-sys-color-inverse-on-surface: #20323f;
+    --md-sys-color-tertiary-fixed-dim: #c6c6c7;
+    --md-sys-color-surface-container: #0e222e;
+    --md-sys-color-outline: #87929b;
+    --md-sys-color-on-primary-fixed-variant: #004c6b;
+    --md-sys-color-on-secondary-container: #9cb8d3;
+    --md-sys-color-tertiary-fixed: #e2e2e2;
+    --md-sys-color-tertiary-container: #a2a3a3;
+    --md-sys-color-on-primary-container: #003e58;
+    --md-sys-color-on-tertiary: #2f3131;
+    --md-sys-color-on-error: #690005;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-surface-container-lowest: #00101b;
+    --md-sys-color-surface-variant: #243744;
   }
 
   body {
-    background: var(--background-primary);
-    color: var(--text-primary);
-    font-family: var(--font-sans);
+    background: var(--md-sys-color-background);
+    color: var(--md-sys-color-on-surface);
+    /* The actual variable next/font defines in layout.tsx. This read `var(--font-body-md)`,
+       which is not defined anywhere — the body font silently fell back to the browser default. */
+    font-family: var(--font-hanken), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 }
 
 @layer components {
-  /* Enhanced 2026 Glassmorphism */
+  /* Legacy Glassmorphism for backward compatibility */
   .glass {
     background: rgba(8, 47, 73, 0.6);
     backdrop-filter: blur(20px) saturate(180%);
@@ -80,43 +154,160 @@
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
+
+  /* Mapbox store markers and popups (LiveHeroMap). The markup is built with
+     createElement/textContent so seller-supplied names can't inject HTML, which
+     means the styling has to live here rather than in interpolated inline
+     attributes — including the hover state, which was an inline onmouseover. */
+  .store-marker-pill {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background-color: white;
+    color: var(--md-sys-color-on-surface, #191c1e);
+    border: 1px solid var(--md-sys-color-outline-variant, #c2c7cf);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      transform 0.2s,
+      background-color 0.2s;
+  }
+
+  .store-marker-pill:hover {
+    transform: scale(1.05);
+    background-color: #f8f9fa;
+    z-index: 10;
+  }
+
+  /* Pointer triangle underneath the pill */
+  .store-marker-pill::after {
+    content: "";
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid white;
+  }
+
+  .store-marker-pill__icon {
+    font-size: 16px;
+    color: var(--md-sys-color-primary, #00668a);
+  }
+
+  .store-popup {
+    width: 200px;
+    font-family: inherit;
+    color: #191c1e;
+  }
+
+  .store-popup__image {
+    height: 120px;
+    width: 100%;
+    background-color: #e2e5e9;
+    background-size: cover;
+    background-position: center;
+    border-radius: 6px 6px 0 0;
+  }
+
+  .store-popup__body {
+    padding: 12px 10px;
+    background: white;
+    border-radius: 0 0 6px 6px;
+  }
+
+  .store-popup__name {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 14px;
+    line-height: 1.2;
+  }
+
+  .store-popup__address {
+    margin: 0;
+    font-size: 12px;
+    color: #43474e;
+    line-height: 1.4;
+  }
 }
 
 @layer utilities {
-  /* Shimmer/Glow effects mapped to Cyberpunk Blue tokens */
+  /* Custom Effects for the new landing page */
+  .glow-pulse {
+    animation: pulse-glow 2s infinite alternate;
+  }
+  .dot-pulse {
+    animation: dot-blink 1.5s infinite;
+  }
+  .bg-grid-pattern {
+    background-size: 40px 40px;
+    background-image: radial-gradient(
+      circle,
+      rgba(130, 207, 255, 0.1) 1px,
+      transparent 1px
+    );
+  }
+
+  /* Legacy Utilities */
   .glow-primary {
     box-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
   }
-
   .glow-vibrant {
     box-shadow: 0 0 25px rgba(34, 211, 238, 0.5);
   }
-
-  /* Futuristic Gradient Text updated for Cyberpunk */
   .text-gradient-2026 {
     background: linear-gradient(135deg, #ffffff 0%, #22d3ee 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-
   .text-gradient-soft {
     background: linear-gradient(135deg, #7dd3fc 0%, #0ea5e9 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-
-  /* Animations */
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
-
   .animate-pulse-glow {
-    animation: pulse-glow 4s ease-in-out infinite;
+    animation: legacy-pulse-glow 4s ease-in-out infinite;
   }
 }
 
+/* New Keyframes */
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 10px 0px rgba(130, 207, 255, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 20px 5px rgba(130, 207, 255, 0.4);
+  }
+}
+
+@keyframes dot-blink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
+/* Legacy Keyframes */
 @keyframes float {
   0%,
   100% {
@@ -127,7 +318,7 @@
   }
 }
 
-@keyframes pulse-glow {
+@keyframes legacy-pulse-glow {
   0%,
   100% {
     opacity: 0.5;

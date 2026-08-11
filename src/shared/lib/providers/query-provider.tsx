@@ -55,7 +55,15 @@ export default function QueryProvider({
         }),
         defaultOptions: {
           queries: {
-            staleTime: 1000 * 5,
+            // A 5s default made every query stale almost immediately, so each remount and each
+            // window focus re-hit the API — enough, with the server's rate limit, to throttle
+            // real sessions. 30s absorbs remount storms while still being short enough that a
+            // user who comes back to the tab sees current data.
+            staleTime: 1000 * 30,
+            // Left on deliberately. This was briefly false globally to quieten the socket-backed
+            // queries, but those now opt out individually via socketBackedQueryOptions —
+            // switching focus-refetch off for the whole app to fix three hooks meant every other
+            // screen silently served stale data with no way to refresh but a reload.
             refetchOnWindowFocus: true,
             refetchOnMount: true,
             retry: (count, error) => count < getRetryCount(error),

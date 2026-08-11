@@ -1,25 +1,36 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Poppins } from "next/font/google";
+import {
+  Plus_Jakarta_Sans,
+  Hanken_Grotesk,
+  JetBrains_Mono,
+} from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/shared/lib/providers/query-provider";
 import { Toaster } from "sonner";
 import { AuthListener } from "@/features/auth/components/AuthListener";
 import { ThemeProvider } from "next-themes";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Three families at 11 weights was a lot to load on a public landing page. Plus Jakarta is the
+// display family — every `font-display` site in src/ pairs it with a type style of 600, 700 or
+// 800, and none with font-normal/font-medium, so 400 and 500 were downloaded and never drawn.
+// Hanken (body) and JetBrains (mono) weights are all still in use; if the LCP budget needs more,
+// measure before cutting those, since dropping a used weight causes synthetic-bold fallback.
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
+  weight: ["600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const hanken = Hanken_Grotesk({
+  variable: "--font-hanken",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const poppins = Poppins({
-  variable: "--font-poppins",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
@@ -68,19 +79,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      {/* `font-body` sets the family; `text-body-md` sets the base size/line-height. This
+          previously read `font-body-md`, which resolved to a family only — the document had no
+          base type size at all. */}
       <body
-        className={`${poppins.variable} ${geistSans.variable} ${geistMono.variable} font-[family-name:var(--font-poppins)] antialiased bg-background-primary text-text-primary min-h-screen flex flex-col`}
+        className={`${plusJakarta.variable} ${hanken.variable} ${jetbrainsMono.variable} font-body text-body-md antialiased bg-background text-on-surface min-h-screen flex flex-col selection:bg-primary-container selection:text-on-primary-container`}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
           <QueryProvider>
-            {/* Kept only the actual components, removed the phantom provider */}
             {children}
-
             <Toaster position="top-right" theme="system" richColors />
             <AuthListener />
           </QueryProvider>
