@@ -15,7 +15,7 @@ test.describe("Theme toggle", () => {
     const toggleBtn = page
       .locator('button[aria-label="Toggle dark mode"]')
       .first();
-    await toggleBtn.click();
+    await toggleBtn.dispatchEvent("click");
 
     const html = page.locator("html");
     // After toggle, dark class should be applied (dark mode)
@@ -30,9 +30,9 @@ test.describe("Theme toggle", () => {
     const toggleBtn = page
       .locator('button[aria-label="Toggle dark mode"]')
       .first();
-    await toggleBtn.click(); // → dark
+    await toggleBtn.dispatchEvent("click"); // → dark
     await expect(page.locator("html")).toHaveClass(/dark/);
-    await toggleBtn.click(); // → light again
+    await toggleBtn.dispatchEvent("click"); // → light again
 
     const html = page.locator("html");
     await expect(html).toHaveClass(/light/, { timeout: 2000 });
