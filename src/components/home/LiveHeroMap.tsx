@@ -113,7 +113,7 @@ export default function LiveHeroMap() {
           console.warn("Geolocation failed or denied, using default location.");
           setIsLocating(false);
         },
-        { enableHighAccuracy: true, timeout: 4500, maximumAge: 0 },
+        { enableHighAccuracy: true, timeout: 4500, maximumAge: 300_000 },
       );
     } else {
       clearTimeout(fallbackId);

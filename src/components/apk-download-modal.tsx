@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Download,
   Smartphone,
@@ -43,9 +44,7 @@ export default function ApkDownloadModal({
 }: ApkDownloadModalProps) {
   // Shared with the landing-page hero QR, so both always advertise the same build.
   const { release } = useLatestRelease(isOpen);
-  const [history, setHistory] = useState<AppReleaseInfo[]>(
-    DEFAULT_APP_RELEASE.history || [],
-  );
+
   const [copiedSha, setCopiedSha] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showQr, setShowQr] = useState(false);
@@ -54,21 +53,16 @@ export default function ApkDownloadModal({
   // Whatever had focus before the modal opened, so it can be handed back on close.
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
+  const { data: historyData } = useQuery({
+    queryKey: ["app-release", "history"],
+    queryFn: () => fetchReleaseHistory(),
+    enabled: isOpen,
+    staleTime: 5 * 60 * 1000,
+  });
 
-    let cancelled = false;
-
-    (async () => {
-      const releaseHistory = await fetchReleaseHistory();
-      if (cancelled) return;
-      if (releaseHistory?.length) setHistory(releaseHistory);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen]);
+  const history = historyData?.length
+    ? historyData
+    : DEFAULT_APP_RELEASE.history || [];
 
   /**
    * Dialog behaviour a full-screen modal owes keyboard and screen-reader users: focus moves in,
@@ -104,6 +98,13 @@ export default function ApkDownloadModal({
       const first = items[0];
       const last = items[items.length - 1];
       const active = document.activeElement;
+
+      // If focus wandered outside the dialog, bring it back to the first element
+      if (!panelRef.current?.contains(active)) {
+        e.preventDefault();
+        first.focus();
+        return;
+      }
 
       // Wrap at both ends so focus can't escape to the page behind the overlay.
       if (e.shiftKey && (active === first || active === panelRef.current)) {

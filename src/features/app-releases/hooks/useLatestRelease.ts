@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   DEFAULT_APP_RELEASE,
   type AppReleaseInfo,
@@ -38,39 +38,23 @@ export function resolveApkUrl(apkUrl: string | undefined): string | null {
  * `downloadUrl` stays null so nothing links to a build that isn't there.
  */
 export function useLatestRelease(enabled = true) {
-  const [release, setRelease] = useState<AppReleaseInfo>(DEFAULT_APP_RELEASE);
-  const [loading, setLoading] = useState(enabled);
+  const { data: latest, isLoading: loading } = useQuery({
+    queryKey: ["app-release", "latest"],
+    queryFn: () => fetchLatestRelease(),
+    enabled,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-  useEffect(() => {
-    if (!enabled) return;
-
-    let cancelled = false;
-    setLoading(true);
-
-    (async () => {
-      const latest = await fetchLatestRelease();
-      if (cancelled) return;
-
-      if (latest) {
-        setRelease({
-          ...DEFAULT_APP_RELEASE,
-          ...latest,
-          // Never fall back for the checksum — a stale hash tells users a good download
-          // was tampered with. Show one only when the API supplies it.
-          sha256: latest.sha256 || undefined,
-          whatsNew: Array.isArray(latest.whatsNew)
-            ? latest.whatsNew
-            : DEFAULT_APP_RELEASE.whatsNew,
-        });
+  const release = latest
+    ? {
+        ...DEFAULT_APP_RELEASE,
+        ...latest,
+        sha256: latest.sha256 || undefined,
+        whatsNew: Array.isArray(latest.whatsNew)
+          ? latest.whatsNew
+          : DEFAULT_APP_RELEASE.whatsNew,
       }
-
-      setLoading(false);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled]);
+    : DEFAULT_APP_RELEASE;
 
   return { release, loading, downloadUrl: resolveApkUrl(release.apkUrl) };
 }
