@@ -45,3 +45,11 @@ graphify-out/
 playwright-report/
 test-results/playwright-report/
 test-results/
+
+# app binaries — 120MB+ each, must not enter git history.
+# Host builds in object storage / GitHub Releases and point AppRelease.apkUrl at them.
+/public/downloads/
+*.apk
+
+# stray tailwind CLI output (the app builds css through next/postcss)
+/output.css

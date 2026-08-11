@@ -1,7 +1,9 @@
 // not used - backend REST route /api/channels/:id/messages not implemented
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { io, Socket } from "socket.io-client";
+import { type Socket } from "socket.io-client";
+import { acquireSocket, releaseSocket } from "@/shared/lib/socket";
+import { socketBackedQueryOptions } from "@/shared/lib/query-options";
 
 export interface ChatMessage {
   id: string;
@@ -37,21 +39,24 @@ export const useChatSync = (channelId: string) => {
     },
     // Set to 5 seconds to allow regular poll syncs until backend sockets are ready
     staleTime: 5000,
+    ...socketBackedQueryOptions,
   });
 
   useEffect(() => {
     if (!channelId) return;
 
     const targetCacheKey = ["messages", channelId];
-    const socketUrl =
-      process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:4002";
-    const socket: Socket = io(socketUrl, { transports: ["websocket"] });
+    const socket: Socket = acquireSocket();
 
-    socket.on("connect", () => {
+    const handleConnect = () => {
       socket.emit("join_chat_room", channelId);
-    });
+    };
 
-    socket.on("chat:message", (payload: ChatMessagePayload) => {
+    // Already-connected shared socket emits no further "connect" event.
+    if (socket.connected) handleConnect();
+    socket.on("connect", handleConnect);
+
+    const handleMessage = (payload: ChatMessagePayload) => {
       const liveMessage: ChatMessage = {
         id:
           (payload.metadata?.id as string) ||
@@ -70,15 +75,21 @@ export const useChatSync = (channelId: string) => {
         }
         return [...currentHistory, liveMessage];
       });
-    });
+    };
 
-    socket.on("disconnect", () => {
+    const handleDisconnect = () => {
       queryClient.invalidateQueries({ queryKey: targetCacheKey });
-    });
+    };
+
+    socket.on("chat:message", handleMessage);
+    socket.on("disconnect", handleDisconnect);
 
     return () => {
       socket.emit("leave_chat_room", channelId);
-      socket.disconnect();
+      socket.off("connect", handleConnect);
+      socket.off("chat:message", handleMessage);
+      socket.off("disconnect", handleDisconnect);
+      releaseSocket();
     };
   }, [channelId, queryClient]);
 

@@ -13,9 +13,9 @@ test.describe("Home page", () => {
     await expect(nav).toBeVisible();
   });
 
-  test("Explore Live Map button is visible and clickable", async ({ page }) => {
+  test("Shop the Market button is visible and clickable", async ({ page }) => {
     await page.goto("/");
-    const btn = page.getByRole("button", { name: /explore live map/i });
+    const btn = page.getByRole("button", { name: /shop the market/i });
     await expect(btn).toBeVisible();
     await expect(btn).toBeEnabled();
   });
@@ -24,7 +24,9 @@ test.describe("Home page", () => {
     page,
   }) => {
     await page.goto("/");
-    const howItWorksLink = page.getByRole("link", { name: /how it works/i });
+    const howItWorksLink = page
+      .getByRole("link", { name: /your market journey/i })
+      .first();
     await howItWorksLink.click();
 
     // Section becomes visible after in-page anchor scroll
