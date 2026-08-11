@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import { X, Tag, Layers, Package, Trash2 } from "lucide-react";
 import type { ProductItem } from "@/shared/hooks/useProductsPipeline";
 
@@ -76,6 +77,29 @@ export function ProductDetailDialog({
               </p>
             )}
           </div>
+
+          {product.imageUrl ? (
+            <div className="relative aspect-video w-full overflow-hidden rounded-2xl">
+              <Image
+                src={product.imageUrl}
+                alt={product.name}
+                fill
+                sizes="(max-width: 512px) 100vw, 512px"
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          ) : (
+            <div
+              className="flex aspect-video w-full items-center justify-center rounded-2xl"
+              style={{ background: "var(--background-secondary)" }}
+            >
+              <Package
+                className="h-10 w-10"
+                style={{ color: "var(--text-tertiary)" }}
+              />
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2">
             <span

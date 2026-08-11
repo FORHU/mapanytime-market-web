@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback, FormEvent } from "react";
 import { toast } from "sonner";
 import Image from "next/image";
 import type { ProductItem } from "@/shared/hooks/useProductsPipeline";
+import { useS3AssetUpload } from "@/shared/hooks/useS3AssetUpload";
 import {
   Tag,
   DollarSign,
@@ -314,7 +315,7 @@ function ImageDropzone({
           Drag images here, or click to browse
         </p>
         <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-          Upload coming soon — we&apos;re building this feature
+          PNG, JPG or WebP — first image is the cover
         </p>
         <input
           ref={inputRef}
@@ -529,6 +530,9 @@ export default function ProductForm({
     { id: string; file: File; url: string }[]
   >([]);
 
+  const [uploadedFileIds, setUploadedFileIds] = useState<string[]>([]);
+  const uploadMutation = useS3AssetUpload("products");
+
   const [inventory, setInventory] = useState("");
   const [variants, setVariants] = useState<
     { id: string; name: string; values: string[]; draft: string }[]
@@ -561,6 +565,21 @@ export default function ProductForm({
     setIsSubmitting(true);
 
     try {
+      const fileIds = uploadedFileIds.slice();
+
+      if (
+        images.length > 0 &&
+        images.some((img) => !uploadedFileIds.includes(img.id))
+      ) {
+        const newFiles = images.filter(
+          (img) => !uploadedFileIds.includes(img.id),
+        );
+        for (const img of newFiles) {
+          const result = await uploadMutation.mutateAsync(img.file);
+          if (result.fileId) fileIds.push(result.fileId);
+        }
+      }
+
       await onSuccess({
         name,
         brand,
@@ -569,6 +588,7 @@ export default function ProductForm({
         description,
         stock: inventory ? Number(inventory) : 0,
         tags: tags.length > 0 ? tags : undefined,
+        imageIds: fileIds.length > 0 ? fileIds : undefined,
       });
 
       setName("");
@@ -579,6 +599,7 @@ export default function ProductForm({
       setPrice("");
       setIsActive(true);
       setImages([]);
+      setUploadedFileIds([]);
       setInventory("");
       setVariants([]);
       closeForm();

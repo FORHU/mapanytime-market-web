@@ -5,6 +5,7 @@ import {
   UploadFolder,
   UploadSuccessResult,
 } from "@/shared/types/upload";
+import { fetcher } from "@/shared/lib/http";
 
 /**
  * Two-step direct-to-S3 upload:
@@ -15,6 +16,9 @@ import {
  * which builds the S3 client server-side — AWS credentials never reach the
  * browser. The PUT targets S3's origin directly; the signature is the
  * authorization, so no bearer token is attached.
+ *
+ * After the S3 upload succeeds, persists a Files record via POST /api/v1/files
+ * so the backend can reference the file. Returns the saved file ID.
  */
 const executeCloudUpload = async (
   file: File,
@@ -47,7 +51,23 @@ const executeCloudUpload = async (
     throw new Error("Upload to storage failed. Try again.");
   }
 
-  return { fileKey: data.fileKey, fileName: file.name };
+  const fileRecord: any = await fetcher("/api/v1/files", {
+    method: "POST",
+    body: JSON.stringify({
+      fileKey: data.fileKey,
+      fileName: file.name,
+      mimeType: file.type,
+      size: file.size,
+    }),
+  });
+
+  return {
+    fileKey: data.fileKey,
+    fileName: file.name,
+    mimeType: file.type,
+    size: file.size,
+    fileId: fileRecord?.data?.id,
+  } as UploadSuccessResult & { fileId?: string };
 };
 
 /**
@@ -56,8 +76,8 @@ const executeCloudUpload = async (
  */
 export function useS3AssetUpload(
   folder: UploadFolder,
-): UseMutationResult<UploadSuccessResult, Error, File> {
-  return useMutation<UploadSuccessResult, Error, File>({
+): UseMutationResult<UploadSuccessResult & { fileId?: string }, Error, File> {
+  return useMutation<UploadSuccessResult & { fileId?: string }, Error, File>({
     mutationFn: (file) => executeCloudUpload(file, folder),
     onSuccess: (data) => {
       toast.success(`Uploaded ${data.fileName}`);

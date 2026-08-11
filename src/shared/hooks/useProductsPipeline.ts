@@ -11,6 +11,8 @@ export interface ProductItem {
   description: string;
   stock: number;
   tags?: string[];
+  imageUrl?: string;
+  imageIds?: string[];
 }
 
 const PRODUCTS_QUERY_KEY = ["products"];
@@ -31,6 +33,7 @@ const fetchProducts = async (
     category: prod.category?.name || "Electronics",
     description: prod.description || "",
     stock: prod.inventory?.[0]?.quantityOnHand || 0,
+    imageUrl: prod.productImages?.[0]?.file?.url || undefined,
   }));
 };
 
@@ -88,6 +91,7 @@ export const useProductsPipeline = (
           tags: newProduct.tags || [],
           isActive: true,
           initialStock: newProduct.stock || 0,
+          imageIds: newProduct.imageIds || [],
         }),
       });
 

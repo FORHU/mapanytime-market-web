@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { Card } from "@/shared/components/ui/Card";
 import ProductForm from "@/features/seller-catalog/components/ProductForm";
 import { ProductDetailDialog } from "@/features/seller-catalog/components/ProductDetailDialog";
@@ -9,7 +10,7 @@ import {
   ProductItem,
 } from "@/shared/hooks/useProductsPipeline";
 import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
-import { Plus, X, Tag, Layers } from "lucide-react";
+import { Plus, X, Tag, Layers, Package } from "lucide-react";
 
 export default function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -115,6 +116,28 @@ export default function ProductsPage() {
                     }
                   }}
                 >
+                  {product.imageUrl ? (
+                    <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-xl">
+                      <Image
+                        src={product.imageUrl}
+                        alt={product.name}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="mb-4 flex aspect-video w-full items-center justify-center rounded-xl"
+                      style={{ background: "var(--background-secondary)" }}
+                    >
+                      <Package
+                        className="h-8 w-8"
+                        style={{ color: "var(--text-tertiary)" }}
+                      />
+                    </div>
+                  )}
                   <div>
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <div>

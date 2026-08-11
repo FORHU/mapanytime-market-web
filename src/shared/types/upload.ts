@@ -17,4 +17,6 @@ export interface PresignedUrlResponse {
 export interface UploadSuccessResult {
   fileKey: string;
   fileName: string;
+  mimeType: string;
+  size: number;
 }
