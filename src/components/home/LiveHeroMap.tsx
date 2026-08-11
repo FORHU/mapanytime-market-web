@@ -56,31 +56,165 @@ function createStorePopupContent(store: any): HTMLElement {
   return root;
 }
 
-function createStoreMarkerElement(store: any): HTMLElement {
+function createStoreMarkerElement(
+  store: any,
+  onClick?: (store: any) => void,
+): HTMLElement {
   const el = document.createElement("div");
-  el.className = "store-marker";
+  el.className =
+    "flex items-center rounded-full shadow-lg overflow-hidden text-[10px] sm:text-[11px] font-extrabold cursor-pointer hover:scale-110 transition-transform origin-bottom border-2 border-white bg-white";
 
-  const pill = document.createElement("div");
-  pill.className = "store-marker-pill";
+  if (onClick) {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onClick(store);
+    });
+  }
 
-  const icon = document.createElement("span");
-  icon.className = "material-symbols-outlined store-marker-pill__icon";
-  icon.textContent = "storefront";
-  pill.appendChild(icon);
+  let style = { bg: "bg-blue-500", text: "text-white" };
+  let svgPaths =
+    '<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/>';
 
-  const label = document.createElement("span");
-  label.textContent = store.storeName ?? "";
-  pill.appendChild(label);
+  const categoryName = (store.categoryName || "").toLowerCase();
 
-  el.appendChild(pill);
+  if (
+    categoryName.includes("food") ||
+    categoryName.includes("restaurant") ||
+    categoryName.includes("cafe") ||
+    categoryName.includes("coffee")
+  ) {
+    style = { bg: "bg-orange-500", text: "text-white" };
+    // Coffee cup / food icon
+    svgPaths =
+      '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>';
+  } else if (
+    categoryName.includes("fashion") ||
+    categoryName.includes("clothing") ||
+    categoryName.includes("apparel") ||
+    categoryName.includes("boutique")
+  ) {
+    style = { bg: "bg-purple-500", text: "text-white" };
+    // Shirt icon
+    svgPaths =
+      '<path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/>';
+  } else if (
+    categoryName.includes("electronics") ||
+    categoryName.includes("tech") ||
+    categoryName.includes("gadget") ||
+    categoryName.includes("computer") ||
+    categoryName.includes("mobile")
+  ) {
+    style = { bg: "bg-indigo-500", text: "text-white" };
+    // Smartphone icon
+    svgPaths =
+      '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>';
+  } else if (
+    categoryName.includes("home") ||
+    categoryName.includes("furniture") ||
+    categoryName.includes("hardware") ||
+    categoryName.includes("tools")
+  ) {
+    style = { bg: "bg-teal-500", text: "text-white" };
+    // Hammer / tools icon
+    svgPaths =
+      '<path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H11.2l-1.65 1.65a2.5 2.5 0 0 0 0 3.53l.35.35c.6.6 1.4.93 2.25.93h.86l2.72 2.73c.43.43 1.02.66 1.63.66h2.08l1.65-1.65a2.5 2.5 0 0 0 0-3.53Z"/>';
+  } else if (
+    categoryName.includes("health") ||
+    categoryName.includes("beauty") ||
+    categoryName.includes("pharmacy") ||
+    categoryName.includes("medical") ||
+    categoryName.includes("spa")
+  ) {
+    style = { bg: "bg-pink-500", text: "text-white" };
+    // Heart icon
+    svgPaths =
+      '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>';
+  } else if (
+    categoryName.includes("grocer") ||
+    categoryName.includes("market") ||
+    categoryName.includes("supermarket") ||
+    categoryName.includes("meat")
+  ) {
+    style = { bg: "bg-green-500", text: "text-white" };
+    // Shopping basket
+    svgPaths =
+      '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>';
+  } else if (
+    categoryName.includes("sports") ||
+    categoryName.includes("fitness") ||
+    categoryName.includes("gym")
+  ) {
+    style = { bg: "bg-red-500", text: "text-white" };
+    // Dumbbell
+    svgPaths =
+      '<path d="M14.4 14.4 9.6 9.6"/><path d="M18.65 21.35a2 2 0 0 1-2.83 0l-5.66-5.66a2 2 0 0 1 0-2.83l.06-.06a2 2 0 0 1 2.83 0l5.66 5.66a2 2 0 0 1 0 2.83Z"/><path d="m2 2 2.83 2.83"/><path d="m22 2-2.83 2.83"/><path d="M2.65 8.35a2 2 0 0 1 0-2.83l.06-.06a2 2 0 0 1 2.83 0l5.66 5.66a2 2 0 0 1 0 2.83l-5.66-5.66a2 2 0 0 1-2.83 0Z"/>';
+  } else if (
+    categoryName.includes("auto") ||
+    categoryName.includes("car") ||
+    categoryName.includes("vehicle") ||
+    categoryName.includes("motor")
+  ) {
+    style = { bg: "bg-yellow-500", text: "text-white" };
+    // Car
+    svgPaths =
+      '<path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a2 2 0 0 0-1.6-.8H8.3a2 2 0 0 0-1.6.8L4 11l-5.16.86a1 1 0 0 0-.84.99V16h3"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>';
+  } else if (!categoryName) {
+    // If no category, pick a pseudo-random color based on ID
+    const colors = [
+      { bg: "bg-blue-500", text: "text-white" },
+      { bg: "bg-orange-500", text: "text-white" },
+      { bg: "bg-green-500", text: "text-white" },
+      { bg: "bg-purple-500", text: "text-white" },
+      { bg: "bg-teal-500", text: "text-white" },
+    ];
+    style = colors[store.id ? store.id.charCodeAt(0) % 5 : 0];
+  }
+
+  const iconContainer = document.createElement("div");
+  iconContainer.className = `w-6 h-6 flex items-center justify-center rounded-full ${style.bg} ${style.text}`;
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const icon = document.createElementNS(svgNS, "svg");
+  icon.setAttribute("width", "12");
+  icon.setAttribute("height", "12");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("fill", "none");
+  icon.setAttribute("stroke", "currentColor");
+  icon.setAttribute("stroke-width", "2.5");
+  icon.setAttribute("stroke-linecap", "round");
+  icon.setAttribute("stroke-linejoin", "round");
+
+  icon.innerHTML = svgPaths;
+  iconContainer.appendChild(icon);
+
+  // Use my location indicator style (special case if id is "current-location")
+  if (store.id === "current-location") {
+    el.className =
+      "w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_0_4px_rgba(255,255,255,1),0_0_15px_rgba(0,0,0,0.3)] animate-pulse border-2 border-white";
+    return el;
+  }
+
+  el.appendChild(iconContainer);
+
   return el;
 }
 
-export default function LiveHeroMap() {
+interface LiveHeroMapProps {
+  onStoreClick?: (store: any) => void;
+}
+
+export default function LiveHeroMap({ onStoreClick }: LiveHeroMapProps = {}) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef(new Map<string, mapboxgl.Marker>());
+  const onStoreClickRef = useRef(onStoreClick);
   const { resolvedTheme } = useTheme();
+
+  // Keep the ref always pointing to the latest callback — avoids stale closures
+  // inside marker click handlers which are registered once and never re-registered.
+  useEffect(() => {
+    onStoreClickRef.current = onStoreClick;
+  }, [onStoreClick]);
 
   const [lng, setLng] = useState(120.596); // Default: Baguio City
   const [lat, setLat] = useState(16.409);
@@ -145,8 +279,6 @@ export default function LiveHeroMap() {
       bearing: -20, // Slight angle
       projection: "globe", // Display as a 3D globe when zoomed out
       attributionControl: false, // Hide for cleaner look in hero
-      scrollZoom: false, // Prevent getting stuck when scrolling page
-      cooperativeGestures: true, // Use Mapbox's built in cooperative gestures
     });
 
     // Add zoom and rotation controls to the map
@@ -178,7 +310,9 @@ export default function LiveHeroMap() {
               }).setDOMContent(createStorePopupContent(store));
 
               // Custom marker for store (Text Pill style)
-              const el = createStoreMarkerElement(store);
+              const el = createStoreMarkerElement(store, (s) =>
+                onStoreClickRef.current?.(s),
+              );
 
               const newMarker = new mapboxgl.Marker({ element: el })
                 .setLngLat([store.coordinates.lng, store.coordinates.lat])
