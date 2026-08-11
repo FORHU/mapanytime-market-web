@@ -31,6 +31,7 @@ test.describe("Theme toggle", () => {
       .locator('button[aria-label="Toggle dark mode"]')
       .first();
     await toggleBtn.click(); // → dark
+    await expect(page.locator("html")).toHaveClass(/dark/);
     await toggleBtn.click(); // → light again
 
     const html = page.locator("html");
