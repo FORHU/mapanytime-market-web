@@ -921,7 +921,7 @@ export default function LandingPage() {
                       </button>
                     </div>
                   </div>
-                  {apkDownloadUrl && (
+                  {mounted && apkDownloadUrl && (
                     <div className="hidden lg:block w-16 h-16 bg-surface p-1 rounded-xl shadow-sm border border-outline-variant/20 mr-2 shrink-0 relative z-10">
                       <div className="w-full h-full rounded-lg overflow-hidden flex items-center justify-center bg-white">
                         {/* Rendered locally rather than fetched from api.qrserver.com. A remote QR
