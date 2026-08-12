@@ -8,3 +8,12 @@ export const getRootCategories = async (): Promise<CategoriesResponse> => {
   const res = await fetcher<{ data: unknown }>("/api/v1/categories/roots");
   return CategoriesResponseSchema.parse(res.data);
 };
+
+export const getSubCategories = async (
+  parentId: string,
+): Promise<CategoriesResponse> => {
+  const res = await fetcher<{ data: unknown }>(
+    `/api/v1/categories?parentId=${encodeURIComponent(parentId)}`,
+  );
+  return CategoriesResponseSchema.parse(res.data ?? []);
+};

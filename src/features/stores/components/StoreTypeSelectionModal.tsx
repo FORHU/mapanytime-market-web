@@ -16,6 +16,7 @@ const STORE_TYPE_OPTIONS: Array<{
   label: string;
   description: string;
   icon: typeof StoreIcon;
+  disabled?: boolean;
 }> = [
   {
     type: "store",
@@ -32,7 +33,8 @@ const STORE_TYPE_OPTIONS: Array<{
   {
     type: "renting",
     label: "Renting",
-    description: "Leasing / rental properties or items",
+    disabled: true,
+    description: "Coming Soon",
     icon: KeyRoundIcon,
   },
 ];
@@ -97,12 +99,23 @@ export function StoreTypeSelectionModal({
           {STORE_TYPE_OPTIONS.map((option) => {
             const Icon = option.icon;
 
+            const isDisabled = option.disabled === true;
+
             return (
               <button
                 key={option.type}
                 type="button"
-                onClick={() => onSelect(option.type)}
-                className="group flex min-h-48 flex-col items-center justify-center rounded-2xl border border-[var(--border-light)] bg-[var(--background-elevated)] p-5 text-center transition-all duration-300 hover:-translate-y-1 hover:border-[var(--brand-core)] hover:bg-[var(--background-tertiary)] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-[var(--brand-core)] focus:ring-offset-2 focus:ring-offset-[var(--background-primary)]"
+                disabled={isDisabled}
+                aria-disabled={isDisabled}
+                onClick={() => {
+                  if (isDisabled) return;
+                  onSelect(option.type);
+                }}
+                className={`group flex min-h-48 flex-col items-center justify-center rounded-2xl border p-5 text-center transition-all duration-300 focus:outline-none ${
+                  isDisabled
+                    ? "cursor-not-allowed border-[var(--border-light)] bg-[var(--background-tertiary)] opacity-50"
+                    : "border-[var(--border-light)] bg-[var(--background-elevated)] hover:-translate-y-1 hover:border-[var(--brand-core)] hover:bg-[var(--background-tertiary)] hover:shadow-xl focus:ring-2 focus:ring-[var(--brand-core)] focus:ring-offset-2 focus:ring-offset-[var(--background-primary)]"
+                }`}
               >
                 <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--brand-core)]/10 text-[var(--brand-core)] transition-transform duration-300 group-hover:scale-110">
                   <Icon className="h-7 w-7" />

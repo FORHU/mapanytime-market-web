@@ -22,13 +22,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-const CATEGORIES = [
-  { id: "Electronics", label: "Electronics" },
-  { id: "Apparel", label: "Apparel" },
-  { id: "Home & Kitchen", label: "Home & Kitchen" },
-  { id: "Groceries", label: "Groceries" },
-];
-
 const emptyVariant = () => ({
   id: crypto.randomUUID(),
   name: "",
@@ -36,9 +29,20 @@ const emptyVariant = () => ({
   draft: "",
 });
 
+interface ProductFormCategoryOption {
+  id: string;
+  name: string;
+}
+
 interface ProductFormProps {
   onSuccess: (newProduct: ProductItem) => Promise<ProductItem>;
   closeForm: () => void;
+  mainCategory: ProductFormCategoryOption | null;
+  storeCategoriesLoading: boolean;
+  storeCategoriesError: boolean;
+  subCategories: ProductFormCategoryOption[];
+  subCategoriesLoading: boolean;
+  subCategoriesError: boolean;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -49,10 +53,12 @@ function FieldLabel({
   icon: Icon,
   children,
   hint,
+  required,
 }: {
   icon?: React.ElementType;
   children: React.ReactNode;
   hint?: string;
+  required?: boolean;
 }) {
   return (
     <div className="mb-2 flex items-baseline justify-between">
@@ -67,6 +73,7 @@ function FieldLabel({
           />
         )}
         {children}
+        {required && <span className="ml-0.5 text-rose-500">*</span>}
       </label>
       {hint && (
         <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
@@ -116,8 +123,11 @@ function SectionCard({
 
   return (
     <section
-      className="glass rounded-2xl p-5 sm:p-6"
-      style={{ border: "1px solid var(--border-default)" }}
+      className="rounded-2xl p-5 sm:p-6"
+      style={{
+        background: "var(--md-sys-color-surface-container-high)",
+        border: "1px solid var(--border-default)",
+      }}
     >
       <div
         className={
@@ -491,11 +501,12 @@ function VariantsBuilder({
 
       <button
         type="button"
-        onClick={addVariant}
-        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed py-2.5 text-sm font-medium transition-colors"
+        disabled
+        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed py-2.5 text-sm font-medium cursor-not-allowed"
         style={{
           borderColor: "var(--border-default)",
-          color: "var(--brand-core)",
+          color: "var(--text-secondary)",
+          opacity: 0.4,
         }}
       >
         <Plus className="h-4 w-4" />
@@ -516,12 +527,46 @@ function VariantsBuilder({
 export default function ProductForm({
   onSuccess,
   closeForm,
+  mainCategory,
+  storeCategoriesLoading,
+  storeCategoriesError,
+  subCategories,
+  subCategoriesLoading,
+  subCategoriesError,
 }: ProductFormProps) {
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+
+  const primaryCategoryId = mainCategory?.id ?? null;
+
+  const subCategoryOptions = subCategories ?? [];
+  const subCategoriesDisabled =
+    !primaryCategoryId ||
+    subCategoriesLoading ||
+    subCategoriesError ||
+    subCategoryOptions.length === 0;
+
+  const subCategoryPlaceholder = storeCategoriesError
+    ? "Couldn't load store categories"
+    : storeCategoriesLoading
+      ? "Loading categories…"
+      : !primaryCategoryId
+        ? "No sub-categories available"
+        : subCategoriesLoading
+          ? "Loading sub-categories…"
+          : subCategoriesError
+            ? "Couldn't load sub-categories"
+            : subCategoryOptions.length === 0
+              ? "No sub-categories available"
+              : "Select a sub-category";
+
+  const handleCategoryChange = (value: string) => {
+    setCategoryId(value);
+    setErrors((prev) => ({ ...prev, category: "" }));
+  };
 
   const [price, setPrice] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -554,7 +599,10 @@ export default function ProductForm({
     const newErrors: Record<string, string> = {};
     if (!name) newErrors.name = "Product name is required";
     if (!brand) newErrors.brand = "Brand name is required";
-    if (!categoryId) newErrors.category = "Category is required";
+    if (!categoryId)
+      newErrors.category = subCategoriesDisabled
+        ? "No sub-category is available for your store's category yet"
+        : "Category is required";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -580,11 +628,16 @@ export default function ProductForm({
         }
       }
 
+      const selectedSubCategory = subCategoryOptions.find(
+        (c) => c.id === categoryId,
+      );
+
       await onSuccess({
         name,
         brand,
         price: price.toString(),
-        category: categoryId || "Electronics",
+        category: selectedSubCategory?.name ?? "",
+        categoryId: selectedSubCategory?.id,
         description,
         stock: inventory ? Number(inventory) : 0,
         tags: tags.length > 0 ? tags : undefined,
@@ -625,7 +678,10 @@ export default function ProductForm({
           <Sparkles className="h-3.5 w-3.5" />
           New listing
         </span>
-        <h1 className="text-gradient-2026 text-3xl font-bold sm:text-4xl">
+        <h1
+          className="text-3xl font-bold sm:text-4xl"
+          style={{ color: "var(--text-primary)" }}
+        >
           Add New Product
         </h1>
         <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
@@ -641,7 +697,7 @@ export default function ProductForm({
       >
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
-            <FieldLabel>Product name</FieldLabel>
+            <FieldLabel required>Product name</FieldLabel>
             <TextInput
               required
               value={name}
@@ -653,7 +709,7 @@ export default function ProductForm({
             )}
           </div>
           <div>
-            <FieldLabel hint="Optional">Brand</FieldLabel>
+            <FieldLabel required>Brand</FieldLabel>
             <TextInput
               required
               value={brand}
@@ -667,13 +723,24 @@ export default function ProductForm({
         </div>
 
         <div>
-          <FieldLabel icon={Boxes}>Category</FieldLabel>
+          <FieldLabel
+            icon={Boxes}
+            hint={
+              mainCategory
+                ? `Under "${mainCategory.name}"`
+                : "Based on your store's category"
+            }
+          >
+            Category
+          </FieldLabel>
           <div className="relative">
             <select
               required
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full appearance-none rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all duration-200 focus:glow-primary"
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              disabled={subCategoriesDisabled}
+              aria-busy={subCategoriesLoading || storeCategoriesLoading}
+              className="w-full appearance-none rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all duration-200 focus:glow-primary disabled:cursor-not-allowed disabled:opacity-60"
               style={{
                 background: "var(--background-secondary)",
                 border: "1px solid var(--border-default)",
@@ -683,11 +750,11 @@ export default function ProductForm({
               }}
             >
               <option value="" disabled>
-                Select a category
+                {subCategoryPlaceholder}
               </option>
-              {CATEGORIES.map((c) => (
+              {subCategoryOptions.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.label}
+                  {c.name}
                 </option>
               ))}
             </select>
@@ -702,7 +769,7 @@ export default function ProductForm({
         </div>
 
         <div>
-          <FieldLabel hint={`${description.length}/600`}>
+          <FieldLabel hint={`${description.length}/600`} required>
             Description
           </FieldLabel>
           <textarea
@@ -721,7 +788,7 @@ export default function ProductForm({
         </div>
 
         <div>
-          <FieldLabel icon={Tag} hint="Press Enter or comma to add">
+          <FieldLabel icon={Tag} hint="Optional">
             Tags
           </FieldLabel>
           <TagInput
@@ -740,7 +807,11 @@ export default function ProductForm({
       >
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
-            <FieldLabel icon={DollarSign} hint={formattedPrice ?? undefined}>
+            <FieldLabel
+              icon={DollarSign}
+              hint={formattedPrice ?? undefined}
+              required
+            >
               Price (USD)
             </FieldLabel>
             <div className="relative">
@@ -763,7 +834,11 @@ export default function ProductForm({
             </div>
           </div>
           <div>
-            <FieldLabel icon={Package} hint="Units available at launch">
+            <FieldLabel
+              icon={Package}
+              hint="Units available at launch"
+              required
+            >
               Initial stock
             </FieldLabel>
             <TextInput
@@ -805,7 +880,13 @@ export default function ProductForm({
 
       {/* Floating save bar */}
       <div className="flex justify-center px-4 pb-5">
-        <div className="glass flex w-full max-w-md items-center justify-between rounded-2xl px-5 py-3.5 sm:w-auto">
+        <div
+          className="flex w-full max-w-md items-center justify-between rounded-2xl px-5 py-3.5 sm:w-auto"
+          style={{
+            background: "var(--md-sys-color-surface-container-high)",
+            border: "1px solid var(--border-default)",
+          }}
+        >
           <div className="hidden sm:block">
             <p
               className="text-xs font-medium"

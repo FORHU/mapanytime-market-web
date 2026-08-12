@@ -8,6 +8,7 @@ export interface ProductItem {
   brand: string;
   price: string;
   category: string;
+  categoryId?: string;
   description: string;
   stock: number;
   tags?: string[];
@@ -54,31 +55,35 @@ export const useProductsPipeline = (
     mutationFn: async (newProduct: ProductItem): Promise<ProductItem> => {
       if (!storeId) throw new Error("No active store branch selected.");
 
-      // 1. Fetch categories from backend to resolve name to ID
-      const catEnvelope: any = await fetcher("/api/v1/categories");
-      const categoriesList = catEnvelope.data || [];
+      let categoryId = newProduct.categoryId;
 
-      // 2. Map frontend dropdown category to seeded database category name
-      const categoryNameMap: Record<string, string> = {
-        Electronics: "Electronics",
-        Apparel: "Shopping & Retail",
-        "Home & Kitchen": "Home & Living",
-        Groceries: "Food & Beverage",
-      };
-
-      const targetName = categoryNameMap[newProduct.category] || "Electronics";
-      const matchedCategory = categoriesList.find(
-        (c: any) => c.name.toLowerCase() === targetName.toLowerCase(),
-      );
-
-      const categoryId = matchedCategory?.id || categoriesList[0]?.id;
+      // Fallback: resolve a free-text category name to a backend category ID.
       if (!categoryId) {
-        throw new Error(
-          "No category ID matches. Ensure database categories are seeded.",
+        const catEnvelope: any = await fetcher("/api/v1/categories");
+        const categoriesList = catEnvelope.data || [];
+
+        const categoryNameMap: Record<string, string> = {
+          Electronics: "Electronics",
+          Apparel: "Shopping & Retail",
+          "Home & Kitchen": "Home & Living",
+          Groceries: "Food & Beverage",
+        };
+
+        const targetName =
+          categoryNameMap[newProduct.category] || "Electronics";
+        const matchedCategory = categoriesList.find(
+          (c: any) => c.name.toLowerCase() === targetName.toLowerCase(),
         );
+
+        categoryId = matchedCategory?.id || categoriesList[0]?.id;
+        if (!categoryId) {
+          throw new Error(
+            "No category ID matches. Ensure database categories are seeded.",
+          );
+        }
       }
 
-      // 3. Post to backend to create the product
+      // Post to backend to create the product
       const response: any = await fetcher("/api/v1/products", {
         method: "POST",
         body: JSON.stringify({

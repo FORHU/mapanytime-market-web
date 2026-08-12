@@ -16,6 +16,7 @@ export const StoreSchema = z
     description: z.string().nullable(),
     isActive: z.boolean(),
     approvalStatus: z.enum(["PENDING", "ACTIVE", "REJECTED"]).optional(),
+    primaryCategoryId: z.string().nullable().optional(),
     rejectionReason: z.string().nullable().optional(),
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -24,6 +25,20 @@ export const StoreSchema = z
   .loose();
 
 export const StoresResponseSchema = z.array(StoreSchema);
+
+export const StoreCategorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  parentId: z.string().nullable().optional(),
+});
+
+export const StoreDetailSchema = z
+  .object({
+    id: z.string(),
+    primaryCategory: StoreCategorySchema.nullable().optional(),
+    categories: z.array(StoreCategorySchema),
+  })
+  .loose();
 
 export interface StoreProperty {
   id: string;
@@ -37,3 +52,5 @@ export interface StoreProperty {
 export type StoreLocation = z.infer<typeof StoreLocationSchema>;
 export type Store = z.infer<typeof StoreSchema>;
 export type StoresResponse = z.infer<typeof StoresResponseSchema>;
+export type StoreCategory = z.infer<typeof StoreCategorySchema>;
+export type StoreDetail = z.infer<typeof StoreDetailSchema>;

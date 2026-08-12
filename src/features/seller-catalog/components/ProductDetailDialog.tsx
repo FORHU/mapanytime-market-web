@@ -54,7 +54,7 @@ export function ProductDetailDialog({
       >
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-xl p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)]"
+          className="absolute right-3 top-3 rounded-xl p-2.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)]"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
