@@ -46,10 +46,12 @@ function FieldLabel({
   icon: Icon,
   children,
   hint,
+  required,
 }: {
   icon?: React.ElementType;
   children: React.ReactNode;
   hint?: string;
+  required?: boolean;
 }) {
   return (
     <div className="mb-2 flex items-baseline justify-between">
@@ -64,6 +66,7 @@ function FieldLabel({
           />
         )}
         {children}
+        {required && <span className="ml-0.5 text-rose-500">*</span>}
       </label>
       {hint && (
         <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
@@ -113,8 +116,11 @@ function SectionCard({
 
   return (
     <section
-      className="glass rounded-2xl p-5 sm:p-6"
-      style={{ border: "1px solid var(--border-default)" }}
+      className="rounded-2xl p-5 sm:p-6"
+      style={{
+        background: "var(--md-sys-color-surface-container-high)",
+        border: "1px solid var(--border-default)",
+      }}
     >
       <div
         className={
@@ -488,11 +494,12 @@ function VariantsBuilder({
 
       <button
         type="button"
-        onClick={addVariant}
-        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed py-2.5 text-sm font-medium transition-colors"
+        disabled
+        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed py-2.5 text-sm font-medium cursor-not-allowed"
         style={{
           borderColor: "var(--border-default)",
-          color: "var(--brand-core)",
+          color: "var(--text-secondary)",
+          opacity: 0.4,
         }}
       >
         <Plus className="h-4 w-4" />
@@ -670,7 +677,10 @@ export default function ProductForm({
           <Sparkles className="h-3.5 w-3.5" />
           New listing
         </span>
-        <h1 className="text-gradient-2026 text-3xl font-bold sm:text-4xl">
+        <h1
+          className="text-3xl font-bold sm:text-4xl"
+          style={{ color: "var(--text-primary)" }}
+        >
           Add New Product
         </h1>
         <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
@@ -686,7 +696,7 @@ export default function ProductForm({
       >
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
-            <FieldLabel>Product name</FieldLabel>
+            <FieldLabel required>Product name</FieldLabel>
             <TextInput
               required
               value={name}
@@ -698,7 +708,7 @@ export default function ProductForm({
             )}
           </div>
           <div>
-            <FieldLabel hint="Optional">Brand</FieldLabel>
+            <FieldLabel required>Brand</FieldLabel>
             <TextInput
               required
               value={brand}
@@ -758,7 +768,7 @@ export default function ProductForm({
         </div>
 
         <div>
-          <FieldLabel hint={`${description.length}/600`}>
+          <FieldLabel hint={`${description.length}/600`} required>
             Description
           </FieldLabel>
           <textarea
@@ -777,7 +787,7 @@ export default function ProductForm({
         </div>
 
         <div>
-          <FieldLabel icon={Tag} hint="Press Enter or comma to add">
+          <FieldLabel icon={Tag} hint="Optional">
             Tags
           </FieldLabel>
           <TagInput
@@ -796,7 +806,11 @@ export default function ProductForm({
       >
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
-            <FieldLabel icon={DollarSign} hint={formattedPrice ?? undefined}>
+            <FieldLabel
+              icon={DollarSign}
+              hint={formattedPrice ?? undefined}
+              required
+            >
               Price (USD)
             </FieldLabel>
             <div className="relative">
@@ -819,7 +833,11 @@ export default function ProductForm({
             </div>
           </div>
           <div>
-            <FieldLabel icon={Package} hint="Units available at launch">
+            <FieldLabel
+              icon={Package}
+              hint="Units available at launch"
+              required
+            >
               Initial stock
             </FieldLabel>
             <TextInput
@@ -861,7 +879,13 @@ export default function ProductForm({
 
       {/* Floating save bar */}
       <div className="flex justify-center px-4 pb-5">
-        <div className="glass flex w-full max-w-md items-center justify-between rounded-2xl px-5 py-3.5 sm:w-auto">
+        <div
+          className="flex w-full max-w-md items-center justify-between rounded-2xl px-5 py-3.5 sm:w-auto"
+          style={{
+            background: "var(--md-sys-color-surface-container-high)",
+            border: "1px solid var(--border-default)",
+          }}
+        >
           <div className="hidden sm:block">
             <p
               className="text-xs font-medium"

@@ -1,16 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
-import { Card } from "@/shared/components/ui/Card";
 import ProductForm from "@/features/seller-catalog/components/ProductForm";
+import { ProductCard } from "@/features/seller-catalog/components/ProductCard";
 import { ProductDetailDialog } from "@/features/seller-catalog/components/ProductDetailDialog";
 import {
   useProductsPipeline,
   ProductItem,
 } from "@/shared/hooks/useProductsPipeline";
 import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
-import { Plus, X, Tag, Layers, Package } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 export default function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -100,102 +99,13 @@ export default function ProductsPage() {
               product&quot; to list your first one.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-200">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 animate-in fade-in duration-200">
               {products.map((product, idx) => (
-                <Card
+                <ProductCard
                   key={product.id || idx}
-                  hoverable
-                  className="p-5 flex flex-col justify-between text-left"
-                  style={{ borderColor: "var(--border-light)" }}
-                  onClick={() => setSelectedProduct(product)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSelectedProduct(product);
-                    }
-                  }}
-                >
-                  {product.imageUrl ? (
-                    <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-xl">
-                      <Image
-                        src={product.imageUrl}
-                        alt={product.name}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        className="object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      className="mb-4 flex aspect-video w-full items-center justify-center rounded-xl"
-                      style={{ background: "var(--background-secondary)" }}
-                    >
-                      <Package
-                        className="h-8 w-8"
-                        style={{ color: "var(--text-tertiary)" }}
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <div className="flex items-start justify-between gap-4 mb-2">
-                      <div>
-                        <h3 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
-                          {product.name}
-                        </h3>
-                        {product.brand && (
-                          <span className="text-sm text-[var(--text-secondary)] block mt-0.5">
-                            by {product.brand}
-                          </span>
-                        )}
-                      </div>
-                      <span
-                        className="text-xs px-2 py-1 border rounded-md text-[var(--text-secondary)] shrink-0"
-                        style={{ borderColor: "var(--border-light)" }}
-                      >
-                        {product.category}
-                      </span>
-                    </div>
-                    <p
-                      className="text-sm mb-4 line-clamp-2"
-                      style={{ color: "var(--text-secondary)" }}
-                    >
-                      {product.description || "No description yet."}
-                    </p>
-                  </div>
-
-                  <div
-                    className="flex items-center justify-between pt-3 border-t text-sm font-medium text-[var(--text-secondary)]"
-                    style={{ borderColor: "var(--border-light)" }}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <Tag className="w-4 h-4" />
-                      <span className="text-[var(--text-primary)] font-semibold">
-                        ₱
-                        {Number(product.price).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Layers className="w-4 h-4" />
-                      <span
-                        className={
-                          product.stock === 0
-                            ? "text-rose-600 dark:text-rose-400"
-                            : "text-emerald-600 dark:text-emerald-400"
-                        }
-                      >
-                        {product.stock === 0
-                          ? "Out of stock"
-                          : `${product.stock} in stock`}
-                      </span>
-                    </div>
-                  </div>
-                </Card>
+                  product={product}
+                  onSelect={setSelectedProduct}
+                />
               ))}
             </div>
           )}

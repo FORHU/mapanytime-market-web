@@ -11,22 +11,25 @@ export async function listApprovals(): Promise<ApprovalItem[]> {
 
 export async function approveApproval(
   item: Pick<ApprovalItem, "id" | "entityType">,
+  signal?: AbortSignal,
 ) {
   await fetcher<unknown>(
     `/api/v1/admin/approvals/${item.entityType === "PROPERTY" ? "properties" : "stores"}/${item.id}/approve`,
-    { method: "POST" },
+    { method: "POST", signal },
   );
 }
 
 export async function rejectApproval(
   item: Pick<ApprovalItem, "id" | "entityType">,
   reason: string,
+  signal?: AbortSignal,
 ) {
   await fetcher<unknown>(
     `/api/v1/admin/approvals/${item.entityType === "PROPERTY" ? "properties" : "stores"}/${item.id}/reject`,
     {
       method: "POST",
       body: JSON.stringify({ reason }),
+      signal,
     },
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Building2,
   CheckCircle2,
@@ -29,6 +29,7 @@ export default function AdminStoresPage() {
     null,
   );
   const [rejectionReason, setRejectionReason] = useState("");
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const { data: approvals = [], isLoading, isError, error } = useApprovals();
   const { approve, reject } = useApprovalActions();
 
@@ -58,6 +59,25 @@ export default function AdminStoresPage() {
       },
     );
   };
+
+  const handleApprove = useCallback(
+    (item: ApprovalItem) => {
+      const key = `${item.entityType}:${item.id}`;
+      if (processingIds.has(key) || approve.isPending) return;
+
+      setProcessingIds((prev) => new Set(prev).add(key));
+      approve.mutate(item, {
+        onSettled: () => {
+          setProcessingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(key);
+            return next;
+          });
+        },
+      });
+    },
+    [approve, processingIds],
+  );
 
   return (
     <div className="space-y-8">
@@ -131,19 +151,22 @@ export default function AdminStoresPage() {
 
       {!isLoading && !isError && filteredApprovals.length > 0 && (
         <div className="grid grid-cols-1 gap-4">
-          {filteredApprovals.map((item) => (
-            <ApprovalCard
-              key={`${item.entityType}:${item.id}`}
-              item={item}
-              isApproving={approve.isPending}
-              isRejecting={reject.isPending}
-              onApprove={() => approve.mutate(item)}
-              onReject={() => {
-                setRejectionTarget(item);
-                setRejectionReason(item.rejectionReason ?? "");
-              }}
-            />
-          ))}
+          {filteredApprovals.map((item) => {
+            const itemKey = `${item.entityType}:${item.id}`;
+            return (
+              <ApprovalCard
+                key={itemKey}
+                item={item}
+                isApproving={processingIds.has(itemKey)}
+                isRejecting={reject.isPending}
+                onApprove={() => handleApprove(item)}
+                onReject={() => {
+                  setRejectionTarget(item);
+                  setRejectionReason(item.rejectionReason ?? "");
+                }}
+              />
+            );
+          })}
         </div>
       )}
 
