@@ -85,6 +85,7 @@ export default function ProductsPage() {
       {/* 1. SHOW THE FORM ONLY WHEN OPEN */}
       {isFormOpen && (
         <ProductForm
+          storeId={activeStoreId}
           onSuccess={handleAddProductSuccess}
           closeForm={() => setIsFormOpen(false)}
         />

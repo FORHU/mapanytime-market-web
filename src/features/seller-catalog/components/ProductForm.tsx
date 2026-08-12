@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import Image from "next/image";
 import type { ProductItem } from "@/shared/hooks/useProductsPipeline";
 import { useS3AssetUpload } from "@/shared/hooks/useS3AssetUpload";
+import { useStoreCategories } from "@/features/stores/hooks/useStoreCategories";
+import { useSubCategories } from "@/features/stores/hooks/useSubCategories";
 import {
   Tag,
   DollarSign,
@@ -22,13 +24,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-const CATEGORIES = [
-  { id: "Electronics", label: "Electronics" },
-  { id: "Apparel", label: "Apparel" },
-  { id: "Home & Kitchen", label: "Home & Kitchen" },
-  { id: "Groceries", label: "Groceries" },
-];
-
 const emptyVariant = () => ({
   id: crypto.randomUUID(),
   name: "",
@@ -39,6 +34,8 @@ const emptyVariant = () => ({
 interface ProductFormProps {
   onSuccess: (newProduct: ProductItem) => Promise<ProductItem>;
   closeForm: () => void;
+  /** The active store whose primary category scopes the sub-category list. */
+  storeId: string | null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -516,12 +513,52 @@ function VariantsBuilder({
 export default function ProductForm({
   onSuccess,
   closeForm,
+  storeId,
 }: ProductFormProps) {
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+
+  const {
+    mainCategory,
+    isLoading: storeCategoriesLoading,
+    isError: storeCategoriesError,
+  } = useStoreCategories(storeId);
+  const primaryCategoryId = mainCategory?.id ?? null;
+
+  const {
+    data: subCategories,
+    isLoading: subCategoriesLoading,
+    isError: subCategoriesError,
+  } = useSubCategories(primaryCategoryId);
+
+  const subCategoryOptions = subCategories ?? [];
+  const subCategoriesDisabled =
+    !primaryCategoryId ||
+    subCategoriesLoading ||
+    subCategoriesError ||
+    subCategoryOptions.length === 0;
+
+  const subCategoryPlaceholder = storeCategoriesError
+    ? "Couldn't load store categories"
+    : storeCategoriesLoading
+      ? "Loading categories…"
+      : !primaryCategoryId
+        ? "No sub-categories available"
+        : subCategoriesLoading
+          ? "Loading sub-categories…"
+          : subCategoriesError
+            ? "Couldn't load sub-categories"
+            : subCategoryOptions.length === 0
+              ? "No sub-categories available"
+              : "Select a sub-category";
+
+  const handleCategoryChange = (value: string) => {
+    setCategoryId(value);
+    setErrors((prev) => ({ ...prev, category: "" }));
+  };
 
   const [price, setPrice] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -554,7 +591,10 @@ export default function ProductForm({
     const newErrors: Record<string, string> = {};
     if (!name) newErrors.name = "Product name is required";
     if (!brand) newErrors.brand = "Brand name is required";
-    if (!categoryId) newErrors.category = "Category is required";
+    if (!categoryId)
+      newErrors.category = subCategoriesDisabled
+        ? "No sub-category is available for your store's category yet"
+        : "Category is required";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -580,11 +620,16 @@ export default function ProductForm({
         }
       }
 
+      const selectedSubCategory = subCategoryOptions.find(
+        (c) => c.id === categoryId,
+      );
+
       await onSuccess({
         name,
         brand,
         price: price.toString(),
-        category: categoryId || "Electronics",
+        category: selectedSubCategory?.name ?? "",
+        categoryId: selectedSubCategory?.id,
         description,
         stock: inventory ? Number(inventory) : 0,
         tags: tags.length > 0 ? tags : undefined,
@@ -667,13 +712,24 @@ export default function ProductForm({
         </div>
 
         <div>
-          <FieldLabel icon={Boxes}>Category</FieldLabel>
+          <FieldLabel
+            icon={Boxes}
+            hint={
+              mainCategory
+                ? `Under "${mainCategory.name}"`
+                : "Based on your store's category"
+            }
+          >
+            Category
+          </FieldLabel>
           <div className="relative">
             <select
               required
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full appearance-none rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all duration-200 focus:glow-primary"
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              disabled={subCategoriesDisabled}
+              aria-busy={subCategoriesLoading || storeCategoriesLoading}
+              className="w-full appearance-none rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all duration-200 focus:glow-primary disabled:cursor-not-allowed disabled:opacity-60"
               style={{
                 background: "var(--background-secondary)",
                 border: "1px solid var(--border-default)",
@@ -683,11 +739,11 @@ export default function ProductForm({
               }}
             >
               <option value="" disabled>
-                Select a category
+                {subCategoryPlaceholder}
               </option>
-              {CATEGORIES.map((c) => (
+              {subCategoryOptions.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.label}
+                  {c.name}
                 </option>
               ))}
             </select>
