@@ -5,8 +5,6 @@ import { toast } from "sonner";
 import Image from "next/image";
 import type { ProductItem } from "@/shared/hooks/useProductsPipeline";
 import { useS3AssetUpload } from "@/shared/hooks/useS3AssetUpload";
-import { useStoreCategories } from "@/features/stores/hooks/useStoreCategories";
-import { useSubCategories } from "@/features/stores/hooks/useSubCategories";
 import {
   Tag,
   DollarSign,
@@ -31,11 +29,20 @@ const emptyVariant = () => ({
   draft: "",
 });
 
+interface ProductFormCategoryOption {
+  id: string;
+  name: string;
+}
+
 interface ProductFormProps {
   onSuccess: (newProduct: ProductItem) => Promise<ProductItem>;
   closeForm: () => void;
-  /** The active store whose primary category scopes the sub-category list. */
-  storeId: string | null;
+  mainCategory: ProductFormCategoryOption | null;
+  storeCategoriesLoading: boolean;
+  storeCategoriesError: boolean;
+  subCategories: ProductFormCategoryOption[];
+  subCategoriesLoading: boolean;
+  subCategoriesError: boolean;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -520,7 +527,12 @@ function VariantsBuilder({
 export default function ProductForm({
   onSuccess,
   closeForm,
-  storeId,
+  mainCategory,
+  storeCategoriesLoading,
+  storeCategoriesError,
+  subCategories,
+  subCategoriesLoading,
+  subCategoriesError,
 }: ProductFormProps) {
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
@@ -528,18 +540,7 @@ export default function ProductForm({
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
 
-  const {
-    mainCategory,
-    isLoading: storeCategoriesLoading,
-    isError: storeCategoriesError,
-  } = useStoreCategories(storeId);
   const primaryCategoryId = mainCategory?.id ?? null;
-
-  const {
-    data: subCategories,
-    isLoading: subCategoriesLoading,
-    isError: subCategoriesError,
-  } = useSubCategories(primaryCategoryId);
 
   const subCategoryOptions = subCategories ?? [];
   const subCategoriesDisabled =

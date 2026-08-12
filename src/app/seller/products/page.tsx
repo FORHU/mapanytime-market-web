@@ -1,21 +1,25 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import ProductForm from "@/features/seller-catalog/components/ProductForm";
-import { ProductCard } from "@/features/seller-catalog/components/ProductCard";
+import { ProductTable } from "@/features/seller-catalog/components/ProductTable";
 import { ProductDetailDialog } from "@/features/seller-catalog/components/ProductDetailDialog";
 import {
   useProductsPipeline,
   ProductItem,
 } from "@/shared/hooks/useProductsPipeline";
 import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
-import { Plus, X } from "lucide-react";
+import { useStoreCategories } from "@/features/stores/hooks/useStoreCategories";
+import { useSubCategories } from "@/features/stores/hooks/useSubCategories";
+import { Plus, Search, X } from "lucide-react";
 
 export default function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(
     null,
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const { activeStoreId } = useActiveStore();
 
   // Consume orchestrated features and handle state updates via callbacks
@@ -35,6 +39,36 @@ export default function ProductsPage() {
   const handleAddProductSuccess = (newProduct: ProductItem) => {
     return addProduct(newProduct);
   };
+
+  const {
+    mainCategory,
+    isLoading: storeCategoriesLoading,
+    isError: storeCategoriesError,
+  } = useStoreCategories(activeStoreId);
+
+  const {
+    data: subCategories,
+    isLoading: subCategoriesLoading,
+    isError: subCategoriesError,
+  } = useSubCategories(mainCategory?.id ?? null);
+
+  const categories = useMemo(
+    () => [...new Set(products.map((p) => p.category))].sort(),
+    [products],
+  );
+
+  const filteredProducts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return products.filter((product) => {
+      const matchesCategory =
+        selectedCategory === "all" || product.category === selectedCategory;
+      const matchesQuery =
+        !query ||
+        product.name.toLowerCase().includes(query) ||
+        product.brand.toLowerCase().includes(query);
+      return matchesCategory && matchesQuery;
+    });
+  }, [products, searchQuery, selectedCategory]);
 
   return (
     <div className="space-y-6">
@@ -84,9 +118,14 @@ export default function ProductsPage() {
       {/* 1. SHOW THE FORM ONLY WHEN OPEN */}
       {isFormOpen && (
         <ProductForm
-          storeId={activeStoreId}
           onSuccess={handleAddProductSuccess}
           closeForm={() => setIsFormOpen(false)}
+          mainCategory={mainCategory}
+          storeCategoriesLoading={storeCategoriesLoading}
+          storeCategoriesError={storeCategoriesError}
+          subCategories={subCategories ?? []}
+          subCategoriesLoading={subCategoriesLoading}
+          subCategoriesError={subCategoriesError}
         />
       )}
 
@@ -99,14 +138,58 @@ export default function ProductsPage() {
               product&quot; to list your first one.
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 animate-in fade-in duration-200">
-              {products.map((product, idx) => (
-                <ProductCard
-                  key={product.id || idx}
-                  product={product}
+            <div className="space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+                  <input
+                    type="text"
+                    placeholder="Search by name or brand"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 text-sm border rounded-xl bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-colors text-[var(--text-primary)]"
+                    style={{ borderColor: "var(--border-light)" }}
+                  />
+                </div>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="px-4 py-2 text-sm border rounded-xl focus:outline-none focus:border-[var(--brand-core)] transition-colors sm:w-52"
+                  style={{
+                    background: "var(--background-secondary)",
+                    borderColor: "var(--border-default)",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  <option
+                    value="all"
+                    className="bg-[var(--background-secondary)] text-[var(--text-primary)]"
+                  >
+                    All Categories
+                  </option>
+                  {categories.map((category) => (
+                    <option
+                      key={category}
+                      value={category}
+                      className="bg-[var(--background-secondary)] text-[var(--text-primary)]"
+                    >
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {filteredProducts.length === 0 ? (
+                <div className="p-12 text-center border border-dashed rounded-xl text-sm text-[var(--text-secondary)]">
+                  No products match your search. Try a different keyword or
+                  category.
+                </div>
+              ) : (
+                <ProductTable
+                  products={filteredProducts}
                   onSelect={setSelectedProduct}
                 />
-              ))}
+              )}
             </div>
           )}
         </>
