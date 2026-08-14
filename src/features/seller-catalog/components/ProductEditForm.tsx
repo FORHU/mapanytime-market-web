@@ -57,8 +57,6 @@ export function ProductEditForm({
     const stockValue = Number(stock);
     if (stock === "" || !Number.isInteger(stockValue) || stockValue < 0) {
       nextErrors.stock = "Stock must be a non-negative whole number";
-    } else if (stockValue < product.stock) {
-      nextErrors.stock = `Stock can't be lower than current stock (${product.stock})`;
     }
 
     if (Object.keys(nextErrors).length > 0) {

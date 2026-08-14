@@ -90,6 +90,7 @@ export function SellerOrdersBoard({
   const { userId, isHydrated } = useCurrentUser();
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sortAsc, setSortAsc] = useState(false);
   const [page, setPage] = useState(1);
@@ -99,10 +100,14 @@ export function SellerOrdersBoard({
     label: string;
   } | null>(null);
 
-  // A narrower result set can leave you stranded past the last page.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, sortAsc]);
+  }, [debouncedSearch, statusFilter, sortAsc]);
 
   const {
     orders,
@@ -117,7 +122,7 @@ export function SellerOrdersBoard({
     forceManualRefresh,
   } = useOrdersPipeline({
     userId,
-    search: isFull ? search : "",
+    search: isFull ? debouncedSearch : "",
     status: isFull ? statusFilter : "ALL",
     sortAsc: isFull ? sortAsc : false,
     page: isFull ? page : 1,
@@ -188,7 +193,7 @@ export function SellerOrdersBoard({
               {
                 id: "PROCESSING",
                 label: "Preparing",
-                count: statusCounts?.PREPARING ?? 0,
+                count: statusCounts?.PROCESSING ?? 0,
               },
               {
                 id: "READY_FOR_PICKUP",
@@ -198,7 +203,7 @@ export function SellerOrdersBoard({
               {
                 id: "COMPLETED",
                 label: "Completed",
-                count: statusCounts?.FULFILLED ?? 0,
+                count: statusCounts?.COMPLETED ?? 0,
               },
               {
                 id: "CANCELLED",

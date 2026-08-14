@@ -7,7 +7,6 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { SellerOrdersBoard } from "@/features/orders/components/SellerOrdersBoard";
 import { useStoreOverviewStats } from "@/shared/hooks/useOrdersPipeline";
-import { useProductsPipeline } from "@/shared/hooks/useProductsPipeline";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
 import { usePropertyDashboard } from "@/features/properties/hooks/usePropertyDashboard";
@@ -73,23 +72,16 @@ export default function SellerDashboard() {
 
   const propertyQuery = usePropertyDashboard(effectivePropertyId ?? "");
 
-  const { totalRevenue, pendingCount, fulfilledCount, isLoading } =
-    useStoreOverviewStats({ userId });
+  // All tile numbers come pre-aggregated from the backend stats endpoint.
+  const {
+    totalRevenue,
+    pendingCount,
+    fulfilledCount,
+    lowStockCount,
+    isLoading,
+  } = useStoreOverviewStats({ userId });
 
-  // Stock lives on products, not on orders — the orders API never reports it.
-  const { products, isLoading: productsLoading } = useProductsPipeline({
-    storeId: effectiveStoreId,
-    page: 1,
-    limit: 100,
-  });
-  const lowStockCount = products.filter((p) => p.stock <= 10).length;
-
-  const ordersReady = isHydrated && isStoreContext && !isLoading;
-  const stockReady =
-    isHydrated &&
-    isStoreContext &&
-    Boolean(effectiveStoreId) &&
-    !productsLoading;
+  const statsReady = isHydrated && isStoreContext && !isLoading;
 
   if (!isContextReady || (!isPropertyContext && !isStoreContext)) {
     return null;
@@ -107,7 +99,7 @@ export default function SellerDashboard() {
       icon: TrendingUp,
       accent: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
       valueClass: "text-[var(--text-primary)]",
-      ready: ordersReady,
+      ready: statsReady,
     },
     {
       label: "Orders to handle",
@@ -116,7 +108,7 @@ export default function SellerDashboard() {
       icon: ShoppingBag,
       accent: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
       valueClass: "text-amber-600 dark:text-amber-400",
-      ready: ordersReady,
+      ready: statsReady,
     },
     {
       label: "Completed orders",
@@ -125,7 +117,7 @@ export default function SellerDashboard() {
       icon: CheckCircle2,
       accent: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
       valueClass: "text-emerald-600 dark:text-emerald-400",
-      ready: ordersReady,
+      ready: statsReady,
     },
     {
       label: "Low stock",
@@ -134,7 +126,7 @@ export default function SellerDashboard() {
       icon: AlertTriangle,
       accent: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
       valueClass: "text-rose-600 dark:text-rose-400",
-      ready: stockReady,
+      ready: statsReady,
     },
   ];
 

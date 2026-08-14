@@ -34,7 +34,7 @@ const PRODUCTS_QUERY_KEY = ["products"];
 const EMPTY_PAGE: ProductsPage = {
   items: [],
   total: 0,
-  totalPages: 1,
+  totalPages: 0,
   page: 1,
   limit: 10,
 };
@@ -44,6 +44,8 @@ interface FetchProductsParams {
   limit: number;
   search?: string;
   categoryId?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
 }
 
 const fetchProducts = async (
@@ -60,6 +62,8 @@ const fetchProducts = async (
   });
   if (params.search?.trim()) query.set("search", params.search.trim());
   if (params.categoryId) query.set("categoryId", params.categoryId);
+  if (params.sortBy) query.set("sortBy", params.sortBy);
+  if (params.sortOrder) query.set("sortOrder", params.sortOrder);
 
   const envelope = await fetcher<unknown>(
     `/api/v1/products?${query.toString()}`,
@@ -82,7 +86,7 @@ function mapProductItem(product: SellerProduct): ProductItem {
     name: product.name,
     brand: product.brand || "",
     price: product.price.toString(),
-    category: product.category?.name || "Electronics",
+    category: product.category?.name || "",
     categoryId: product.category?.id,
     description: product.description || "",
     stock: product.inventory?.[0]?.quantityOnHand || 0,
@@ -96,6 +100,8 @@ export interface UseProductsPipelineOptions {
   limit?: number;
   search?: string;
   categoryId?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
   onMutationSuccess?: () => void;
 }
 
@@ -106,13 +112,32 @@ export const useProductsPipeline = (options: UseProductsPipelineOptions) => {
     limit = 10,
     search,
     categoryId,
+    sortBy,
+    sortOrder,
     onMutationSuccess,
   } = options;
   const queryClient = useQueryClient();
 
   const query = useQuery<ProductsPage, Error>({
-    queryKey: [PRODUCTS_QUERY_KEY, storeId, page, limit, search, categoryId],
-    queryFn: () => fetchProducts(storeId, { page, limit, search, categoryId }),
+    queryKey: [
+      PRODUCTS_QUERY_KEY,
+      storeId,
+      page,
+      limit,
+      search,
+      categoryId,
+      sortBy,
+      sortOrder,
+    ],
+    queryFn: () =>
+      fetchProducts(storeId, {
+        page,
+        limit,
+        search,
+        categoryId,
+        sortBy,
+        sortOrder,
+      }),
     staleTime: 10000,
     enabled: Boolean(getToken() && storeId),
   });
@@ -121,32 +146,13 @@ export const useProductsPipeline = (options: UseProductsPipelineOptions) => {
     mutationFn: async (newProduct: ProductItem): Promise<ProductItem> => {
       if (!storeId) throw new Error("No active store branch selected.");
 
-      let categoryIdForCreate = newProduct.categoryId;
-
-      // Fallback: resolve a free-text category name to a backend category ID.
+      // The form always picks a sub-category, so require a real category ID.
+      // Guessing a category on the client would silently mis-categorize.
+      const categoryIdForCreate = newProduct.categoryId;
       if (!categoryIdForCreate) {
-        const catEnvelope: any = await fetcher("/api/v1/categories");
-        const categoriesList = catEnvelope.data || [];
-
-        const categoryNameMap: Record<string, string> = {
-          Electronics: "Electronics",
-          Apparel: "Shopping & Retail",
-          "Home & Kitchen": "Home & Living",
-          Groceries: "Food & Beverage",
-        };
-
-        const targetName =
-          categoryNameMap[newProduct.category] || "Electronics";
-        const matchedCategory = categoriesList.find(
-          (c: any) => c.name.toLowerCase() === targetName.toLowerCase(),
+        throw new Error(
+          "A category is required. Select a sub-category and try again.",
         );
-
-        categoryIdForCreate = matchedCategory?.id || categoriesList[0]?.id;
-        if (!categoryIdForCreate) {
-          throw new Error(
-            "No category ID matches. Ensure database categories are seeded.",
-          );
-        }
       }
 
       // Post to backend to create the product
@@ -204,14 +210,12 @@ export const useProductsPipeline = (options: UseProductsPipelineOptions) => {
         body: JSON.stringify({ name, description, price }),
       });
 
-      // The inventory endpoint only supports restocking (increments).
-      const delta = stock - current.stock;
-      if (delta > 0) {
-        await fetcher(`/api/v1/inventory/${productId}/restock`, {
-          method: "PATCH",
-          body: JSON.stringify({ addedQuantity: delta }),
-        });
-      }
+      // The backend computes the delta transactionally from the absolute target,
+      // so stock can be increased or decreased safely.
+      await fetcher(`/api/v1/inventory/${productId}/adjust`, {
+        method: "PATCH",
+        body: JSON.stringify({ targetQuantity: stock }),
+      });
 
       return {
         ...current,
