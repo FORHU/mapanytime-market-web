@@ -137,8 +137,8 @@ export function Sidebar({
       roles: ["SELLER", "ADMIN"],
       children: [
         {
-          label: "Store details",
-          href: "/seller/store-profile",
+          label: "Store profile",
+          href: "/seller/store-profile/view",
           icon: Store,
           roles: ["SELLER", "ADMIN"],
         },

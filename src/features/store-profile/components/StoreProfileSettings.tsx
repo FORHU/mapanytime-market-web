@@ -1,0 +1,476 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import { MapPin, X, Plus, Star, SaveIcon } from "lucide-react";
+import { useStoreProfiles, useStoreCategories } from "../hooks/useStoreProfile";
+
+interface StoreProfileSettingsProps {
+  activeStoreId?: string | null;
+  isHydrated?: boolean;
+}
+
+function formatDate(value?: string | Date) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "—"
+    : date.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+}
+
+export function StoreProfileSettings({
+  activeStoreId,
+  isHydrated = true,
+}: StoreProfileSettingsProps) {
+  const daysOfWeek = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+
+  const {
+    data: stores,
+    isLoading: storesLoading,
+    isError: storesError,
+    error: storesErrorDetails,
+  } = useStoreProfiles();
+
+  const {
+    data: categories,
+    isLoading: categoriesLoading,
+    isError: categoriesError,
+  } = useStoreCategories();
+
+  const store = stores?.find((s) => s.id === activeStoreId);
+  const location = store?.storeLocations;
+
+  const [closedDays, setClosedDays] = useState<Record<string, boolean>>({
+    Sunday: true,
+  });
+
+  const [toggles, setToggles] = useState({
+    open: store?.isActive ?? true,
+    vacation: false,
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleClosedToggle = (day: string) => {
+    setClosedDays((prev) => ({ ...prev, [day]: !prev[day] }));
+  };
+
+  if (!isHydrated || storesLoading || categoriesLoading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 animate-pulse text-[var(--text-secondary)]">
+        Loading your store profile...
+      </div>
+    );
+  }
+
+  if (storesError || categoriesError) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="p-6 border-rose-200 bg-rose-50/20 text-sm text-rose-600 rounded-lg">
+          <strong className="font-semibold">
+            We couldn&apos;t load your store details.
+          </strong>{" "}
+          {storesErrorDetails?.message}
+        </div>
+      </div>
+    );
+  }
+
+  if (!store) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 text-center">
+        <p className="text-sm text-[var(--text-secondary)] mb-3">
+          We couldn&apos;t find the store you&apos;re managing.
+        </p>
+        <Link
+          href="/seller/manage-stores"
+          className="text-sm font-medium text-[var(--brand-core)] hover:underline"
+        >
+          Choose a store
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-[var(--background-primary)] rounded-xl border border-[var(--border-light)] shadow-sm w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
+            Store profile
+          </h1>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
+            Manage how your store appears to customers
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={isSubmitting}
+          onClick={() => setIsSubmitting(false)}
+          className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{
+            background: "var(--brand-core)",
+            color: "var(--background-primary)",
+          }}
+        >
+          <SaveIcon className="h-4 w-4" />
+          {isSubmitting ? "Saving…" : "Save Profile"}
+        </button>
+      </div>
+
+      <div className="space-y-8">
+        {/* SECTION 1: General */}
+        <section className="pb-8 border-b border-[var(--border-light)]">
+          <div className="mb-6">
+            <h2 className="text-lg font-medium text-[var(--text-primary)]">
+              General
+            </h2>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Basic details customers see first
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                Store name{" "}
+                <span className="text-[var(--md-sys-color-error)]">*</span>
+              </label>
+              <input
+                type="text"
+                defaultValue={store.storeName || ""}
+                className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
+              />
+            </div>
+
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                About
+              </label>
+              <textarea
+                rows={2}
+                defaultValue={store.description || ""}
+                className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)] resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                Phone
+              </label>
+              <input
+                type="tel"
+                defaultValue={store.phone ? String(store.phone) : ""}
+                placeholder="No phone number"
+                className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                defaultValue={store.email || ""}
+                placeholder="No email address"
+                className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                Primary category
+              </label>
+              <select
+                defaultValue={store.categoryId || ""}
+                disabled={categoriesLoading || Boolean(categoriesError)}
+                className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)] disabled:opacity-50"
+              >
+                <option value="" disabled>
+                  {categoriesLoading
+                    ? "Loading categories..."
+                    : categoriesError
+                      ? "Unable to load categories"
+                      : "Select a category"}
+                </option>
+                {categories?.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              {categoriesError && (
+                <p className="mt-1 text-xs text-rose-500">
+                  Could not load categories.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                Subcategories
+              </label>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] text-sm font-medium rounded-full">
+                  Smartphones
+                  <button
+                    type="button"
+                    className="text-[var(--brand-core)] hover:text-[var(--md-sys-color-on-primary-container)] focus:outline-none"
+                  >
+                    <X size={14} />
+                  </button>
+                </span>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 px-3 py-1 border border-dashed border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] text-sm font-medium rounded-full transition-colors focus:outline-none"
+                >
+                  <Plus size={14} /> Add
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 2: Location and hours */}
+        <section className="pb-8 border-b border-[var(--border-light)]">
+          <div className="mb-6">
+            <h2 className="text-lg font-medium text-[var(--text-primary)]">
+              Location and hours
+            </h2>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Where customers find you and when you are open
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="col-span-1 md:col-span-3">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                Address
+              </label>
+              <input
+                type="text"
+                defaultValue={location?.currentAddress || ""}
+                className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                City
+              </label>
+              <input
+                type="text"
+                defaultValue={location?.city || ""}
+                className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                Province/State
+              </label>
+              <input
+                type="text"
+                defaultValue={location?.province || ""}
+                className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                ZIP code
+              </label>
+              <input
+                type="text"
+                defaultValue={
+                  location?.postalCode ? String(location.postalCode) : ""
+                }
+                className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
+              />
+            </div>
+
+            <div className="col-span-1 md:col-span-3">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                Country
+              </label>
+              <input
+                type="text"
+                defaultValue={location?.country || "Philippines"}
+                className="w-full md:w-1/3 px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
+              />
+            </div>
+
+            <div className="col-span-1 md:col-span-3 mt-2">
+              <div className="h-[120px] w-full bg-[var(--background-secondary)] border border-[var(--border-default)] rounded-lg flex flex-col items-center justify-center text-[var(--text-secondary)] cursor-pointer hover:bg-[var(--border-light)] transition-colors">
+                <MapPin
+                  size={24}
+                  className="mb-2 text-[var(--text-quaternary)]"
+                />
+                <span className="text-sm font-medium">Map pin selector</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-4">
+              Weekly hours
+            </label>
+            <div className="border border-[var(--border-default)] rounded-lg overflow-hidden bg-[var(--background-elevated)]">
+              {daysOfWeek.map((day) => {
+                const isClosed = closedDays[day] || false;
+                return (
+                  <div
+                    key={day}
+                    className="flex flex-col sm:flex-row sm:items-center py-3 px-4 border-b border-[var(--border-light)] last:border-0 gap-4 sm:gap-0"
+                  >
+                    <div className="w-32 text-sm font-medium text-[var(--text-primary)]">
+                      {day}
+                    </div>
+                    <div className="flex flex-1 items-center gap-3">
+                      <input
+                        type="time"
+                        defaultValue="09:00"
+                        disabled={isClosed}
+                        className="px-3 py-1.5 border border-[var(--border-default)] bg-transparent rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)] disabled:opacity-50"
+                      />
+                      <span className="text-[var(--text-secondary)] text-sm">
+                        to
+                      </span>
+                      <input
+                        type="time"
+                        defaultValue="17:00"
+                        disabled={isClosed}
+                        className="px-3 py-1.5 border border-[var(--border-default)] bg-transparent rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)] disabled:opacity-50"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={`closed-${day}`}
+                        checked={isClosed}
+                        onChange={() => handleClosedToggle(day)}
+                        className="h-4 w-4 text-[var(--brand-core)] border-[var(--border-default)] rounded focus:ring-[var(--brand-core)] cursor-pointer"
+                      />
+                      <label
+                        htmlFor={`closed-${day}`}
+                        className="text-sm text-[var(--text-secondary)] cursor-pointer select-none"
+                      >
+                        Closed
+                      </label>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 3: Status */}
+        <section>
+          <div className="mb-6">
+            <h2 className="text-lg font-medium text-[var(--text-primary)]">
+              Status
+            </h2>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Control visibility and see your standing
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-4 mb-6">
+            {/* Toggle 1 */}
+            <div className="bg-[var(--background-secondary)] rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  Open to customers
+                </p>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Your storefront is visible in search
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={toggles.open}
+                onClick={() => setToggles((p) => ({ ...p, open: !p.open }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand-core)] focus:ring-offset-2 ${
+                  toggles.open
+                    ? "bg-[var(--brand-core)]"
+                    : "bg-[var(--border-strong)]"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-[var(--md-sys-color-on-primary)] transition-transform ${
+                    toggles.open ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Status Read-only Card */}
+          <div className="border border-[var(--border-default)] rounded-xl p-6 bg-[var(--background-elevated)]">
+            <div className="mb-4">
+              {store.isActive ? (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400">
+                  Approved & Active
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                  Hidden
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <dt className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide">
+                  Store ID
+                </dt>
+                <dd className="mt-1 text-sm text-[var(--text-primary)] font-mono">
+                  {store.id}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide">
+                  Opened Date
+                </dt>
+                <dd className="mt-1 text-sm text-[var(--text-primary)]">
+                  {formatDate(store.createdAt)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide">
+                  Rating
+                </dt>
+                <dd className="mt-1 text-sm text-[var(--text-primary)] flex items-center gap-1">
+                  4.9{" "}
+                  <Star size={14} className="text-amber-400 fill-amber-400" />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide">
+                  Followers
+                </dt>
+                <dd className="mt-1 text-sm text-[var(--text-primary)]">0</dd>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}

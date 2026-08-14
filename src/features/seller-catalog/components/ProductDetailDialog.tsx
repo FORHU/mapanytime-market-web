@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { X, Tag, Layers, Package, Trash2 } from "lucide-react";
+import { X, Tag, Layers, Package, Trash2, Pencil } from "lucide-react";
+import { toast } from "sonner";
 import type { ProductItem } from "@/shared/hooks/useProductsPipeline";
+import type { UpdateProductInput } from "@/shared/contracts/products.contract";
+import { ProductEditForm } from "./ProductEditForm";
 
 interface ProductDetailDialogProps {
   product: ProductItem;
@@ -12,6 +15,11 @@ interface ProductDetailDialogProps {
   onClose: () => void;
   onDelete: (id: string) => void;
   isDeleting: boolean;
+  onUpdate: (
+    productId: string,
+    input: UpdateProductInput,
+  ) => Promise<ProductItem>;
+  isUpdating: boolean;
 }
 
 export function ProductDetailDialog({
@@ -20,7 +28,11 @@ export function ProductDetailDialog({
   onClose,
   onDelete,
   isDeleting,
+  onUpdate,
+  isUpdating,
 }: ProductDetailDialogProps) {
+  const [isEditing, setIsEditing] = useState(false);
+
   useEffect(() => {
     if (!open) return;
 
@@ -32,7 +44,24 @@ export function ProductDetailDialog({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (open) setIsEditing(false);
+  }, [open, product.id]);
+
   if (!open || typeof document === "undefined") return null;
+
+  const handleUpdate = async (input: UpdateProductInput) => {
+    try {
+      await onUpdate(product.id!, input);
+      setIsEditing(false);
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Could not update product. Try again.",
+      );
+    }
+  };
 
   const formattedPrice = Number(product.price).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -54,17 +83,28 @@ export function ProductDetailDialog({
       >
         <button
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-xl p-2.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)]"
+          className="absolute right-3 top-3 rounded-xl p-2.5 text-[var(--text-secondary)] transition-colors bg-[var(--background-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-light)]"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
         </button>
 
+        {!isEditing && (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="absolute right-16 top-3 rounded-xl p-2.5 transition-colors bg-[var(--background-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-light)]"
+            aria-label="Edit product"
+            title="Edit product"
+          >
+            <Pencil className="h-5 w-5 text-emerald-500 " />
+          </button>
+        )}
+
         <div className="space-y-6">
           <div>
             <h2
               id="product-detail-title"
-              className="pr-8 text-xl font-bold tracking-tight text-[var(--text-primary)]"
+              className="pr-32 text-xl font-bold tracking-tight text-[var(--text-primary)]"
             >
               {product.name}
             </h2>
@@ -73,154 +113,165 @@ export function ProductDetailDialog({
                 className="mt-1 text-sm"
                 style={{ color: "var(--text-secondary)" }}
               >
-                by {product.brand}
+                Brand: {product.brand}
               </p>
             )}
           </div>
 
-          {product.imageUrl ? (
-            <div className="relative aspect-video w-full overflow-hidden rounded-2xl">
-              <Image
-                src={product.imageUrl}
-                alt={product.name}
-                fill
-                sizes="(max-width: 512px) 100vw, 512px"
-                className="object-contain"
-                unoptimized
-              />
-            </div>
+          {isEditing ? (
+            <ProductEditForm
+              product={product}
+              isSaving={isUpdating}
+              onCancel={() => setIsEditing(false)}
+              onSubmit={handleUpdate}
+            />
           ) : (
-            <div
-              className="flex aspect-video w-full items-center justify-center rounded-2xl"
-              style={{ background: "var(--background-secondary)" }}
-            >
-              <Package
-                className="h-10 w-10"
-                style={{ color: "var(--text-tertiary)" }}
-              />
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <span
-              className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium"
-              style={{
-                borderColor: "var(--border-light)",
-                color: "var(--text-secondary)",
-              }}
-            >
-              <Tag className="h-3.5 w-3.5" />
-              {product.category}
-            </span>
-            <span
-              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium ${
-                product.stock === 0
-                  ? "border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400"
-                  : "border-emerald-300 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400"
-              }`}
-            >
-              <Package className="h-3.5 w-3.5" />
-              {product.stock === 0
-                ? "Out of stock"
-                : `${product.stock} in stock`}
-            </span>
-            {product.tags && product.tags.length > 0 && (
-              <span
-                className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium"
-                style={{
-                  borderColor: "var(--border-light)",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                <Layers className="h-3.5 w-3.5" />
-                {product.tags.join(", ")}
-              </span>
-            )}
-          </div>
-
-          {product.description && (
-            <div>
-              <p
-                className="text-xs font-bold uppercase tracking-wider"
-                style={{ color: "var(--text-tertiary)" }}
-              >
-                Description
-              </p>
-              <p
-                className="mt-1.5 text-sm leading-relaxed"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                {product.description}
-              </p>
-            </div>
-          )}
-
-          <div
-            className="rounded-2xl border p-4"
-            style={{ borderColor: "var(--border-light)" }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p
-                  className="text-xs font-bold uppercase tracking-wider"
-                  style={{ color: "var(--text-tertiary)" }}
+            <>
+              {product.imageUrl ? (
+                <div className="relative aspect-video w-full overflow-hidden rounded-2xl">
+                  <Image
+                    src={product.imageUrl}
+                    alt={product.name}
+                    fill
+                    sizes="(max-width: 512px) 100vw, 512px"
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
+              ) : (
+                <div
+                  className="flex aspect-video w-full items-center justify-center rounded-2xl"
+                  style={{ background: "var(--background-secondary)" }}
                 >
-                  Price
-                </p>
-                <p className="mt-1 text-2xl font-bold text-[var(--text-primary)]">
-                  ₱{formattedPrice}
-                </p>
-              </div>
-              <div className="text-right">
-                <p
-                  className="text-xs font-bold uppercase tracking-wider"
-                  style={{ color: "var(--text-tertiary)" }}
+                  <Package
+                    className="h-10 w-10"
+                    style={{ color: "var(--text-tertiary)" }}
+                  />
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium"
+                  style={{
+                    borderColor: "var(--border-light)",
+                    color: "var(--text-secondary)",
+                  }}
                 >
-                  Stock
-                </p>
-                <p
-                  className={`mt-1 text-lg font-semibold ${
+                  <Tag className="h-3.5 w-3.5" />
+                  {product.category}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium ${
                     product.stock === 0
-                      ? "text-rose-600 dark:text-rose-400"
-                      : "text-emerald-600 dark:text-emerald-400"
+                      ? "border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400"
+                      : "border-emerald-300 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400"
                   }`}
                 >
+                  <Package className="h-3.5 w-3.5" />
                   {product.stock === 0
-                    ? "Unavailable"
-                    : `${product.stock} units`}
-                </p>
+                    ? "Out of stock"
+                    : `${product.stock} in stock`}
+                </span>
+                {product.tags && product.tags.length > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium"
+                    style={{
+                      borderColor: "var(--border-light)",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                    {product.tags.join(", ")}
+                  </span>
+                )}
               </div>
-            </div>
-          </div>
 
-          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-            <button
-              onClick={onClose}
-              className="flex-1 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--background-secondary)]"
-              style={{
-                borderColor: "var(--border-default)",
-                color: "var(--text-primary)",
-              }}
-            >
-              Close
-            </button>
-            <button
-              onClick={() => {
-                if (
-                  window.confirm(
-                    "Are you sure you want to delete this product? This action cannot be undone.",
-                  )
-                ) {
-                  onDelete(product.id!);
-                }
-              }}
-              disabled={isDeleting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-rose-500 transition-colors hover:bg-rose-500/10 disabled:opacity-40"
-            >
-              <Trash2 className="h-4 w-4" />
-              {isDeleting ? "Deleting…" : "Delete Product"}
-            </button>
-          </div>
+              {product.description && (
+                <div>
+                  <p
+                    className="text-xs font-bold uppercase tracking-wider"
+                    style={{ color: "var(--text-tertiary)" }}
+                  >
+                    Description
+                  </p>
+                  <p
+                    className="mt-1.5 text-sm leading-relaxed"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    {product.description}
+                  </p>
+                </div>
+              )}
+
+              <div
+                className="rounded-2xl border p-4"
+                style={{ borderColor: "var(--border-light)" }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p
+                      className="text-xs font-bold uppercase tracking-wider"
+                      style={{ color: "var(--text-tertiary)" }}
+                    >
+                      Price
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-[var(--text-primary)]">
+                      ₱{formattedPrice}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className="text-xs font-bold uppercase tracking-wider"
+                      style={{ color: "var(--text-tertiary)" }}
+                    >
+                      Stock
+                    </p>
+                    <p
+                      className={`mt-1 text-lg font-semibold ${
+                        product.stock === 0
+                          ? "text-rose-600 dark:text-rose-400"
+                          : "text-emerald-600 dark:text-emerald-400"
+                      }`}
+                    >
+                      {product.stock === 0
+                        ? "Unavailable"
+                        : `${product.stock} units`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                <button
+                  onClick={onClose}
+                  className="flex-1 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--background-secondary)]"
+                  style={{
+                    borderColor: "var(--border-default)",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Are you sure you want to delete this product? This action cannot be undone.",
+                      )
+                    ) {
+                      onDelete(product.id!);
+                    }
+                  }}
+                  disabled={isDeleting}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-rose-500 transition-colors hover:bg-rose-500/10 disabled:opacity-40"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {isDeleting ? "Deleting…" : "Delete Product"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>,

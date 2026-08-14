@@ -6,8 +6,6 @@ import { Button } from "@/shared/components/ui/Button";
 import { Sliders, Map, Percent, Info } from "lucide-react";
 
 export default function SettingsPage() {
-  // Preview only — there is no store-settings endpoint on the API yet, so these
-  // values are not persisted. Wire up Save once one exists.
   const [settings, setSettings] = useState({
     discoveryRadius: 5.0,
     allowInstantCheckout: true,

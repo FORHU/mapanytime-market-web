@@ -77,8 +77,11 @@ export default function SellerDashboard() {
     useStoreOverviewStats({ userId });
 
   // Stock lives on products, not on orders — the orders API never reports it.
-  const { products, isLoading: productsLoading } =
-    useProductsPipeline(effectiveStoreId);
+  const { products, isLoading: productsLoading } = useProductsPipeline({
+    storeId: effectiveStoreId,
+    page: 1,
+    limit: 100,
+  });
   const lowStockCount = products.filter((p) => p.stock <= 10).length;
 
   const ordersReady = isHydrated && isStoreContext && !isLoading;
