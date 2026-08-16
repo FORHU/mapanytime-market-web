@@ -2,7 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ShieldCheck, Menu, X, Sun, Moon } from "lucide-react";
+import {
+  ShieldCheck,
+  Menu,
+  X,
+  Sun,
+  Moon,
+  ShoppingBag,
+  Home,
+  Store,
+  Users,
+} from "lucide-react";
 
 export function ThemeIcon({
   mounted,
@@ -49,32 +59,36 @@ export default function HomeNavBar({
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-stack-md">
           <Link
-            href="#home"
-            onClick={() => setActiveSection("home")}
-            className={`${activeSection === "home" ? "text-primary font-bold border-b-2 border-primary pb-1" : "text-on-surface-variant hover:text-primary transition-colors duration-200"}`}
-          >
-            Home
-          </Link>
-          <Link
-            href="#how-it-works"
-            onClick={() => setActiveSection("how-it-works")}
-            className={`${activeSection === "how-it-works" ? "text-primary font-bold border-b-2 border-primary pb-1" : "text-on-surface-variant hover:text-primary transition-colors duration-200"}`}
-          >
-            Your Market Journey
-          </Link>
-          <Link
             href="#map"
             onClick={() => setActiveSection("map")}
-            className={`${activeSection === "map" ? "text-primary font-bold border-b-2 border-primary pb-1" : "text-on-surface-variant hover:text-primary transition-colors duration-200"}`}
+            className={`group flex items-center gap-2 transition-colors duration-200 ${activeSection === "map" ? "text-primary font-bold border-b-2 border-primary pb-1" : "text-on-surface-variant hover:text-primary pb-1 border-b-2 border-transparent"}`}
           >
-            Discover. Shop. Sell.
+            <ShoppingBag className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+            Shop
+          </Link>
+          <Link
+            href="#real-estate"
+            onClick={() => setActiveSection("real-estate")}
+            className={`group flex items-center gap-2 transition-colors duration-200 ${activeSection === "real-estate" ? "text-secondary font-bold border-b-2 border-secondary pb-1" : "text-on-surface-variant hover:text-secondary pb-1 border-b-2 border-transparent"}`}
+          >
+            <Home className="w-4 h-4 text-secondary group-hover:scale-110 transition-transform" />
+            Real Estate
           </Link>
           <Link
             href="#ecosystem"
             onClick={() => setActiveSection("ecosystem")}
-            className={`${activeSection === "ecosystem" ? "text-primary font-bold border-b-2 border-primary pb-1" : "text-on-surface-variant hover:text-primary transition-colors duration-200"}`}
+            className={`group flex items-center gap-2 transition-colors duration-200 ${activeSection === "ecosystem" ? "text-tertiary font-bold border-b-2 border-tertiary pb-1" : "text-on-surface-variant hover:text-tertiary pb-1 border-b-2 border-transparent"}`}
           >
-            Merchant Ecosystem
+            <Store className="w-4 h-4 text-tertiary group-hover:scale-110 transition-transform" />
+            Sell
+          </Link>
+          <Link
+            href="#ecosystem"
+            onClick={() => setActiveSection("ecosystem")}
+            className={`group flex items-center gap-2 transition-colors duration-200 ${activeSection === "ecosystem" ? "text-primary font-bold border-b-2 border-primary pb-1" : "text-on-surface-variant hover:text-primary pb-1 border-b-2 border-transparent"}`}
+          >
+            <Users className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+            Agents
           </Link>
         </nav>
 
@@ -125,34 +139,26 @@ export default function HomeNavBar({
       {mobileMenuOpen && (
         <div className="md:hidden bg-surface-container-low border-b border-outline-variant/10 px-margin-mobile py-4 flex flex-col gap-4 shadow-lg">
           <Link
-            href="#home"
-            onClick={() => {
-              setActiveSection("home");
-              setMobileMenuOpen(false);
-            }}
-            className={`${activeSection === "home" ? "text-primary font-bold" : "text-on-surface-variant"}`}
-          >
-            Home
-          </Link>
-          <Link
-            href="#how-it-works"
-            onClick={() => {
-              setActiveSection("how-it-works");
-              setMobileMenuOpen(false);
-            }}
-            className={`${activeSection === "how-it-works" ? "text-primary font-bold" : "text-on-surface-variant"}`}
-          >
-            Your Market Journey
-          </Link>
-          <Link
             href="#map"
             onClick={() => {
               setActiveSection("map");
               setMobileMenuOpen(false);
             }}
-            className={`${activeSection === "map" ? "text-primary font-bold" : "text-on-surface-variant"}`}
+            className={`flex items-center gap-2 ${activeSection === "map" ? "text-primary font-bold" : "text-on-surface-variant"}`}
           >
-            Discover. Shop. Sell.
+            <ShoppingBag className="w-4 h-4 text-primary" />
+            Shop
+          </Link>
+          <Link
+            href="#real-estate"
+            onClick={() => {
+              setActiveSection("real-estate");
+              setMobileMenuOpen(false);
+            }}
+            className={`flex items-center gap-2 ${activeSection === "real-estate" ? "text-secondary font-bold" : "text-on-surface-variant"}`}
+          >
+            <Home className="w-4 h-4 text-secondary" />
+            Real Estate
           </Link>
           <Link
             href="#ecosystem"
@@ -160,9 +166,21 @@ export default function HomeNavBar({
               setActiveSection("ecosystem");
               setMobileMenuOpen(false);
             }}
-            className={`${activeSection === "ecosystem" ? "text-primary font-bold" : "text-on-surface-variant"}`}
+            className={`flex items-center gap-2 ${activeSection === "ecosystem" ? "text-tertiary font-bold" : "text-on-surface-variant"}`}
           >
-            Merchant Ecosystem
+            <Store className="w-4 h-4 text-tertiary" />
+            Sell
+          </Link>
+          <Link
+            href="#ecosystem"
+            onClick={() => {
+              setActiveSection("ecosystem");
+              setMobileMenuOpen(false);
+            }}
+            className={`flex items-center gap-2 ${activeSection === "ecosystem" ? "text-primary font-bold" : "text-on-surface-variant"}`}
+          >
+            <Users className="w-4 h-4 text-primary" />
+            Agents
           </Link>
           <div className="border-t border-outline-variant/10 pt-4 flex flex-col gap-3">
             <div className="flex items-center gap-4">
