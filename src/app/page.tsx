@@ -4,9 +4,16 @@ import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import ApkDownloadModal from "@/components/apk-download-modal";
 import HomeNavBar from "@/components/home/HomeNavBar";
-import HeroSection from "@/components/home/HeroSection";
-import HowItWorksSection from "@/components/home/HowItWorksSection";
+import HeroSectionNew from "@/components/home/HeroSection_New";
+import NearbyProductsSection from "@/components/home/NearbyProductsSection";
+import JourneySection from "@/components/home/JourneySection";
+import LocalPickupSection from "@/components/home/LocalPickupSection";
+import TrendingNearYouSection from "@/components/home/TrendingNearYouSection";
+import DifferentiationSection from "@/components/home/DifferentiationSection";
+import RealEstateMarketplaceSection from "@/components/home/RealEstateMarketplaceSection";
 import ExploreMapSection from "@/components/home/ExploreMapSection";
+import MobileAppSection from "@/components/home/MobileAppSection";
+import FinalCTASection from "@/components/home/FinalCTASection";
 import EcosystemSection from "@/components/home/EcosystemSection";
 import HomeFooter from "@/components/home/HomeFooter";
 
@@ -55,13 +62,43 @@ export default function LandingPage() {
       />
 
       <main className="flex-grow">
-        <HeroSection setIsDownloadModalOpen={setIsDownloadModalOpen} />
-        <HowItWorksSection />
+        {/* NEW MARKETING LANDING PAGE SECTIONS */}
+
+        {/* 1. Simplified Hero Section */}
+        <HeroSectionNew setIsDownloadModalOpen={setIsDownloadModalOpen} />
+
+        {/* 2. What's Around You - Real Products Section */}
+        <NearbyProductsSection />
+
+        {/* 3. Discover → Shop → Pickup Journey */}
+        <JourneySection />
+
+        {/* 4. Local Pickup Benefits Section */}
+        <LocalPickupSection />
+
+        {/* 5. Trending Near You Section */}
+        <TrendingNearYouSection />
+
+        {/* 6. Differentiation Section - Why MapAnytime is Different */}
+        <DifferentiationSection />
+
+        {/* 6.5. Real Estate Marketplace Section - NEW */}
+        <RealEstateMarketplaceSection />
+
+        {/* CORE INTERACTIVE MAP - PRESERVED UNCHANGED ✅ */}
         <ExploreMapSection
           mounted={mounted}
           setIsDownloadModalOpen={setIsDownloadModalOpen}
         />
+
+        {/* 7. Mobile App Section */}
+        <MobileAppSection />
+
+        {/* 8. Ecosystem Section */}
         <EcosystemSection />
+
+        {/* 9. Final CTA Section */}
+        <FinalCTASection setIsDownloadModalOpen={setIsDownloadModalOpen} />
       </main>
 
       <HomeFooter />
