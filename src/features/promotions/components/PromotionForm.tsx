@@ -111,7 +111,8 @@ export function PromotionForm({
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const requiresProducts = kind === "EVENT" || discountType === "BOGO";
+  const requiresProducts =
+    kind === "EVENT" || (kind === "PROMO" && discountType !== "");
 
   const validate = (): PromotionFields | null => {
     const nextErrors: Record<string, string> = {};
@@ -358,7 +359,7 @@ export function PromotionForm({
         />
       </Field>
 
-      {(kind === "EVENT" || (kind === "PROMO" && discountType === "BOGO")) && (
+      {requiresProducts && (
         <div>
           <ProductPickerField
             storeId={storeId}
