@@ -9,10 +9,10 @@ hurt if skipped", so the resolved ones stay at the top where they were.
 
 **Gates after the fixes:**
 
-|                         |                                                                                                |
-| ----------------------- | ---------------------------------------------------------------------------------------------- |
-| `mapanytime-market-web` | `tsc --noEmit` clean · `vitest run` 5 suites / 30 tests passing · `eslint .` **3 errors** (§8) |
-| `mapanytime-api`        | `tsc --noEmit` clean · `jest --runInBand` 26/27 suites, 197/199 tests (§8)                     |
+|                         |                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| `mapanytime-market-web` | `tsc --noEmit` clean · `vitest run` 5 suites / 30 tests passing · `eslint .` **clean** |
+| `mapanytime-api`        | `tsc --noEmit` clean · `jest --runInBand` 26/27 suites, 197/199 tests (§8)             |
 
 > ⚠️ **Neither service was running** (`:4002` and `:4000` both refused), so
 > nothing here — including the fixes — was confirmed against a live server. This
@@ -32,7 +32,7 @@ than in the transport:
 - [`shared/lib/http.ts`](../src/shared/lib/http.ts) prepends
   `NEXT_PUBLIC_API_URL`; every caller passes `/api/v1/...`. The API mounts its
   router at `/api` with `/v1/*` inside. Path shape matches exactly.
-- Bearer token from `localStorage`, single-flight refresh with a subscriber
+- Bearer token from `sessionStorage` (see §4), single-flight refresh with a subscriber
   queue on 401, then clear + redirect to `/login`.
 - API CORS reflects any origin, so `:4000 → :4002` needs no allowlist entry.
 - Socket.IO points at `NEXT_PUBLIC_SOCKET_SERVER_URL`, same origin as the API.
