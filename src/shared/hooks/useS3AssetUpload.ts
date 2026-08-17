@@ -9,13 +9,23 @@ import { fetcher } from "@/shared/lib/http";
 
 /**
  * Two-step direct-to-S3 upload:
- *   1. ask our own Next route handler for a presigned PUT URL (15-min expiry)
+ *   1. ask the API for a presigned PUT URL (15-min expiry)
  *   2. PUT the file straight to S3, bypassing our servers
  *
- * The presign step is a same-origin call to `/api/file-uploads/presigned-url`,
- * which builds the S3 client server-side — AWS credentials never reach the
- * browser. The PUT targets S3's origin directly; the signature is the
- * authorization, so no bearer token is attached.
+ * The presign step calls the API's `GET /v1/file-uploads/presigned-url`, which
+ * signs with the credentials the API already holds. This used to go through a
+ * Next route handler in this app, which meant the web needed its own copy of
+ * AWS_ACCESS_KEY_ID / SECRET / BUCKET — they were blank, so every upload 500d
+ * before it started. Routing through the API keeps this app credential-free,
+ * which is what its .env has always claimed. See docs/connection-audit.md §2.
+ *
+ * Both sides derive the same key shape ({folder}/{16-byte hex}.{ext}) and the
+ * same 15-minute expiry, so the response contract is unchanged: { uploadUrl,
+ * fileKey } inside the API's standard `data` envelope.
+ *
+ * Unlike the S3 PUT — where the signature is the authorization — the presign
+ * call is authenticated, so it goes through `fetcher` to pick up the bearer
+ * token.
  *
  * After the S3 upload succeeds, persists a Files record via POST /api/v1/files
  * so the backend can reference the file. Returns the saved file ID.
@@ -30,16 +40,13 @@ const executeCloudUpload = async (
     folder,
   });
 
-  const presignRes = await fetch(
-    `/api/file-uploads/presigned-url?${query.toString()}`,
+  const { data } = await fetcher<{ data: PresignedUrlResponse }>(
+    `/api/v1/file-uploads/presigned-url?${query.toString()}`,
   );
 
-  if (!presignRes.ok) {
-    const body = await presignRes.json().catch(() => ({}));
-    throw new Error(body?.error || "Couldn't prepare the upload. Try again.");
+  if (!data?.uploadUrl || !data?.fileKey) {
+    throw new Error("Couldn't prepare the upload. Try again.");
   }
-
-  const { data }: { data: PresignedUrlResponse } = await presignRes.json();
 
   const transferRes = await fetch(data.uploadUrl, {
     method: "PUT",
