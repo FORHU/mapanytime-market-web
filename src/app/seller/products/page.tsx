@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ProductForm from "@/features/seller-catalog/components/ProductForm";
 import { ProductTable } from "@/features/seller-catalog/components/ProductTable";
-import { ProductDetailDialog } from "@/features/seller-catalog/components/ProductDetailDialog";
+import { ProductDetail } from "@/features/seller-catalog/components/ProductDetailDialog";
 import {
   useProductsPipeline,
   ProductItem,
 } from "@/shared/hooks/useProductsPipeline";
+import { usePagination } from "@/shared/pagination/usePagination";
+import { PaginationControls } from "@/shared/pagination/PaginationControls";
 import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
 import { useStoreCategories } from "@/features/stores/hooks/useStoreCategories";
 import { useSubCategories } from "@/features/stores/hooks/useSubCategories";
@@ -19,12 +21,30 @@ export default function ProductsPage() {
     null,
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(
+    null,
+  );
   const { activeStoreId } = useActiveStore();
+
+  const { page, limit, goTo } = usePagination(1, 10);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (page !== 1) goTo(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, selectedCategoryId, sortDirection]);
 
   // Consume orchestrated features and handle state updates via callbacks
   const {
     products,
+    total,
+    totalPages,
     isLoading,
     isError,
     error,
@@ -32,9 +52,26 @@ export default function ProductsPage() {
     isAdding,
     deleteProduct,
     isDeleting,
-  } = useProductsPipeline(activeStoreId, () => {
-    setIsFormOpen(false); // Callback triggered on mutation success
+    updateProduct,
+    isUpdating,
+  } = useProductsPipeline({
+    storeId: activeStoreId,
+    page,
+    limit,
+    search: debouncedSearch,
+    categoryId: selectedCategoryId || undefined,
+    sortBy: sortDirection ? "price" : undefined,
+    sortOrder: sortDirection ?? undefined,
+    onMutationSuccess: () => setIsFormOpen(false),
   });
+
+  // Clamp an out-of-range page (e.g. the last item on page 5 was archived).
+  useEffect(() => {
+    if (!isLoading && totalPages > 0 && page > totalPages) {
+      goTo(totalPages);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, totalPages, isLoading]);
 
   const handleAddProductSuccess = (newProduct: ProductItem) => {
     return addProduct(newProduct);
@@ -52,23 +89,16 @@ export default function ProductsPage() {
     isError: subCategoriesError,
   } = useSubCategories(mainCategory?.id ?? null);
 
-  const categories = useMemo(
-    () => [...new Set(products.map((p) => p.category))].sort(),
-    [products],
+  const categoryOptions = useMemo(
+    () => (subCategories ?? []).map((c) => ({ id: c.id, name: c.name })),
+    [subCategories],
   );
 
-  const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    return products.filter((product) => {
-      const matchesCategory =
-        selectedCategory === "all" || product.category === selectedCategory;
-      const matchesQuery =
-        !query ||
-        product.name.toLowerCase().includes(query) ||
-        product.brand.toLowerCase().includes(query);
-      return matchesCategory && matchesQuery;
-    });
-  }, [products, searchQuery, selectedCategory]);
+  const emptyStateMessage = selectedCategoryId
+    ? 'No products found in this category. Try another category or select "All Categories".'
+    : debouncedSearch
+      ? "No products match your search. Try a different keyword."
+      : 'You haven\'t added any products yet. Tap "Add product" to list your first one.';
 
   return (
     <div className="space-y-6">
@@ -131,80 +161,120 @@ export default function ProductsPage() {
 
       {/* 2. ONLY SHOW THE PRODUCTS GRID IF THE FORM IS CLOSED */}
       {!isFormOpen && !isLoading && !isError && (
-        <>
-          {products.length === 0 ? (
-            <div className="p-12 text-center border border-dashed rounded-xl text-sm text-[var(--text-secondary)]">
-              You haven&apos;t added any products yet. Tap &quot;Add
-              product&quot; to list your first one.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
-                  <input
-                    type="text"
-                    placeholder="Search by name or brand"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 text-sm border rounded-xl bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-colors text-[var(--text-primary)]"
-                    style={{ borderColor: "var(--border-light)" }}
-                  />
-                </div>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-4 py-2 text-sm border rounded-xl focus:outline-none focus:border-[var(--brand-core)] transition-colors sm:w-52"
-                  style={{
-                    background: "var(--background-secondary)",
-                    borderColor: "var(--border-default)",
-                    color: "var(--text-primary)",
-                  }}
+        <div className="space-y-4">
+          {/* HIDE SEARCH AND FILTERS WHEN PRODUCT DETAIL IS OPEN */}
+          {!selectedProduct && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+                <input
+                  type="text"
+                  placeholder="Search by name or brand"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 text-sm border rounded-xl bg-transparent focus:outline-none focus:border-[var(--brand-core)] transition-colors text-[var(--text-primary)]"
+                  style={{ borderColor: "var(--border-light)" }}
+                />
+              </div>
+              <select
+                aria-label="Sort by Price"
+                value={sortDirection ?? ""}
+                onChange={(e) =>
+                  setSortDirection((e.target.value as "asc" | "desc") || null)
+                }
+                className="px-4 py-2 text-sm border rounded-xl focus:outline-none focus:border-[var(--brand-core)] transition-colors sm:w-48"
+                style={{
+                  background: "var(--background-secondary)",
+                  borderColor: "var(--border-default)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                <option
+                  value=""
+                  className="bg-[var(--background-secondary)] text-[var(--text-primary)]"
                 >
+                  Sort by Price
+                </option>
+                <option
+                  value="asc"
+                  className="bg-[var(--background-secondary)] text-[var(--text-primary)]"
+                >
+                  Price: Low → High
+                </option>
+                <option
+                  value="desc"
+                  className="bg-[var(--background-secondary)] text-[var(--text-primary)]"
+                >
+                  Price: High → Low
+                </option>
+              </select>
+              <select
+                value={selectedCategoryId}
+                onChange={(e) => setSelectedCategoryId(e.target.value)}
+                className="px-4 py-2 text-sm border rounded-xl focus:outline-none focus:border-[var(--brand-core)] transition-colors sm:w-52"
+                style={{
+                  background: "var(--background-secondary)",
+                  borderColor: "var(--border-default)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                <option
+                  value=""
+                  className="bg-[var(--background-secondary)] text-[var(--text-primary)]"
+                >
+                  All Categories
+                </option>
+                {categoryOptions.map((category) => (
                   <option
-                    value="all"
+                    key={category.id}
+                    value={category.id}
                     className="bg-[var(--background-secondary)] text-[var(--text-primary)]"
                   >
-                    All Categories
+                    {category.name}
                   </option>
-                  {categories.map((category) => (
-                    <option
-                      key={category}
-                      value={category}
-                      className="bg-[var(--background-secondary)] text-[var(--text-primary)]"
-                    >
-                      {category}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {filteredProducts.length === 0 ? (
-                <div className="p-12 text-center border border-dashed rounded-xl text-sm text-[var(--text-secondary)]">
-                  No products match your search. Try a different keyword or
-                  category.
-                </div>
-              ) : (
-                <ProductTable
-                  products={filteredProducts}
-                  onSelect={setSelectedProduct}
-                />
-              )}
+                ))}
+              </select>
             </div>
           )}
-        </>
-      )}
 
-      {selectedProduct && (
-        <ProductDetailDialog
-          product={selectedProduct}
-          open={!!selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          onDelete={(id) =>
-            deleteProduct(id).then(() => setSelectedProduct(null))
-          }
-          isDeleting={isDeleting}
-        />
+          {products.length === 0 && total === 0 ? (
+            <div className="p-12 text-center border border-dashed rounded-xl text-sm text-[var(--text-secondary)]">
+              {emptyStateMessage}
+            </div>
+          ) : products.length === 0 && total > 0 ? (
+            <div className="p-8 text-center text-sm text-[var(--text-secondary)] animate-pulse">
+              Loading products…
+            </div>
+          ) : selectedProduct ? (
+            <ProductDetail
+              product={selectedProduct}
+              onBack={() => setSelectedProduct(null)}
+              onDelete={(id) =>
+                deleteProduct(id).then(() => setSelectedProduct(null))
+              }
+              isDeleting={isDeleting}
+              onUpdate={(id, input) =>
+                updateProduct(id, input, selectedProduct).then((updated) => {
+                  setSelectedProduct(updated);
+                  return updated;
+                })
+              }
+              isUpdating={isUpdating}
+            />
+          ) : (
+            <ProductTable products={products} onSelect={setSelectedProduct} />
+          )}
+
+          {/* HIDE PAGINATION WHEN PRODUCT DETAIL IS OPEN */}
+          {!selectedProduct && (
+            <PaginationControls
+              page={Math.min(page, Math.max(1, totalPages))}
+              totalPages={totalPages}
+              onPageChange={goTo}
+              isLoading={isLoading}
+            />
+          )}
+        </div>
       )}
     </div>
   );
