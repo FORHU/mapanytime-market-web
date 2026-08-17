@@ -54,7 +54,7 @@ export function ProductDetail({
   });
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8 rounded-3xl border border-[var(--border-default)] bg-[var(--background-primary)] p-6 shadow-sm sm:p-10">
+    <div className="mx-auto w-full max-w-3xl space-y-5 rounded-3xl border border-[var(--border-default)] bg-[var(--background-primary)] p-6 shadow-sm sm:p-10">
       {/* Header / Navigation */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border-light)] pb-6">
         <button

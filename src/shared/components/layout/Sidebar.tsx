@@ -156,6 +156,12 @@ export function Sidebar({
       icon: Store,
       roles: ["SELLER", "ADMIN"],
     },
+    {
+      label: "All Stores",
+      href: "/seller/all-stores",
+      icon: Store,
+      roles: ["SELLER", "ADMIN"],
+    },
   ];
 
   const propertyNavLinks: NavItem[] = [
