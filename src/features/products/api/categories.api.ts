@@ -1,4 +1,6 @@
-// not used - superseded by categories.client.ts
+// not used - superseded by features/stores/api/categories.client.ts, which is
+// the live category path. Nothing imports this file.
+// See docs/connection-audit.md §9.
 import { API_BASE_URL } from "@/shared/config/api";
 
 export const createCategory = async (payload: {
