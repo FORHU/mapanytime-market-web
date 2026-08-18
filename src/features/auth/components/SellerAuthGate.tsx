@@ -3,26 +3,20 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SellerLayout } from "@/shared/components/layout/SellerLayout";
-import { useStoreProfiles } from "@/features/store-profile/hooks/useStoreProfile";
 import { useAuthStore } from "../stores/auth.store";
 import { useAuth } from "../hooks/useAuth";
 
-export function SellerAuthGate({ children }: { children: React.ReactNode }) {
+export function SellerAuthGate({
+  children,
+  stores,
+}: {
+  children: React.ReactNode;
+  stores?: any[];
+}) {
   const token = useAuthStore((state) => state.token);
   const { logout } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-
-  /**
-   * Fetched here rather than inside SellerLayout/Sidebar. Those live in the
-   * `shared/` kernel, which the project's eslint boundary rule keeps free of
-   * `features/` imports — so the gate, which is itself a feature, supplies the
-   * data and the layout stays pure presentation.
-   *
-   * The query is shared with any other `useStoreProfiles` caller through React
-   * Query's cache, so lifting it here costs no extra request.
-   */
-  const { data: stores } = useStoreProfiles();
 
   useEffect(() => {
     setMounted(true);
