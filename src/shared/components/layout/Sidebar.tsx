@@ -15,6 +15,7 @@ import {
   X,
   Lock,
   Boxes,
+  Megaphone,
   MessageSquare,
   ChevronDown,
   ChevronRight,
@@ -136,6 +137,12 @@ export function Sidebar({
           label: "Orders",
           href: "/seller/orders",
           icon: ShoppingBag,
+          roles: ["SELLER", "ADMIN"],
+        },
+        {
+          label: "Promotions & ads",
+          href: "/seller/promotions",
+          icon: Megaphone,
           roles: ["SELLER", "ADMIN"],
         },
         {
