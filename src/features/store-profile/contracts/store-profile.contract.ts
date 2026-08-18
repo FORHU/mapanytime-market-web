@@ -34,6 +34,11 @@ export const StoreProfileSchema = z
     description: z.string().nullable().optional(),
     phone: z.union([z.string(), z.number()]).nullable().optional(),
     email: z.string().nullable().optional(),
+    // The API returns the schema's own name, `primaryCategoryId`. `categoryId`
+    // is kept because it is the name the PATCH body uses (the API translates it
+    // to primaryCategoryId on write) and because older callers read it — but on
+    // a GET it is always undefined, so read `primaryCategoryId ?? categoryId`.
+    primaryCategoryId: z.string().nullable().optional(),
     categoryId: z.string().nullable().optional(),
     isActive: z.boolean().default(true),
     approvalStatus: z.enum(["PENDING", "ACTIVE", "REJECTED"]).optional(),

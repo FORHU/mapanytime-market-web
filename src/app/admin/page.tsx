@@ -1,5 +1,8 @@
 "use client";
 
+// MOCK DATA - kpiCards, chartData, pendingStores and recentOrders below are all
+// hardcoded. This page makes no API call. It renders convincingly enough to be
+// mistaken for a working dashboard. See docs/connection-audit.md §7.
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {

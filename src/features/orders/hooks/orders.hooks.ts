@@ -1,3 +1,7 @@
+// not used - no page mounts these hooks; the live seller order path is
+// shared/hooks/useOrdersPipeline.ts. useOrderStatus below is doubly dead: it
+// calls GET /v1/orders/:id/status, which the API does not register.
+// See docs/connection-audit.md §9.
 import { useQueryClient } from "@tanstack/react-query";
 import { useSafeQuery } from "@/shared/query/useSafeQuery";
 import { useSafeMutation } from "@/shared/query/useSafeMutation";
@@ -5,12 +9,11 @@ import { getOrders, createOrder, getOrderStatus } from "../api/orders.client";
 import { ordersKeys } from "../api/orders.keys";
 import type { CreateOrderInput } from "../contracts/orders.contract";
 
-/** Fetch all orders for a given store. No-ops until a store is selected. */
-export function useOrders(storeId: string) {
+/** Fetch all orders for a given store, or all stores if null. */
+export function useOrders(storeId?: string | null) {
   return useSafeQuery({
-    queryKey: ordersKeys.lists(storeId),
+    queryKey: storeId ? ordersKeys.lists(storeId) : ["orders", "list", "all"],
     queryFn: () => getOrders(storeId),
-    enabled: Boolean(storeId),
   });
 }
 

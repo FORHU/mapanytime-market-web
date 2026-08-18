@@ -115,18 +115,29 @@ export default function ProductsPage() {
             Everything you sell, with prices and stock.
           </p>
         </div>
-        <button
-          onClick={() => setIsFormOpen(!isFormOpen)}
-          disabled={isAdding}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl text-white bg-[var(--brand-core)] hover:opacity-90 transition-all disabled:opacity-50 shrink-0"
-        >
-          {isFormOpen ? (
-            <X className="w-4 h-4" />
-          ) : (
+        {activeStoreId ? (
+          <button
+            onClick={() => setIsFormOpen(!isFormOpen)}
+            disabled={isAdding}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl text-white bg-[var(--brand-core)] hover:opacity-90 transition-all disabled:opacity-50 shrink-0"
+          >
+            {isFormOpen ? (
+              <X className="w-4 h-4" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
+            {isFormOpen ? "Cancel" : "Add product"}
+          </button>
+        ) : (
+          <button
+            disabled
+            title="Please select a specific store from the sidebar to add a product"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl text-white bg-[var(--brand-core)] opacity-50 cursor-not-allowed shrink-0"
+          >
             <Plus className="w-4 h-4" />
-          )}
-          {isFormOpen ? "Cancel" : "Add product"}
-        </button>
+            Add product
+          </button>
+        )}
       </div>
 
       {/* ASYNC STATE RENDERING ELEMENT TILES */}
@@ -262,7 +273,11 @@ export default function ProductsPage() {
               isUpdating={isUpdating}
             />
           ) : (
-            <ProductTable products={products} onSelect={setSelectedProduct} />
+            <ProductTable
+              products={products}
+              onSelect={setSelectedProduct}
+              showStoreColumn={!activeStoreId}
+            />
           )}
 
           {/* HIDE PAGINATION WHEN PRODUCT DETAIL IS OPEN */}

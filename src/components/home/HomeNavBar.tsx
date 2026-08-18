@@ -95,7 +95,7 @@ export default function HomeNavBar({
             <ShieldCheck className="w-5 h-5" />
           </Link>
           <Link
-            href="/register"
+            href="/login"
             className="font-display text-button-text text-on-surface hover:text-primary transition-colors px-4 py-2"
           >
             Register
@@ -182,7 +182,7 @@ export default function HomeNavBar({
               </Link>
             </div>
             <Link
-              href="/register"
+              href="/login"
               className="font-display text-button-text text-on-surface py-2 border border-outline-variant/30 rounded-lg text-center"
             >
               Register

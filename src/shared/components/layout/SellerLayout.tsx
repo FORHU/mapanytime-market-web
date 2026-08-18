@@ -12,6 +12,7 @@ import {
   Bell,
   ShoppingBag,
   Check,
+  User,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
@@ -21,11 +22,19 @@ import { acquireSocket, releaseSocket } from "@/shared/lib/socket";
 import { toast } from "sonner";
 import { getToken } from "@/shared/lib/token";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
+import type { ActiveStoreSummary } from "./Sidebar";
 
 interface SellerLayoutProps {
   children: React.ReactNode;
   isAuthenticated: boolean;
   onSignOut: () => void;
+  /**
+   * The seller's stores, supplied by the caller. Fetched in `SellerAuthGate`
+   * rather than here: this component lives in the `shared/` kernel, which is
+   * infrastructure and must not reach into `features/`. Only the shape is
+   * declared here; where the data comes from is the caller's business.
+   */
+  stores?: ActiveStoreSummary[];
 }
 
 interface NotificationItem {
@@ -40,6 +49,7 @@ export function SellerLayout({
   children,
   isAuthenticated,
   onSignOut,
+  stores,
 }: SellerLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -50,10 +60,11 @@ export function SellerLayout({
 
   const router = useRouter();
   const pathname = usePathname();
-  const { userId } = useCurrentUser();
+  const { userId, roles } = useCurrentUser();
 
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
   const [activePropertyId, setActivePropertyId] = useState<string | null>(null);
+  const activeStore = stores?.find((s) => s.id === activeStoreId);
 
   useEffect(() => {
     setMounted(true);
@@ -149,22 +160,8 @@ export function SellerLayout({
   const isPropertyContext = Boolean(
     (activePropertyId || isPropertyRoute) && !activeStoreId,
   );
-  const hasContextForRoute = hasSellerContext || isPropertyRoute;
-  const isLocked =
-    mounted &&
-    (!isAuthenticated ||
-      (!hasContextForRoute && pathname !== "/seller/manage-stores"));
-
-  useEffect(() => {
-    if (
-      mounted &&
-      isAuthenticated &&
-      !hasContextForRoute &&
-      pathname !== "/seller/manage-stores"
-    ) {
-      router.push("/seller/manage-stores");
-    }
-  }, [router, hasContextForRoute, pathname, mounted, isAuthenticated]);
+  // Unlocking the layout so Global Seller Context works without redirecting
+  const isLocked = mounted && !isAuthenticated;
 
   return (
     <div
@@ -174,10 +171,13 @@ export function SellerLayout({
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        isLocked={!hasContextForRoute}
+        isLocked={isLocked}
         isPropertyContext={isPropertyContext}
         propertyId={activePropertyId}
+        activeStoreId={activeStoreId}
+        activeStore={activeStore}
         onSignOut={onSignOut}
+        onClearContext={handleClearContext}
       />
 
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
@@ -191,7 +191,6 @@ export function SellerLayout({
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              disabled={!hasSellerContext}
               className="p-2 border rounded-xl md:hidden transition-colors disabled:opacity-30"
               style={{
                 backgroundColor: "var(--background-tertiary)",
@@ -202,7 +201,7 @@ export function SellerLayout({
             </button>
             <div className="text-left hidden sm:block">
               <h2 className="text-base font-semibold text-[var(--text-primary)]">
-                Seller dashboard
+                {activeStore?.storeName || "Seller dashboard"}
               </h2>
               {activeStoreId ? (
                 <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -213,22 +212,51 @@ export function SellerLayout({
                   <Unlock className="w-3 h-3" /> Managing your property
                 </span>
               ) : (
-                <span className="text-xs text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                  <Lock className="w-3 h-3" /> Choose a store or property to
-                  continue
+                <span className="text-xs text-sky-600 dark:text-sky-400 flex items-center gap-1">
+                  <Unlock className="w-3 h-3" /> Global View (All Stores)
                 </span>
               )}
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            {hasContextForRoute && pathname !== "/seller/manage-stores" && (
+            {activeStoreId && pathname !== "/seller/manage-stores" && (
               <Button
                 variant="dark"
                 onClick={handleClearContext}
                 className="!h-9 !px-4 !rounded-xl !text-xs"
               >
-                <RefreshCw className="w-3.5 h-3.5" /> Switch context
+                <RefreshCw className="w-3.5 h-3.5" /> Clear Context
+              </Button>
+            )}
+
+            {roles.includes("BUYER") && (
+              <Button
+                variant="secondary"
+                onClick={() => router.push("/buyer")}
+                className="!h-9 !px-3 !rounded-xl !text-xs !bg-indigo-50 !text-indigo-600 !border-indigo-100 hover:!bg-indigo-100 dark:!bg-indigo-950/40 dark:!text-indigo-400 dark:hover:!bg-indigo-900/40"
+              >
+                <User className="w-3.5 h-3.5 mr-1.5" /> Buyer Portal
+              </Button>
+            )}
+            {roles.some((r: string) =>
+              ["SUPER_ADMIN", "DEVELOPER", "ADMIN"].includes(r),
+            ) && (
+              <Button
+                variant="secondary"
+                onClick={() => router.push("/admin")}
+                className="!h-9 !px-3 !rounded-xl !text-xs !bg-rose-50 !text-rose-600 !border-rose-100 hover:!bg-rose-100 dark:!bg-rose-950/40 dark:!text-rose-400 dark:hover:!bg-rose-900/40"
+              >
+                <User className="w-3.5 h-3.5 mr-1.5" /> Admin Console
+              </Button>
+            )}
+            {roles.includes("SUPPORT_AGENT") && (
+              <Button
+                variant="secondary"
+                onClick={() => router.push("/agent")}
+                className="!h-9 !px-3 !rounded-xl !text-xs !bg-sky-50 !text-sky-600 !border-sky-100 hover:!bg-sky-100 dark:!bg-sky-950/40 dark:text-sky-400 dark:hover:bg-sky-900/40"
+              >
+                <User className="w-3.5 h-3.5 mr-1.5" /> Agent Portal
               </Button>
             )}
 

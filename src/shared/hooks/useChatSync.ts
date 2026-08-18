@@ -1,4 +1,7 @@
-// not used - backend REST route /api/channels/:id/messages not implemented
+// not used - backend REST route /api/channels/:id/messages not implemented, and
+// nothing mounts this hook. The socket half would work as written (join_chat_room
+// and chat:message both match the API); it is the history fetch that has no
+// endpoint behind it. See docs/connection-audit.md §9.
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Socket } from "socket.io-client";

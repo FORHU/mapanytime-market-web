@@ -24,6 +24,7 @@ export const SellerProductSchema = z.object({
       }),
     )
     .optional(),
+  store: z.object({ storeName: z.string() }).optional(),
 });
 
 export const ProductsListDataSchema = z.object({

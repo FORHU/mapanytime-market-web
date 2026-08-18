@@ -1,4 +1,7 @@
-// not used - superseded by useProductsPipeline.ts and seller-catalog feature
+// not used - superseded by shared/hooks/useProductsPipeline.ts and the
+// seller-catalog feature. Nothing imports this file. Note updateProduct below
+// sends PATCH /v1/products/:id while the API registers PUT /:id, so it would
+// 404 if revived. See docs/connection-audit.md §9.
 import { API_BASE_URL } from "@/shared/config/api";
 
 export const getProducts = async (storeId: string) => {

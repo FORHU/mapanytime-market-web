@@ -43,32 +43,13 @@ export default function SellerDashboard() {
 
   const propertyId = queryPropertyId ?? storedPropertyId;
   const isPropertyContext =
-    queryContext === "property" || (!queryContext && !activeStoreId);
+    queryContext === "property" || Boolean(propertyId && !activeStoreId);
   const effectivePropertyId = isPropertyContext ? propertyId : null;
   const effectiveStoreId = isPropertyContext
     ? null
     : (queryStoreId ?? activeStoreId);
-  const isStoreContext = Boolean(effectiveStoreId) && !isPropertyContext;
+  const isStoreContext = !isPropertyContext; // Treats global as store context
   const isContextReady = isHydrated && propertyContextHydrated;
-
-  useEffect(() => {
-    if (!isContextReady) return;
-
-    const hasValidContext =
-      (isPropertyContext && Boolean(effectivePropertyId)) ||
-      (isStoreContext && Boolean(effectiveStoreId));
-
-    if (!hasValidContext) {
-      router.replace("/seller/manage-stores");
-    }
-  }, [
-    effectivePropertyId,
-    effectiveStoreId,
-    isContextReady,
-    isPropertyContext,
-    isStoreContext,
-    router,
-  ]);
 
   const propertyQuery = usePropertyDashboard(effectivePropertyId ?? "");
 

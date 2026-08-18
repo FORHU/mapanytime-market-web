@@ -8,9 +8,14 @@ import type { ProductItem } from "@/shared/hooks/useProductsPipeline";
 interface ProductTableProps {
   products: ProductItem[];
   onSelect: (product: ProductItem) => void;
+  showStoreColumn?: boolean;
 }
 
-export function ProductTable({ products, onSelect }: ProductTableProps) {
+export function ProductTable({
+  products,
+  onSelect,
+  showStoreColumn = false,
+}: ProductTableProps) {
   return (
     <Card
       className="border border-[var(--border-default)] overflow-hidden shadow-sm !p-0 animate-in fade-in duration-200"
@@ -20,8 +25,19 @@ export function ProductTable({ products, onSelect }: ProductTableProps) {
         <table className="w-full text-left border-collapse table-fixed min-w-[720px]">
           <thead>
             <tr className="border-b border-[var(--border-light)] bg-[var(--background-secondary)] text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)] sticky top-0 z-10">
-              <th className="py-3.5 px-4 w-[24%]">Product Name</th>
-              <th className="py-3.5 px-4 w-[16%]">Brand</th>
+              <th
+                className={`py-3.5 px-4 ${showStoreColumn ? "w-[20%]" : "w-[24%]"}`}
+              >
+                Product Name
+              </th>
+              <th
+                className={`py-3.5 px-4 ${showStoreColumn ? "w-[12%]" : "w-[16%]"}`}
+              >
+                Brand
+              </th>
+              {showStoreColumn && (
+                <th className="py-3.5 px-4 w-[16%]">Store</th>
+              )}
               <th className="py-3.5 px-4 w-[18%]">Category</th>
               <th className="py-3.5 px-4 text-right w-[16%]">Price</th>
               <th className="py-3.5 px-4 text-right w-[14%]">Stock</th>
@@ -40,6 +56,11 @@ export function ProductTable({ products, onSelect }: ProductTableProps) {
                 <td className="py-4 px-4 text-[var(--text-secondary)] truncate">
                   {product.brand || "—"}
                 </td>
+                {showStoreColumn && (
+                  <td className="py-4 px-4 text-[var(--text-secondary)] truncate">
+                    {product.storeName || "—"}
+                  </td>
+                )}
                 <td className="py-4 px-4">
                   <span
                     className="inline-block text-xs px-2 py-0.5 border rounded-md text-[var(--text-secondary)] truncate max-w-full"
