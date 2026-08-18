@@ -16,7 +16,7 @@ export function ProductPickerField({
   onChange,
   required,
 }: ProductPickerFieldProps) {
-  const { products, isLoading } = useProductsPipeline(storeId);
+  const { products, isLoading } = useProductsPipeline({ storeId });
 
   const toggle = (id: string) => {
     onChange(
