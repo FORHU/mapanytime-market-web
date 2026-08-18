@@ -36,6 +36,10 @@ export function useAuth() {
       login(credentials, roleName),
     onSuccess: (data) => {
       setToken(data.accessToken, data.refreshToken);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("active_store_context_id");
+        localStorage.removeItem("active_property_context_id");
+      }
       queryClient.invalidateQueries();
     },
   });
@@ -53,6 +57,10 @@ export function useAuth() {
     onSuccess: (data) => {
       if (data.accessToken)
         setToken(data.accessToken, (data as any).refreshToken);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("active_store_context_id");
+        localStorage.removeItem("active_property_context_id");
+      }
       queryClient.invalidateQueries();
     },
   });
