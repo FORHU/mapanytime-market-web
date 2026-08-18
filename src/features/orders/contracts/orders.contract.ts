@@ -26,6 +26,7 @@ export const OrderSchema = z.object({
   totalAmount: z.coerce.number().nonnegative(),
   customerName: z.string(),
   createdAt: z.string(),
+  checkoutUrl: z.string().optional(),
 });
 
 export const OrdersResponseSchema = z.array(OrderSchema);

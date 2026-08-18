@@ -58,6 +58,7 @@ export const createOrder = async (input: CreateOrderInput): Promise<Order> => {
     totalAmount: order.totalAmount,
     customerName: "You",
     createdAt: order.createdAt,
+    checkoutUrl: order.checkoutUrl,
   });
 };
 
