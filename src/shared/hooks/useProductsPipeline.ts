@@ -19,6 +19,7 @@ export interface ProductItem {
   tags?: string[];
   imageUrl?: string;
   imageIds?: string[];
+  storeName?: string;
 }
 
 export interface ProductsPage {
@@ -52,14 +53,11 @@ const fetchProducts = async (
   storeId: string | null,
   params: FetchProductsParams,
 ): Promise<ProductsPage> => {
-  if (!storeId)
-    return { ...EMPTY_PAGE, page: params.page, limit: params.limit };
-
   const query = new URLSearchParams({
-    storeId,
     page: String(params.page),
     limit: String(params.limit),
   });
+  if (storeId) query.append("storeId", storeId);
   if (params.search?.trim()) query.set("search", params.search.trim());
   if (params.categoryId) query.set("categoryId", params.categoryId);
   if (params.sortBy) query.set("sortBy", params.sortBy);
@@ -91,6 +89,7 @@ function mapProductItem(product: SellerProduct): ProductItem {
     description: product.description || "",
     stock: product.inventory?.[0]?.quantityOnHand || 0,
     imageUrl: product.productImages?.[0]?.file?.url || undefined,
+    storeName: product.store?.storeName,
   };
 }
 
@@ -139,7 +138,7 @@ export const useProductsPipeline = (options: UseProductsPipelineOptions) => {
         sortOrder,
       }),
     staleTime: 10000,
-    enabled: Boolean(getToken() && storeId),
+    enabled: Boolean(getToken()),
   });
 
   const addProductMutation = useMutation({

@@ -1,5 +1,9 @@
 "use client";
 
+// MOCK DATA - the category list below is useState seed data and edits are
+// local only. /v1/categories exists and is already consumed elsewhere via
+// features/stores/api/categories.client.ts, so this page could be wired for
+// real with little work. See docs/connection-audit.md §7.
 import { useState } from "react";
 import {
   Grid,

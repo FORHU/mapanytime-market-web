@@ -2,8 +2,14 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { MapPin, X, Plus, Star, SaveIcon } from "lucide-react";
-import { useStoreProfiles, useStoreCategories } from "../hooks/useStoreProfile";
+import {
+  useStoreProfiles,
+  useStoreCategories,
+  useUpdateStoreProfile,
+} from "../hooks/useStoreProfile";
+import type { UpdateStoreProfileInput } from "../contracts/store-profile.contract";
 
 interface StoreProfileSettingsProps {
   activeStoreId?: string | null;
@@ -56,15 +62,61 @@ export function StoreProfileSettings({
     Sunday: true,
   });
 
-  const [toggles, setToggles] = useState({
-    open: store?.isActive ?? true,
-    vacation: false,
-  });
+  /**
+   * `null` means "untouched, follow the store". useState only reads its
+   * initialiser on first render, and on that render `stores` is still loading
+   * so `store` is undefined — seeding straight from `store.isActive` would
+   * therefore pin the toggle to the fallback `true` forever, and saving an
+   * inactive store would silently reactivate it.
+   */
+  const [openOverride, setOpenOverride] = useState<boolean | null>(null);
+  const isOpenToCustomers = openOverride ?? store?.isActive ?? true;
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { mutate: saveProfile, isPending: isSubmitting } =
+    useUpdateStoreProfile({
+      onSuccess: () => toast.success("Store profile saved"),
+    });
 
   const handleClosedToggle = (day: string) => {
     setClosedDays((prev) => ({ ...prev, [day]: !prev[day] }));
+  };
+
+  /**
+   * The fields are uncontrolled (`defaultValue`, no onChange), so the current
+   * values are read off the form at submit rather than mirrored into state.
+   * `isActive` is the one exception — it is a custom toggle button, not a form
+   * control, so it comes from the `isOpenToCustomers` toggle.
+   *
+   * Weekly hours and subcategories are intentionally absent: hours need a
+   * separate endpoint shape (StoreHours rows, minutes since midnight) and the
+   * subcategory chips are still hardcoded markup. Sending them as-is would
+   * persist placeholder data. See docs/connection-audit.md §1.
+   */
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!store) return;
+
+    const form = new FormData(event.currentTarget);
+    const text = (key: string) => String(form.get(key) ?? "").trim();
+
+    const input: UpdateStoreProfileInput = {
+      storeName: text("storeName"),
+      description: text("description"),
+      phone: text("phone"),
+      email: text("email"),
+      currentAddress: text("currentAddress"),
+      city: text("city"),
+      province: text("province"),
+      postalCode: text("postalCode"),
+      country: text("country"),
+      isActive: isOpenToCustomers,
+    };
+
+    // An unset <select> submits "", which would fail the API's string check.
+    const categoryId = text("categoryId");
+    if (categoryId) input.categoryId = categoryId;
+
+    saveProfile({ storeId: store.id, input });
   };
 
   if (!isHydrated || storesLoading || categoriesLoading) {
@@ -105,7 +157,10 @@ export function StoreProfileSettings({
   }
 
   return (
-    <div className="bg-[var(--background-primary)] rounded-xl border border-[var(--border-light)] shadow-sm w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+    <form
+      onSubmit={handleSubmit}
+      className="bg-[var(--background-primary)] rounded-xl border border-[var(--border-light)] shadow-sm w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8"
+    >
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
@@ -117,9 +172,8 @@ export function StoreProfileSettings({
           </p>
         </div>
         <button
-          type="button"
+          type="submit"
           disabled={isSubmitting}
-          onClick={() => setIsSubmitting(false)}
           className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
           style={{
             background: "var(--brand-core)",
@@ -151,6 +205,7 @@ export function StoreProfileSettings({
               </label>
               <input
                 type="text"
+                name="storeName"
                 defaultValue={store.storeName || ""}
                 className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
               />
@@ -162,6 +217,7 @@ export function StoreProfileSettings({
               </label>
               <textarea
                 rows={2}
+                name="description"
                 defaultValue={store.description || ""}
                 className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)] resize-none"
               />
@@ -173,6 +229,7 @@ export function StoreProfileSettings({
               </label>
               <input
                 type="tel"
+                name="phone"
                 defaultValue={store.phone ? String(store.phone) : ""}
                 placeholder="No phone number"
                 className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
@@ -185,6 +242,7 @@ export function StoreProfileSettings({
               </label>
               <input
                 type="email"
+                name="email"
                 defaultValue={store.email || ""}
                 placeholder="No email address"
                 className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
@@ -196,7 +254,8 @@ export function StoreProfileSettings({
                 Primary category
               </label>
               <select
-                defaultValue={store.categoryId || ""}
+                name="categoryId"
+                defaultValue={store.primaryCategoryId || store.categoryId || ""}
                 disabled={categoriesLoading || Boolean(categoriesError)}
                 className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)] disabled:opacity-50"
               >
@@ -263,6 +322,7 @@ export function StoreProfileSettings({
               </label>
               <input
                 type="text"
+                name="currentAddress"
                 defaultValue={location?.currentAddress || ""}
                 className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
               />
@@ -274,6 +334,7 @@ export function StoreProfileSettings({
               </label>
               <input
                 type="text"
+                name="city"
                 defaultValue={location?.city || ""}
                 className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
               />
@@ -285,6 +346,7 @@ export function StoreProfileSettings({
               </label>
               <input
                 type="text"
+                name="province"
                 defaultValue={location?.province || ""}
                 className="w-full px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
               />
@@ -296,6 +358,7 @@ export function StoreProfileSettings({
               </label>
               <input
                 type="text"
+                name="postalCode"
                 defaultValue={
                   location?.postalCode ? String(location.postalCode) : ""
                 }
@@ -309,6 +372,7 @@ export function StoreProfileSettings({
               </label>
               <input
                 type="text"
+                name="country"
                 defaultValue={location?.country || "Philippines"}
                 className="w-full md:w-1/3 px-3 py-2 border border-[var(--border-default)] bg-[var(--background-elevated)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]"
               />
@@ -404,17 +468,17 @@ export function StoreProfileSettings({
               <button
                 type="button"
                 role="switch"
-                aria-checked={toggles.open}
-                onClick={() => setToggles((p) => ({ ...p, open: !p.open }))}
+                aria-checked={isOpenToCustomers}
+                onClick={() => setOpenOverride(!isOpenToCustomers)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand-core)] focus:ring-offset-2 ${
-                  toggles.open
+                  isOpenToCustomers
                     ? "bg-[var(--brand-core)]"
                     : "bg-[var(--border-strong)]"
                 }`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-[var(--md-sys-color-on-primary)] transition-transform ${
-                    toggles.open ? "translate-x-6" : "translate-x-1"
+                    isOpenToCustomers ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
               </button>
@@ -471,6 +535,6 @@ export function StoreProfileSettings({
           </div>
         </section>
       </div>
-    </div>
+    </form>
   );
 }

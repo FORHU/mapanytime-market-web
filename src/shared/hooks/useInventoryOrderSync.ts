@@ -1,4 +1,8 @@
-// not used - backend REST route /api/orders not implemented
+// not used - backend REST route /api/orders not implemented, and nothing mounts
+// this hook. Note the three socket events it listens for (order:created,
+// order:updated, inventory:stock-sync) are not emitted by the API either, so
+// IS_SOCKET_BACKEND_READY below cannot simply be flipped to true.
+// See docs/connection-audit.md §5.
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Socket } from "socket.io-client";

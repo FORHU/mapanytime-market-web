@@ -1,3 +1,7 @@
+// built, not mounted - these endpoints all exist on the API
+// (/v1/settlements/*, /v1/payouts/*) and the contracts match, but no UI file
+// imports useSellerEarnings. The wiring is done; the screen was never built.
+// See docs/connection-audit.md §6.
 import { fetcher } from "@/shared/lib/http";
 import {
   PayoutSchema,

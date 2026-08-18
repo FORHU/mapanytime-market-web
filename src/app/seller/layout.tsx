@@ -1,9 +1,9 @@
-import { SellerAuthGate } from "@/features/auth/components/SellerAuthGate";
+import { SellerAppLayout } from "./_components/SellerAppLayout";
 
 export default function SellerRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <SellerAuthGate>{children}</SellerAuthGate>;
+  return <SellerAppLayout>{children}</SellerAppLayout>;
 }

@@ -1,3 +1,5 @@
+// built, not mounted - /v1/supplier-products/* exists and the contracts match,
+// but no UI file imports useSupplierProducts. See docs/connection-audit.md §6.
 import { fetcher } from "@/shared/lib/http";
 import {
   SupplierProductSchema,

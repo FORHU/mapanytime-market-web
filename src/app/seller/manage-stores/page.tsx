@@ -2,7 +2,12 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { StoreTypeSelectionModal, type StoreType } from "@/features/stores";
+// Imported from their own paths rather than the `@/features/stores` barrel.
+// That barrel also re-exports StoreOnboardingForm, which reaches MapSelection →
+// mapbox-gl, so importing this small modal through it pulled the entire map
+// engine into a page that has no map.
+import { StoreTypeSelectionModal } from "@/features/stores/components/StoreTypeSelectionModal";
+import type { StoreType } from "@/features/stores/types";
 import StoreManagementDashboard from "@/features/stores/components/StoreManagementDashboard";
 import { useStores } from "@/features/stores/hooks/useStores";
 import { useProperties } from "@/features/properties/hooks/useProperties";
