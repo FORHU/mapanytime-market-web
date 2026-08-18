@@ -30,7 +30,19 @@ export default function BuyerDashboardPage() {
                 </h3>
                 <p className="text-xs text-on-surface-variant flex items-center gap-1.5">
                   <MapPin className="w-3 h-3 text-primary" />
-                  {selectedStore.address}
+                  {/*
+                   * `address` is an object — { currentAddress, city, province,
+                   * country } — built by StoreRepository.findNearbyStores.
+                   * Rendering it directly threw "Objects are not valid as a
+                   * React child". Matches the shape used in ExploreMapSection
+                   * and LiveHeroMap.
+                   */}
+                  {[
+                    selectedStore.address?.currentAddress,
+                    selectedStore.address?.city,
+                  ]
+                    .filter(Boolean)
+                    .join(", ") || "Address not provided"}
                 </p>
               </div>
               <button

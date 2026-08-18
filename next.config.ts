@@ -2,9 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+
   // Standalone output produces a self-contained server bundle
   // (.next/standalone) used by the production Dockerfile.
   output: "standalone",
