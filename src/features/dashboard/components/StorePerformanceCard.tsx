@@ -3,28 +3,28 @@
 import React from "react";
 import Link from "next/link";
 import { Card } from "@/shared/components/ui/Card";
-import { useStoreProfiles } from "@/features/store-profile/hooks/useStoreProfile";
-import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
-import {
-  Store,
-  ArrowRight,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle2,
-} from "lucide-react";
+import { Store, ArrowRight, AlertTriangle, CheckCircle2 } from "lucide-react";
+
+interface StoreItem {
+  id: string;
+  storeName: string;
+}
 
 interface StorePerformanceCardProps {
   totalRevenue: number;
   totalOrdersCount: number;
+  stores?: StoreItem[];
+  isLoading?: boolean;
+  onSelectStore?: (storeId: string) => void;
 }
 
 export function StorePerformanceCard({
   totalRevenue,
   totalOrdersCount,
+  stores = [],
+  isLoading = false,
+  onSelectStore,
 }: StorePerformanceCardProps) {
-  const { data: stores, isLoading } = useStoreProfiles();
-  const { setActiveStoreId } = useActiveStore();
-
   return (
     <Card
       className="p-5 border border-[var(--border-light)] bg-[var(--background-secondary)] shadow-sm space-y-4 text-left flex flex-col justify-between"
@@ -59,7 +59,6 @@ export function StorePerformanceCard({
             ))
           ) : stores && stores.length > 0 ? (
             stores.map((store, index) => {
-              // Proportional mock distribution of total numbers across registered branches
               const share =
                 stores.length === 1
                   ? 1
@@ -80,7 +79,7 @@ export function StorePerformanceCard({
               return (
                 <div
                   key={store.id}
-                  onClick={() => setActiveStoreId(store.id)}
+                  onClick={() => onSelectStore?.(store.id)}
                   className="p-3 rounded-xl bg-[var(--background-elevated)] border hover:border-[var(--brand-core)] hover:shadow-sm transition-all cursor-pointer flex items-center justify-between group"
                   style={{ borderColor: "var(--border-light)" }}
                 >

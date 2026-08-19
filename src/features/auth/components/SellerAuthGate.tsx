@@ -3,16 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SellerLayout } from "@/shared/components/layout/SellerLayout";
-import { StoreSelectorDropdown } from "@/features/stores/components/StoreSelectorDropdown";
 import { useAuthStore } from "../stores/auth.store";
 import { useAuth } from "../hooks/useAuth";
 
 export function SellerAuthGate({
   children,
   stores,
+  storeSelector,
 }: {
   children: React.ReactNode;
   stores?: any[];
+  storeSelector?: React.ReactNode;
 }) {
   const token = useAuthStore((state) => state.token);
   const { logout } = useAuth();
@@ -37,12 +38,6 @@ export function SellerAuthGate({
     }
   };
 
-  // Renders a shell rather than `null` while hydrating. The token lives in
-  // sessionStorage, which the server cannot read, so the first paint genuinely
-  // cannot know whether this user is signed in — but returning null meant the
-  // whole route was a blank white frame until JS landed. A skeleton occupies the
-  // same layout, so the page assembles into place instead of appearing from
-  // nothing. See PRODUCTION_READINESS.md → "Rendering".
   if (!mounted) {
     return (
       <div className="flex min-h-screen">
@@ -60,7 +55,7 @@ export function SellerAuthGate({
       isAuthenticated={!!token}
       onSignOut={handleSignOut}
       stores={stores}
-      storeSelector={<StoreSelectorDropdown />}
+      storeSelector={storeSelector}
     >
       {children}
     </SellerLayout>

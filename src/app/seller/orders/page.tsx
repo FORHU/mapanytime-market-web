@@ -2,8 +2,13 @@
 
 import React from "react";
 import { SellerOrdersBoard } from "@/features/orders/components/SellerOrdersBoard";
+import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
+import { useStoreProfiles } from "@/features/store-profile/hooks/useStoreProfile";
 
 export default function OrdersPage() {
+  const { activeStoreId } = useActiveStore();
+  const { data: stores } = useStoreProfiles();
+
   return (
     <div className="space-y-6 text-left">
       <div className="space-y-1">
@@ -15,7 +20,11 @@ export default function OrdersPage() {
         </p>
       </div>
 
-      <SellerOrdersBoard variant="full" />
+      <SellerOrdersBoard
+        variant="full"
+        activeStoreId={activeStoreId}
+        stores={stores}
+      />
     </div>
   );
 }

@@ -227,6 +227,7 @@ export default function PromotionsPage() {
       {isWizardOpen && (
         <PromoteStoreWizardModal
           storeId={effectiveStoreId}
+          stores={stores}
           onClose={() => setIsWizardOpen(false)}
           onSuccess={() => refetch()}
         />

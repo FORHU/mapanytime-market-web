@@ -10,8 +10,6 @@ import {
   type OrderRecord,
 } from "@/shared/hooks/useOrdersPipeline";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
-import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
-import { useStoreProfiles } from "@/features/store-profile/hooks/useStoreProfile";
 import {
   PackageCheck,
   Search,
@@ -110,21 +108,28 @@ function formatRelativeTime(dateStr?: string) {
   }
 }
 
+interface StoreItem {
+  id: string;
+  storeName: string;
+}
+
 interface SellerOrdersBoardProps {
   /** "full" shows search, status filters, and Kanban toggle; "recent" shows a short preview. */
   variant?: "full" | "recent";
   /** Rows to show in the "recent" variant. */
   recentLimit?: number;
+  activeStoreId?: string | null;
+  stores?: StoreItem[];
 }
 
 export function SellerOrdersBoard({
   variant = "full",
   recentLimit = 5,
+  activeStoreId = null,
+  stores = [],
 }: SellerOrdersBoardProps) {
   const isFull = variant === "full";
   const { userId, isHydrated } = useCurrentUser();
-  const { activeStoreId } = useActiveStore();
-  const { data: stores } = useStoreProfiles();
 
   const [viewMode, setViewMode] = useState<"pipeline" | "table">("pipeline");
   const [selectedStoreFilter, setSelectedStoreFilter] = useState<string>("");

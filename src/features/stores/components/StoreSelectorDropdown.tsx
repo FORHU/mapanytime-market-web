@@ -3,17 +3,28 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useActiveStore } from "../hooks/useActiveStore";
-import { useStoreProfiles } from "@/features/store-profile/hooks/useStoreProfile";
 import { Store, ChevronDown, Check, Plus, Building2 } from "lucide-react";
 
-export function StoreSelectorDropdown() {
+interface StoreItem {
+  id: string;
+  storeName: string;
+}
+
+interface StoreSelectorDropdownProps {
+  stores?: StoreItem[];
+  isLoading?: boolean;
+}
+
+export function StoreSelectorDropdown({
+  stores = [],
+  isLoading = false,
+}: StoreSelectorDropdownProps) {
   const { activeStoreId, setActiveStoreId, clearActiveStore } =
     useActiveStore();
-  const { data: stores, isLoading } = useStoreProfiles();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const activeStore = stores?.find((s) => s.id === activeStoreId);
+  const activeStore = stores.find((s) => s.id === activeStoreId);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

@@ -5,8 +5,6 @@ import { toast } from "sonner";
 import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { useCreatePromotion } from "../hooks/usePromotionMutations";
-import { useStoreProfiles } from "@/features/store-profile/hooks/useStoreProfile";
-import type { StoreProfile } from "@/features/store-profile/contracts/store-profile.contract";
 import {
   MapPin,
   Eye,
@@ -24,8 +22,16 @@ import {
   Clock,
 } from "lucide-react";
 
+interface StoreItem {
+  id: string;
+  storeName: string;
+  logoUrl?: string | null;
+  slug?: string;
+}
+
 interface PromoteStoreWizardModalProps {
   storeId?: string | null;
+  stores?: StoreItem[];
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -35,10 +41,10 @@ type CampaignType = "DISCOUNT" | "FLASH_SALE" | "NEW_PRODUCT" | "FEATURED";
 
 export function PromoteStoreWizardModal({
   storeId,
+  stores = [],
   onClose,
   onSuccess,
 }: PromoteStoreWizardModalProps) {
-  const { data: stores } = useStoreProfiles();
   const [selectedStoreId, setSelectedStoreId] = useState<string>(
     storeId || (stores && stores[0]?.id) || "",
   );

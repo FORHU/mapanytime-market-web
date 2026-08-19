@@ -31,8 +31,8 @@ import {
 
 export default function SellerDashboard() {
   const { userId, isHydrated } = useCurrentUser();
-  const { activeStoreId } = useActiveStore();
-  const { data: stores } = useStoreProfiles();
+  const { activeStoreId, setActiveStoreId } = useActiveStore();
+  const { data: stores, isLoading: isStoresLoading } = useStoreProfiles();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [storedPropertyId, setStoredPropertyId] = useState<string | null>(null);
@@ -246,6 +246,9 @@ export default function SellerDashboard() {
             <StorePerformanceCard
               totalRevenue={totalRevenue || 0}
               totalOrdersCount={totalOrdersCount}
+              stores={stores}
+              isLoading={isStoresLoading}
+              onSelectStore={setActiveStoreId}
             />
           </div>
         )}
@@ -253,7 +256,11 @@ export default function SellerDashboard() {
 
       {/* ── 5. Recent Orders ─────────────────────────────────────────── */}
       <div className="pt-2">
-        <SellerOrdersBoard variant="recent" />
+        <SellerOrdersBoard
+          variant="recent"
+          activeStoreId={effectiveStoreId}
+          stores={stores}
+        />
       </div>
     </div>
   );
