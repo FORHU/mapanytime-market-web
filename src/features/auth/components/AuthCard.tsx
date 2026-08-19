@@ -451,8 +451,8 @@ export default function AuthCard({
           {/* ── REGISTER ──────────────────────────────────────── */}
           {activeTab === "register" && (
             <div className="animate-in fade-in slide-in-from-right-2 duration-200">
-              {/* Seller role select step */}
-              {registerStep === "ROLE_SELECT" && portalRole === "seller" && (
+              {/* Role select step for universal / seller portals */}
+              {registerStep === "ROLE_SELECT" && portalRole !== "buyer" && (
                 <>
                   <p className="text-xs text-[var(--text-tertiary)] text-center mb-5">
                     Select your registration type
@@ -486,12 +486,12 @@ export default function AuthCard({
               {/* Fields form */}
               {registerStep === "FIELDS_FORM" && (
                 <>
-                  {portalRole === "seller" && (
+                  {portalRole !== "buyer" && (
                     <div className="flex items-center gap-2 mb-4">
                       <button
                         type="button"
                         onClick={() => setRegisterStep("ROLE_SELECT")}
-                        className="text-[10px] font-bold text-[var(--text-tertiary)] hover:text-[var(--brand-core)] transition-colors"
+                        className="text-[10px] font-bold text-[var(--text-tertiary)] hover:text-[var(--brand-core)] transition-colors cursor-pointer"
                       >
                         ← Back
                       </button>

@@ -41,7 +41,7 @@ export default function AdminOrdersPage() {
       buyer: "Alex Chen",
       buyerPhone: "+1 (555) 443-8811",
       amount: "$118.00",
-      paymentMethod: "GCASH",
+      paymentMethod: "E_WALLET",
       type: "DELIVERY",
       pickupAt: "N/A (Delivery)",
       status: "PROCESSING",
