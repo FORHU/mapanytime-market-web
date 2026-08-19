@@ -54,7 +54,7 @@ export function setToken(token: string, refreshToken?: string): void {
   }
   // Deliberately left without Max-Age: a session cookie is the closest a cookie
   // gets to sessionStorage's lifetime, so the marker expires roughly when the
-  // credential it stands for does. See docs/connection-audit.md §4.
+  // credential it stands for does. See FLAGS.md.
   document.cookie = `${SESSION_COOKIE}=1; path=/; SameSite=Lax`;
 }
 

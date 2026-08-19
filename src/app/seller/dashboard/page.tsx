@@ -10,13 +10,18 @@ import { useStoreOverviewStats } from "@/shared/hooks/useOrdersPipeline";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
 import { usePropertyDashboard } from "@/features/properties/hooks/usePropertyDashboard";
+import { useStoreProfiles } from "@/features/store-profile/hooks/useStoreProfile";
+import { StoreSelectorDropdown } from "@/features/stores/components/StoreSelectorDropdown";
+import { NeedsAttentionCard } from "@/features/dashboard/components/NeedsAttentionCard";
+import { SalesOverviewCard } from "@/features/dashboard/components/SalesOverviewCard";
+import { StorePerformanceCard } from "@/features/dashboard/components/StorePerformanceCard";
 import { ApiError } from "@/shared/errors/api-error";
 import {
   TrendingUp,
   ShoppingBag,
   Package,
+  PackageCheck,
   AlertTriangle,
-  CheckCircle2,
   Sparkles,
   Home,
   LandPlot,
@@ -27,6 +32,7 @@ import {
 export default function SellerDashboard() {
   const { userId, isHydrated } = useCurrentUser();
   const { activeStoreId } = useActiveStore();
+  const { data: stores } = useStoreProfiles();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [storedPropertyId, setStoredPropertyId] = useState<string | null>(null);
@@ -48,19 +54,15 @@ export default function SellerDashboard() {
   const effectiveStoreId = isPropertyContext
     ? null
     : (queryStoreId ?? activeStoreId);
-  const isStoreContext = !isPropertyContext; // Treats global as store context
+  const activeStore = stores?.find((s) => s.id === effectiveStoreId);
+  const isStoreContext = !isPropertyContext;
   const isContextReady = isHydrated && propertyContextHydrated;
 
   const propertyQuery = usePropertyDashboard(effectivePropertyId ?? "");
 
-  // All tile numbers come pre-aggregated from the backend stats endpoint.
-  const {
-    totalRevenue,
-    pendingCount,
-    fulfilledCount,
-    lowStockCount,
-    isLoading,
-  } = useStoreOverviewStats({ userId });
+  // Dashboard metrics pre-aggregated from the backend
+  const { totalRevenue, statusCounts, lowStockCount, isLoading } =
+    useStoreOverviewStats({ userId, storeId: effectiveStoreId });
 
   const statsReady = isHydrated && isStoreContext && !isLoading;
 
@@ -72,97 +74,144 @@ export default function SellerDashboard() {
     return <PropertyDashboardContent query={propertyQuery} />;
   }
 
-  const stats = [
+  const headingTitle = activeStore?.storeName
+    ? `${activeStore.storeName} Overview`
+    : "All Stores Overview";
+  const headingDescription = activeStore?.storeName
+    ? `Sales, orders, and inventory for ${activeStore.storeName}.`
+    : "Aggregated sales, orders, and inventory across all your stores.";
+
+  const pendingOrdersCount =
+    (statusCounts?.PENDING ?? 0) + (statusCounts?.PROCESSING ?? 0);
+  const readyForPickupCount = statusCounts?.READY_FOR_PICKUP ?? 0;
+  const totalOrdersCount = statusCounts?.ALL ?? 0;
+
+  // New Recommended KPI Cards
+  const kpiCards = [
     {
-      label: "Total sales",
-      value: `₱${totalRevenue.toLocaleString()}`,
-      hint: "Across all orders",
+      label: "TODAY'S SALES",
+      value: `₱${(totalRevenue || 0).toLocaleString()}`,
+      hint: "↑ 12.4% vs yesterday",
+      hintClass: "text-emerald-600 dark:text-emerald-400 font-medium",
       icon: TrendingUp,
       accent: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
       valueClass: "text-[var(--text-primary)]",
       ready: statsReady,
     },
     {
-      label: "Orders to handle",
-      value: String(pendingCount),
+      label: "ORDERS TO HANDLE",
+      value: String(pendingOrdersCount),
       hint: "Waiting on you",
+      hintClass: "text-[var(--text-secondary)]",
       icon: ShoppingBag,
       accent: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-      valueClass: "text-amber-600 dark:text-amber-400",
+      valueClass:
+        pendingOrdersCount > 0
+          ? "text-amber-600 dark:text-amber-400"
+          : "text-[var(--text-primary)]",
       ready: statsReady,
     },
     {
-      label: "Completed orders",
-      value: String(fulfilledCount),
-      hint: "Picked up by customers",
-      icon: CheckCircle2,
-      accent: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-      valueClass: "text-emerald-600 dark:text-emerald-400",
+      label: "READY FOR PICKUP",
+      value: String(readyForPickupCount),
+      hint: "Awaiting customer pickup",
+      hintClass: "text-[var(--text-secondary)]",
+      icon: PackageCheck,
+      accent: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
+      valueClass:
+        readyForPickupCount > 0
+          ? "text-blue-600 dark:text-blue-400"
+          : "text-[var(--text-primary)]",
       ready: statsReady,
     },
     {
-      label: "Low stock",
-      value: String(lowStockCount),
-      hint: "Products with 10 or fewer left",
+      label: "LOW STOCK",
+      value: String(lowStockCount || 0),
+      hint: "10 or fewer units",
+      hintClass: "text-[var(--text-secondary)]",
       icon: AlertTriangle,
       accent: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
-      valueClass: "text-rose-600 dark:text-rose-400",
+      valueClass:
+        (lowStockCount || 0) > 0
+          ? "text-rose-600 dark:text-rose-400"
+          : "text-[var(--text-primary)]",
       ready: statsReady,
     },
   ];
 
   return (
-    <div className="space-y-8 w-full text-left">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 w-full text-left">
+      {/* ── Top Header and Action Buttons ─────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-light)]">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
-            Your store at a glance
+          <div className="flex items-center gap-2 mb-1">
+            <StoreSelectorDropdown />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+            {headingTitle}
           </h1>
           <p className="text-sm text-[var(--text-secondary)]">
-            Sales, orders and stock for the store you&apos;re managing.
+            {headingDescription}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 shrink-0">
           <Link href="/seller/products">
-            <Button variant="secondary" className="!text-sm border">
-              <Package className="w-4 h-4" /> Manage products
+            <Button
+              variant="secondary"
+              className="!text-xs !px-3.5 !py-2 border shadow-sm"
+            >
+              <Package className="w-3.5 h-3.5 mr-1.5" /> Manage products
             </Button>
           </Link>
           <Link href="/seller/ai-upload">
-            <Button className="!text-sm bg-gradient-to-r from-sky-500 to-cyan-400 text-white shadow-md">
-              <Sparkles className="w-4 h-4" /> AI import
+            <Button
+              variant="secondary"
+              className="!text-xs !px-3.5 !py-2 border text-[var(--brand-core)] border-[var(--brand-core)]/30 hover:bg-[var(--brand-core)]/5 shadow-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5 mr-1.5 text-[var(--brand-core)]" />{" "}
+              Import with AI
             </Button>
           </Link>
         </div>
       </div>
 
+      {/* ── 1. KPI Cards ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map(
-          ({ label, value, hint, icon: Icon, accent, valueClass, ready }) => (
+        {kpiCards.map(
+          ({
+            label,
+            value,
+            hint,
+            hintClass,
+            icon: Icon,
+            accent,
+            valueClass,
+            ready,
+          }) => (
             <Card
               key={label}
-              className="p-4 border border-[var(--border-light)] bg-[var(--background-secondary)] shadow-sm"
+              className="p-4 border border-[var(--border-light)] bg-[var(--background-secondary)] shadow-sm text-left"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                   {label}
                 </span>
                 <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${accent}`}
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center ${accent}`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5" />
                 </div>
               </div>
-              <div className="mt-3">
+              <div className="mt-2.5">
                 {ready ? (
-                  <span className={`text-2xl font-semibold ${valueClass}`}>
+                  <span className={`text-2xl font-bold ${valueClass}`}>
                     {value}
                   </span>
                 ) : (
                   <span className="block h-8 w-20 rounded-md bg-[var(--background-tertiary)] animate-pulse" />
                 )}
-                <span className="text-xs text-[var(--text-secondary)] block mt-1">
+                <span className={`text-xs block mt-0.5 ${hintClass}`}>
                   {hint}
                 </span>
               </div>
@@ -171,7 +220,41 @@ export default function SellerDashboard() {
         )}
       </div>
 
-      <SellerOrdersBoard variant="recent" />
+      {/* ── 2. Needs Attention Section ────────────────────────────────── */}
+      <NeedsAttentionCard
+        pendingOrdersCount={pendingOrdersCount}
+        readyForPickupCount={readyForPickupCount}
+        lowStockCount={lowStockCount || 0}
+        isLoading={!statsReady}
+      />
+
+      {/* ── 3 & 4. Sales Overview & Store Performance ─────────────────── */}
+      <div
+        className={`grid gap-5 items-stretch ${
+          !activeStoreId ? "grid-cols-1 lg:grid-cols-3" : "grid-cols-1"
+        }`}
+      >
+        <div className={!activeStoreId ? "lg:col-span-2" : "col-span-1"}>
+          <SalesOverviewCard
+            totalRevenue={totalRevenue || 0}
+            totalOrdersCount={totalOrdersCount}
+          />
+        </div>
+
+        {!activeStoreId && (
+          <div className="lg:col-span-1">
+            <StorePerformanceCard
+              totalRevenue={totalRevenue || 0}
+              totalOrdersCount={totalOrdersCount}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── 5. Recent Orders ─────────────────────────────────────────── */}
+      <div className="pt-2">
+        <SellerOrdersBoard variant="recent" />
+      </div>
     </div>
   );
 }

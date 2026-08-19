@@ -94,7 +94,7 @@ export function Sidebar({
 
   const navLinks: NavItem[] = [
     {
-      label: "Dashboard",
+      label: activeStore?.storeName ? "Store Overview" : "All Stores Overview",
       href: "/seller/dashboard",
       icon: LayoutDashboard,
       roles: ["SELLER", "ADMIN"],
@@ -109,6 +109,7 @@ export function Sidebar({
           href: "/seller/products",
           icon: Package,
           roles: ["SELLER", "ADMIN"],
+          requiresStore: true,
         },
         {
           label: "Import products",
@@ -123,8 +124,6 @@ export function Sidebar({
           href: "/seller/inventory",
           icon: Boxes,
           roles: ["SELLER", "ADMIN"],
-          badge: "Soon",
-          requiresStore: true,
         },
       ],
     },
@@ -158,6 +157,7 @@ export function Sidebar({
           icon: MessageSquare,
           roles: ["SELLER", "ADMIN"],
           badge: "Soon",
+          requiresStore: true,
         },
       ],
     },
@@ -172,12 +172,14 @@ export function Sidebar({
           href: "/seller/store-profile/view",
           icon: Store,
           roles: ["SELLER", "ADMIN"],
+          requiresStore: true,
         },
         {
           label: "Preferences",
           href: "/seller/settings",
           icon: Settings,
           roles: ["SELLER", "ADMIN"],
+          requiresStore: true,
         },
       ],
     },
@@ -277,38 +279,50 @@ export function Sidebar({
           </div>
 
           <div className="px-1 shrink-0">
-            <Link
-              href="/seller/manage-stores"
-              onClick={onClose}
-              className="flex items-center justify-between w-full p-3 rounded-xl bg-[var(--background-tertiary)] hover:bg-[var(--background-hover)] border border-[var(--border-light)] transition-colors group"
-            >
-              <div className="flex items-center gap-3 truncate">
-                <div className="w-8 h-8 shrink-0 rounded-lg bg-[var(--background-elevated)] border border-[var(--border-light)] flex items-center justify-center text-[var(--text-secondary)] group-hover:text-[var(--brand-core)] transition-colors shadow-sm">
-                  <Store className="w-4 h-4" />
-                </div>
-                <div className="flex flex-col text-left truncate">
+            {activeStore ? (
+              <div className="flex items-center justify-between w-full p-2.5 rounded-xl bg-[var(--background-tertiary)] border border-[var(--border-light)] group">
+                <Link
+                  href="/seller/manage-stores"
+                  onClick={onClose}
+                  className="flex items-center gap-3 flex-1 min-w-0"
+                >
+                  <div className="w-8 h-8 shrink-0 rounded-lg bg-[var(--background-elevated)] border border-[var(--border-light)] flex items-center justify-center text-[var(--text-secondary)] group-hover:text-[var(--brand-core)] transition-colors shadow-sm">
+                    <Store className="w-4 h-4" />
+                  </div>
                   <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
-                    {activeStore?.storeName || "All Stores"}
+                    Switch store
                   </span>
-                  <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider font-semibold">
-                    {activeStore ? "Switch Store" : "Manage store"}
+                </Link>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (onClearContext) onClearContext();
+                  }}
+                  title="Deselect store"
+                  aria-label="Deselect store"
+                  className="p-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white transition-all shadow-sm flex items-center justify-center shrink-0"
+                >
+                  <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/seller/manage-stores"
+                onClick={onClose}
+                className="flex items-center justify-between w-full p-2.5 rounded-xl bg-[var(--background-tertiary)] hover:bg-[var(--background-hover)] border border-[var(--border-light)] transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 shrink-0 rounded-lg bg-[var(--background-elevated)] border border-[var(--border-light)] flex items-center justify-center text-[var(--text-secondary)] group-hover:text-[var(--brand-core)] transition-colors shadow-sm">
+                    <Store className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-semibold text-[var(--text-primary)]">
+                    Select store
                   </span>
                 </div>
-              </div>
-              <ChevronRight className="w-4 h-4 shrink-0 text-[var(--text-tertiary)] group-hover:text-[var(--brand-core)] transition-colors" />
-            </Link>
-
-            {activeStore && (
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (onClearContext) onClearContext();
-                }}
-                className="w-full mt-2 flex items-center justify-center gap-2 p-2 rounded-xl text-xs font-medium text-rose-600 bg-rose-50 hover:bg-rose-100 dark:text-rose-400 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 border border-rose-100 dark:border-rose-900/50 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-                Deselect Store
-              </button>
+                <ChevronRight className="w-4 h-4 shrink-0 text-[var(--text-tertiary)] group-hover:text-[var(--brand-core)] transition-colors" />
+              </Link>
             )}
           </div>
 

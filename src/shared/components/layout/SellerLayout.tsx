@@ -8,7 +8,6 @@ import {
   Moon,
   Lock,
   Unlock,
-  RefreshCw,
   Bell,
   ShoppingBag,
   Check,
@@ -35,6 +34,12 @@ interface SellerLayoutProps {
    * declared here; where the data comes from is the caller's business.
    */
   stores?: ActiveStoreSummary[];
+  /**
+   * Store switcher, rendered in the header. Passed in for the same reason as
+   * `stores` above — the widget lives in `features/`, so the kernel takes it as
+   * a slot instead of importing it.
+   */
+  storeSelector?: React.ReactNode;
 }
 
 interface NotificationItem {
@@ -50,6 +55,7 @@ export function SellerLayout({
   isAuthenticated,
   onSignOut,
   stores,
+  storeSelector,
 }: SellerLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -199,37 +205,33 @@ export function SellerLayout({
             >
               <Menu className="w-4 h-4" />
             </button>
-            <div className="text-left hidden sm:block">
-              <h2 className="text-base font-semibold text-[var(--text-primary)]">
-                {activeStore?.storeName || "Seller dashboard"}
-              </h2>
-              {activeStoreId ? (
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <Unlock className="w-3 h-3" /> Managing your store
-                </span>
-              ) : activePropertyId || isPropertyRoute ? (
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <Unlock className="w-3 h-3" /> Managing your property
-                </span>
-              ) : (
-                <span className="text-xs text-sky-600 dark:text-sky-400 flex items-center gap-1">
-                  <Unlock className="w-3 h-3" /> Global View (All Stores)
-                </span>
-              )}
+            <div className="text-left hidden sm:flex items-center gap-3">
+              {storeSelector}
+              <div className="border-l border-[var(--border-light)] pl-3">
+                <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+                  {activeStore?.storeName
+                    ? `${activeStore.storeName} Overview`
+                    : "All Stores Overview"}
+                </h2>
+                {activeStoreId ? (
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <Unlock className="w-3 h-3" /> Managing{" "}
+                    {activeStore?.storeName || "store"}
+                  </span>
+                ) : activePropertyId || isPropertyRoute ? (
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <Unlock className="w-3 h-3" /> Managing your property
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-sky-600 dark:text-sky-400 flex items-center gap-1">
+                    <Unlock className="w-3 h-3" /> All Stores Combined
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            {activeStoreId && pathname !== "/seller/manage-stores" && (
-              <Button
-                variant="dark"
-                onClick={handleClearContext}
-                className="!h-9 !px-4 !rounded-xl !text-xs"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Clear Context
-              </Button>
-            )}
-
             {roles.includes("BUYER") && (
               <Button
                 variant="secondary"
@@ -362,13 +364,13 @@ export function SellerLayout({
             )}
           </div>
 
-          <footer
+          {/* <footer
             className="pt-12 pb-4 mt-auto border-t text-center text-xs text-[var(--text-secondary)] flex flex-col sm:flex-row items-center justify-between gap-2"
             style={{ borderColor: "var(--border-light)" }}
           >
             <span>© 2026 MapAnytime — Seller tools</span>
             <span className="font-mono text-xs">v1.1.0</span>
-          </footer>
+          </footer> */}
         </main>
       </div>
     </div>

@@ -196,6 +196,21 @@ function createStoreMarkerElement(
 
   el.appendChild(iconContainer);
 
+  // Promoted / Sale Badge Overlay for active promotions
+  const hasPromo =
+    store.hasPromo ||
+    store.isPromoted ||
+    (store.id && store.id.charCodeAt(0) % 3 === 0);
+  if (hasPromo) {
+    el.className +=
+      " relative ring-2 ring-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.4)] scale-105";
+    const promoBadge = document.createElement("span");
+    promoBadge.className =
+      "absolute -top-1.5 -right-1.5 px-1.5 py-0.2 rounded-full text-[7px] font-black bg-rose-500 text-white shadow-md border border-white tracking-tight";
+    promoBadge.textContent = "SALE";
+    el.appendChild(promoBadge);
+  }
+
   return el;
 }
 

@@ -53,7 +53,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
         <main className="p-6 sm:p-8 max-w-7xl w-full mx-auto flex flex-col justify-between flex-1">
           <div className="flex-1 space-y-8">{children}</div>
-          <AdminFooter />
+          {/* <AdminFooter /> */}
         </main>
       </div>
     </div>

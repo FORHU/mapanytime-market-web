@@ -64,7 +64,7 @@ export default function LandingPage() {
         <EcosystemSection />
       </main>
 
-      <HomeFooter />
+      {/* <HomeFooter /> */}
 
       <ApkDownloadModal
         isOpen={isDownloadModalOpen}

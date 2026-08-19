@@ -27,8 +27,8 @@ export function acquireSocket(): Socket {
   if (!socket) {
     socket = io(env.NEXT_PUBLIC_SOCKET_SERVER_URL, {
       autoConnect: true,
-      // Bounded backoff. The default retries forever with no ceiling on attempts, which turns a
-      // misconfigured host into a permanent reconnect loop hammering the server.
+      withCredentials: true,
+      transports: ["polling", "websocket"],
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 10000,

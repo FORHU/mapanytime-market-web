@@ -1,7 +1,7 @@
 // not used - no page mounts these hooks; the live seller order path is
 // shared/hooks/useOrdersPipeline.ts. useOrderStatus below is doubly dead: it
 // calls GET /v1/orders/:id/status, which the API does not register.
-// See docs/connection-audit.md §9.
+// See FLAGS.md.
 import { useQueryClient } from "@tanstack/react-query";
 import { useSafeQuery } from "@/shared/query/useSafeQuery";
 import { useSafeMutation } from "@/shared/query/useSafeMutation";

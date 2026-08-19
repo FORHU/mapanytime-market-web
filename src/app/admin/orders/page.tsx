@@ -2,7 +2,7 @@
 
 // MOCK DATA - the orders array below is hardcoded. /v1/orders/store exists and
 // shared/hooks/useOrdersPipeline.ts already calls it on the seller side.
-// See docs/connection-audit.md §7.
+// See FLAGS.md.
 import { useState } from "react";
 import {
   ShoppingBag,

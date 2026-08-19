@@ -90,7 +90,7 @@ export function StoreProfileSettings({
    * Weekly hours and subcategories are intentionally absent: hours need a
    * separate endpoint shape (StoreHours rows, minutes since midnight) and the
    * subcategory chips are still hardcoded markup. Sending them as-is would
-   * persist placeholder data. See docs/connection-audit.md §1.
+   * persist placeholder data. See FLAGS.md.
    */
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

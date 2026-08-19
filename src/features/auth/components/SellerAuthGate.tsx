@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SellerLayout } from "@/shared/components/layout/SellerLayout";
+import { StoreSelectorDropdown } from "@/features/stores/components/StoreSelectorDropdown";
 import { useAuthStore } from "../stores/auth.store";
 import { useAuth } from "../hooks/useAuth";
 
@@ -59,6 +60,7 @@ export function SellerAuthGate({
       isAuthenticated={!!token}
       onSignOut={handleSignOut}
       stores={stores}
+      storeSelector={<StoreSelectorDropdown />}
     >
       {children}
     </SellerLayout>

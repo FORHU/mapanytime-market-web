@@ -17,7 +17,7 @@ import { fetcher } from "@/shared/lib/http";
  * Next route handler in this app, which meant the web needed its own copy of
  * AWS_ACCESS_KEY_ID / SECRET / BUCKET — they were blank, so every upload 500d
  * before it started. Routing through the API keeps this app credential-free,
- * which is what its .env has always claimed. See docs/connection-audit.md §2.
+ * which is what its .env has always claimed. See FLAGS.md.
  *
  * Both sides derive the same key shape ({folder}/{16-byte hex}.{ext}) and the
  * same 15-minute expiry, so the response contract is unchanged: { uploadUrl,

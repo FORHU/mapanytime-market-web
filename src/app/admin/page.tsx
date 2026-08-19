@@ -1,11 +1,11 @@
 "use client";
 
-// Live data, as of 2026-08-18 — this closes docs/connection-audit.md §7 for this
+// Live data, as of 2026-08-18 — this closes FLAGS.md for this
 // page. Every number below comes from GET /api/v1/admin/approvals/dashboard.
 // The mock "+18.4%" style deltas were removed rather than reimplemented: the API
 // has no period-over-period comparison to base them on, and a fabricated delta
 // beside a real figure is worse than no delta.
-// See mapanytime-api/docs/payments-rework-review.md §13.
+// See FLAGS.md.
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -78,7 +78,7 @@ export default function AdminDashboardPage() {
         // getToken(), not localStorage — tokens moved to sessionStorage on
         // 2026-08-17 and getToken() purges the legacy localStorage key on every
         // read, so reading it directly always yielded null.
-        // See mapanytime-api/docs/payments-rework-review.md §10.
+        // See FLAGS.md.
         const token = getToken();
         const res = await fetch(
           `${API_BASE_URL}/api/v1/admin/approvals/dashboard`,

@@ -11,6 +11,7 @@ import {
   Users,
   Key,
   ShoppingBag,
+  Coins,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -51,6 +52,12 @@ const navItems: AdminNavItem[] = [
         name: "Store Approvals",
         href: "/admin/stores",
         icon: Store,
+        roles: ["ADMIN"],
+      },
+      {
+        name: "Pricing & Fees",
+        href: "/admin/pricing",
+        icon: Coins,
         roles: ["ADMIN"],
       },
       {

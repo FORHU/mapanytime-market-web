@@ -5,7 +5,7 @@ const SESSION_KEY = "mapanytime_analytics_session_id";
 /**
  * Must stay a subset of the API's ANALYTICSEVENTTYPE enum (prisma/schema.prisma)
  * — the ingestion endpoint validates against it with Joi and 400s anything else.
- * See mapanytime-api/docs/payments-rework-review.md §9.
+ * See FLAGS.md.
  */
 export type AnalyticsEventType =
   | "PAGE_VIEW"
