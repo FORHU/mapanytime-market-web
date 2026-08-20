@@ -31,12 +31,6 @@ export function LandingNav({ scrolled }: LandingNavProps) {
 
         <nav className="ml-auto mr-[30px] hidden items-center gap-[30px] landing-lg:flex">
           <a
-            href="#how"
-            className="text-[11px] font-semibold text-[#7693a1] transition duration-200 hover:text-white"
-          >
-            How it works
-          </a>
-          <a
             href="#benefits"
             className="text-[11px] font-semibold text-[#7693a1] transition duration-200 hover:text-white"
           >
