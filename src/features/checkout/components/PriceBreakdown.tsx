@@ -2,11 +2,13 @@
 
 import { Tag } from "lucide-react";
 import { formatPeso } from "@/shared/lib/currency";
-import type { CartPricing } from "@/features/cart/contracts/cart.contract";
-import type { PaymentMethod } from "../contracts/checkout.contract";
+import type {
+  CheckoutPricingSummary,
+  PaymentMethod,
+} from "../contracts/checkout.contract";
 
 interface PriceBreakdownProps {
-  pricing: CartPricing;
+  pricing: CheckoutPricingSummary;
   /** Once a method is chosen, its fee and the real total are shown. */
   selectedMethod?: PaymentMethod | null;
 }

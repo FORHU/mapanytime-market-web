@@ -7,7 +7,6 @@ import {
   type CreateOrderInput,
 } from "../api/checkout.client";
 import type { PaymentProvider } from "../contracts/checkout.contract";
-import { cartKeys } from "@/features/cart/hooks/useCart";
 
 /**
  * Payment methods priced for this basket. Re-quotes whenever the goods total
@@ -34,7 +33,7 @@ export function useCreateOrder() {
     }) => createOrder(input, idempotencyKey),
     onSuccess: () => {
       // The order consumed the cart; anything holding the old basket is stale.
-      queryClient.invalidateQueries({ queryKey: cartKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
   });
 }

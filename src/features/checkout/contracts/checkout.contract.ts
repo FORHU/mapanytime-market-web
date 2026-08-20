@@ -41,3 +41,9 @@ export const CreatedOrderSchema = z.object({
 export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
 export type PaymentProvider = z.infer<typeof PaymentProviderSchema>;
 export type CreatedOrder = z.infer<typeof CreatedOrderSchema>;
+
+export interface CheckoutPricingSummary {
+  subtotalAmount: number;
+  discountAmount: number;
+  totalAmount: number;
+}
