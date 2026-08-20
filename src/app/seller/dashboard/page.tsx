@@ -17,7 +17,6 @@ import {
   Package,
   AlertTriangle,
   CheckCircle2,
-  Sparkles,
   Home,
   LandPlot,
   MapPin,
@@ -127,11 +126,6 @@ export default function SellerDashboard() {
           <Link href="/seller/products">
             <Button variant="secondary" className="!text-sm border">
               <Package className="w-4 h-4" /> Manage products
-            </Button>
-          </Link>
-          <Link href="/seller/ai-upload">
-            <Button className="!text-sm bg-gradient-to-r from-sky-500 to-cyan-400 text-white shadow-md">
-              <Sparkles className="w-4 h-4" /> AI import
             </Button>
           </Link>
         </div>
