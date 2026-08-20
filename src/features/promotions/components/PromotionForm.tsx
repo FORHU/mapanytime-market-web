@@ -8,7 +8,6 @@ import {
   useUpdatePromotion,
 } from "../hooks/usePromotionMutations";
 import { ProductPickerField } from "./ProductPickerField";
-import { MapSelection } from "@/features/stores/components/MapSelection";
 import type {
   Promotion,
   PromotionKind,
@@ -85,16 +84,26 @@ function inputStyle() {
   } as const;
 }
 
+interface MapSelectionProps {
+  initialLat?: number;
+  initialLng?: number;
+  onChange: (lat: number, lng: number) => void;
+  label?: string;
+  hint?: string;
+}
+
 interface PromotionFormProps {
   storeId: string;
   promotion?: Promotion;
   onDone: () => void;
+  MapSelectionComponent: React.ComponentType<MapSelectionProps>;
 }
 
 export function PromotionForm({
   storeId,
   promotion,
   onDone,
+  MapSelectionComponent,
 }: PromotionFormProps) {
   const isEditing = Boolean(promotion);
   const createMutation = useCreatePromotion(storeId);
@@ -438,7 +447,7 @@ export function PromotionForm({
       </div>
 
       <div>
-        <MapSelection
+        <MapSelectionComponent
           initialLat={targetLat}
           initialLng={targetLng}
           onChange={(lat, lng) => {

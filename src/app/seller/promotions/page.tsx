@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
+import { MapSelection } from "@/features/stores/components/MapSelection";
 import { usePromotions } from "@/features/promotions/hooks/usePromotions";
 import { PromotionForm } from "@/features/promotions/components/PromotionForm";
 import { PromotionsTable } from "@/features/promotions/components/PromotionsTable";
@@ -71,6 +72,7 @@ export default function PromotionsPage() {
           storeId={activeStoreId}
           promotion={editingPromotion ?? undefined}
           onDone={closeForm}
+          MapSelectionComponent={MapSelection}
         />
       )}
 
