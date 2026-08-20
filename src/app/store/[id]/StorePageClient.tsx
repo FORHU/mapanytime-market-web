@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { env } from "@/shared/lib/env";
+import { AddToCartButton } from "@/features/cart/components/AddToCartButton";
 import {
   MapPin,
   Phone,
@@ -379,6 +380,12 @@ export default function StorePageClient({ storeId }: { storeId: string }) {
                             </span>
                           )}
                         </div>
+
+                        <AddToCartButton
+                          storeId={storeId}
+                          productId={product.id}
+                          productName={product.name}
+                        />
                       </div>
                     </div>
                   );

@@ -10,14 +10,14 @@ import {
   Tooltip,
 } from "recharts";
 import type { RevenueDataPoint } from "../contracts/dashboard.contract";
+import { formatPesoCompact } from "@/shared/lib/currency";
 
 interface RevenueChartProps {
   data: RevenueDataPoint[];
 }
 
-function formatCurrency(value: number) {
-  return `$${(value / 1000).toFixed(0)}k`;
-}
+// The platform trades in PHP only; this rendered a `$` prefix on peso figures.
+const formatCurrency = formatPesoCompact;
 
 export function RevenueChart({ data }: RevenueChartProps) {
   return (
