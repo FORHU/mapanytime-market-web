@@ -9,29 +9,32 @@ test.describe("Home page", () => {
 
   test("navigation bar is visible", async ({ page }) => {
     await page.goto("/");
-    const nav = page.locator("nav");
+    const nav = page.getByRole("navigation").first();
     await expect(nav).toBeVisible();
   });
 
-  test("Shop the Market button is visible and clickable", async ({ page }) => {
+  test("primary CTA links are visible", async ({ page }) => {
     await page.goto("/");
-    const btn = page.getByRole("button", { name: /shop the market/i });
-    await expect(btn).toBeVisible();
-    await expect(btn).toBeEnabled();
+    const loginLink = page.getByRole("link", { name: "Login" }).first();
+    await expect(loginLink).toBeVisible();
+    const joinLink = page.getByRole("link", { name: /join mapanytime/i });
+    await expect(joinLink).toBeVisible();
   });
 
-  test("How It Works nav link scrolls to the how-it-works section", async ({
+  test("Why MapAnytime nav link scrolls to the benefits section", async ({
     page,
   }) => {
     await page.goto("/");
-    const howItWorksLink = page
-      .getByRole("link", { name: /your market journey/i })
+    const benefitsLink = page
+      .getByRole("link", { name: /why mapanytime/i })
       .first();
-    await howItWorksLink.click();
+    await benefitsLink.click();
 
-    // Section becomes visible after in-page anchor scroll
-    const howItWorksSection = page.locator("#how-it-works");
-    await expect(howItWorksSection).toBeInViewport({ timeout: 2000 });
+    // globals.css sets scroll-behavior: smooth; #benefits sits past the
+    // full-height hero and how-it-works sections, so the animated scroll
+    // needs more than the default couple seconds to land.
+    const benefitsSection = page.locator("#benefits");
+    await expect(benefitsSection).toBeInViewport({ timeout: 8000 });
   });
 
   test("footer is visible", async ({ page }) => {
