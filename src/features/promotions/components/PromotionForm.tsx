@@ -8,10 +8,13 @@ import {
   useUpdatePromotion,
 } from "../hooks/usePromotionMutations";
 import { ProductPickerField } from "./ProductPickerField";
+import { MapSelection } from "@/features/stores/components/MapSelection";
 import type {
   Promotion,
   PromotionKind,
   DiscountType,
+  AdGoal,
+  AdFormat,
   PromotionFields,
 } from "../contracts/promotions.contract";
 
@@ -29,6 +32,19 @@ const DISCOUNT_OPTIONS: { value: DiscountType; label: string }[] = [
   { value: "BOGO", label: "Buy X, get Y free" },
   { value: "PERCENTAGE", label: "% off" },
   { value: "FIXED_AMOUNT", label: "Fixed amount off" },
+];
+
+const GOAL_OPTIONS: { value: AdGoal; label: string }[] = [
+  { value: "STORE_VISITS", label: "Store visits" },
+  { value: "IMPRESSIONS", label: "Impressions" },
+  { value: "PURCHASES", label: "Purchases" },
+];
+
+const FORMAT_OPTIONS: { value: AdFormat; label: string }[] = [
+  { value: "MAP_FLOATING_CARD", label: "Map card" },
+  { value: "PROMOTED_PIN", label: "Promoted pin" },
+  { value: "DISCOVERY_CAROUSEL", label: "Discovery carousel" },
+  { value: "SPONSORED_SEARCH", label: "Sponsored search" },
 ];
 
 function Field({
@@ -106,6 +122,25 @@ export function PromotionForm({
   const [expiresAt, setExpiresAt] = useState(
     promotion?.expiresAt ? promotion.expiresAt.slice(0, 10) : "",
   );
+  const [goal, setGoal] = useState<AdGoal>(promotion?.goal ?? "STORE_VISITS");
+  const [format, setFormat] = useState<AdFormat>(
+    promotion?.format ?? "MAP_FLOATING_CARD",
+  );
+  const [radiusKm, setRadiusKm] = useState(
+    promotion?.radiusKm != null ? String(promotion.radiusKm) : "",
+  );
+  const [targetLat, setTargetLat] = useState<number | undefined>(
+    promotion?.targetLat ?? undefined,
+  );
+  const [targetLng, setTargetLng] = useState<number | undefined>(
+    promotion?.targetLng ?? undefined,
+  );
+  const [dailyBudget, setDailyBudget] = useState(
+    promotion?.dailyBudget != null ? String(promotion.dailyBudget) : "",
+  );
+  const [totalBudget, setTotalBudget] = useState(
+    promotion?.totalBudget != null ? String(promotion.totalBudget) : "",
+  );
   const [productIds, setProductIds] = useState<string[]>(
     promotion?.products?.map((p) => p.productId) ?? [],
   );
@@ -162,7 +197,19 @@ export function PromotionForm({
         kind === "PROMO" && discountType === "BOGO"
           ? Number(freeQuantity)
           : undefined,
-      expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
+      // A plain YYYY-MM-DD parses as UTC midnight (start of day) — sellers
+      // pick a date meaning "valid through end of that day", so anchor to
+      // 23:59:59 local time instead, or the promo expires a day early.
+      expiresAt: expiresAt
+        ? new Date(`${expiresAt}T23:59:59`).toISOString()
+        : undefined,
+      goal,
+      format,
+      radiusKm: radiusKm ? Number(radiusKm) : undefined,
+      targetLat,
+      targetLng,
+      dailyBudget: dailyBudget ? Number(dailyBudget) : undefined,
+      totalBudget: totalBudget ? Number(totalBudget) : undefined,
       products:
         productIds.length > 0
           ? productIds.map((productId) => ({ productId }))
@@ -358,6 +405,90 @@ export function PromotionForm({
           onChange={(e) => setExpiresAt(e.target.value)}
         />
       </Field>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <Field label="Goal">
+          <select
+            className={inputClass()}
+            style={inputStyle()}
+            value={goal}
+            onChange={(e) => setGoal(e.target.value as AdGoal)}
+          >
+            {GOAL_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Placement">
+          <select
+            className={inputClass()}
+            style={inputStyle()}
+            value={format}
+            onChange={(e) => setFormat(e.target.value as AdFormat)}
+          >
+            {FORMAT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      <div>
+        <MapSelection
+          initialLat={targetLat}
+          initialLng={targetLng}
+          onChange={(lat, lng) => {
+            setTargetLat(lat);
+            setTargetLng(lng);
+          }}
+          label="Target area"
+          hint="Where this ad should be centered. Leave unset to target your store's own location."
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <Field label="Target radius (km)">
+          <input
+            type="number"
+            min={1}
+            max={50}
+            className={inputClass()}
+            style={inputStyle()}
+            value={radiusKm}
+            onChange={(e) => setRadiusKm(e.target.value)}
+            placeholder="3"
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <Field label="Daily budget">
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            className={inputClass()}
+            style={inputStyle()}
+            value={dailyBudget}
+            onChange={(e) => setDailyBudget(e.target.value)}
+          />
+        </Field>
+        <Field label="Total budget">
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            className={inputClass()}
+            style={inputStyle()}
+            value={totalBudget}
+            onChange={(e) => setTotalBudget(e.target.value)}
+          />
+        </Field>
+      </div>
 
       {requiresProducts && (
         <div>

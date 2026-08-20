@@ -3,12 +3,13 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { MapPin, X, Plus, Star, SaveIcon } from "lucide-react";
+import { MapPin, X, Plus, Star, SaveIcon, ImagePlus } from "lucide-react";
 import {
   useStoreProfiles,
   useStoreCategories,
   useUpdateStoreProfile,
 } from "../hooks/useStoreProfile";
+import { useS3AssetUpload } from "@/shared/hooks/useS3AssetUpload";
 import type { UpdateStoreProfileInput } from "../contracts/store-profile.contract";
 
 interface StoreProfileSettingsProps {
@@ -72,13 +73,28 @@ export function StoreProfileSettings({
   const [openOverride, setOpenOverride] = useState<boolean | null>(null);
   const isOpenToCustomers = openOverride ?? store?.isActive ?? true;
 
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const bannerUpload = useS3AssetUpload("stores");
+
   const { mutate: saveProfile, isPending: isSubmitting } =
     useUpdateStoreProfile({
-      onSuccess: () => toast.success("Store profile saved"),
+      onSuccess: () => {
+        toast.success("Store profile saved");
+        setBannerFile(null);
+        setBannerPreview(null);
+      },
     });
 
   const handleClosedToggle = (day: string) => {
     setClosedDays((prev) => ({ ...prev, [day]: !prev[day] }));
+  };
+
+  const handleBannerChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setBannerFile(file);
+    setBannerPreview(URL.createObjectURL(file));
   };
 
   /**
@@ -92,7 +108,7 @@ export function StoreProfileSettings({
    * subcategory chips are still hardcoded markup. Sending them as-is would
    * persist placeholder data. See docs/connection-audit.md §1.
    */
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!store) return;
 
@@ -115,6 +131,15 @@ export function StoreProfileSettings({
     // An unset <select> submits "", which would fail the API's string check.
     const categoryId = text("categoryId");
     if (categoryId) input.categoryId = categoryId;
+
+    if (bannerFile) {
+      try {
+        const result = await bannerUpload.mutateAsync(bannerFile);
+        if (result.fileId) input.bannerId = result.fileId;
+      } catch {
+        return; // useS3AssetUpload already surfaced a toast.
+      }
+    }
 
     saveProfile({ storeId: store.id, input });
   };
@@ -173,7 +198,7 @@ export function StoreProfileSettings({
         </div>
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || bannerUpload.isPending}
           className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
           style={{
             background: "var(--brand-core)",
@@ -181,7 +206,11 @@ export function StoreProfileSettings({
           }}
         >
           <SaveIcon className="h-4 w-4" />
-          {isSubmitting ? "Saving…" : "Save Profile"}
+          {bannerUpload.isPending
+            ? "Uploading photo…"
+            : isSubmitting
+              ? "Saving…"
+              : "Save Profile"}
         </button>
       </div>
 
@@ -198,6 +227,38 @@ export function StoreProfileSettings({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="col-span-1 md:col-span-2 flex items-center gap-4">
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--background-secondary)]">
+                {bannerPreview || store.bannerUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- remote CDN URLs aren't in next.config.ts's image remotePatterns
+                  <img
+                    src={bannerPreview || store.bannerUrl || undefined}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[var(--text-quaternary)]">
+                    <ImagePlus size={20} />
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--border-default)] px-3 py-2 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--background-secondary)]">
+                  {bannerUpload.isPending ? "Uploading…" : "Change photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleBannerChange}
+                    disabled={bannerUpload.isPending}
+                  />
+                </label>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                  Shown on your store&apos;s map marker. JPG or PNG.
+                </p>
+              </div>
+            </div>
+
             <div className="col-span-1 md:col-span-2">
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
                 Store name{" "}
