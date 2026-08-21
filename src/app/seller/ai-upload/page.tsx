@@ -195,7 +195,7 @@ export default function AIUploadPage() {
               <div
                 className={`p-4 rounded-xl text-xs font-bold border flex items-start gap-2 ${
                   systemMessage.type === "success"
-                    ? "bg-emerald-50/50 border-emerald-200 text-emerald-600"
+                    ? "bg-emerald-300 border-emerald-300 text-emerald-800"
                     : "bg-rose-50/50 border-rose-200 text-rose-600"
                 }`}
               >

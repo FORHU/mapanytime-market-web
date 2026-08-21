@@ -2,8 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { MapPin, Pencil, Star, Image as ImageIcon } from "lucide-react";
+import { MapPin, Pencil, Star } from "lucide-react";
 import { useStoreProfiles, useStoreCategories } from "../hooks/useStoreProfile";
+import { Card } from "@/shared/components/ui/Card";
 
 interface StoreProfileViewProps {
   activeStoreId?: string | null;
@@ -22,22 +23,49 @@ function formatDate(value?: string | Date) {
       });
 }
 
-function ValueCell({
+function ValueBox({
   label,
   children,
+  className = "",
 }: {
   label: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div>
-      <dt className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide">
+    <div className={className}>
+      <div className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2">
         {label}
-      </dt>
-      <dd className="mt-1 text-sm text-[var(--text-primary)]">{children}</dd>
+      </div>
+      <div className="px-3.5 py-3 bg-[var(--background-secondary)] border border-[var(--border-light)] rounded-lg text-sm font-medium text-[var(--text-primary)]">
+        {children}
+      </div>
     </div>
   );
 }
+
+function SectionHeader({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="mb-7">
+      <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1">
+        {title}
+      </h2>
+      <p className="text-sm text-[var(--text-secondary)]">{description}</p>
+    </div>
+  );
+}
+
+const storeHours = [
+  { label: "Mon – Fri", value: "9:00 AM – 7:00 PM" },
+  { label: "Saturday", value: "10:00 AM – 6:00 PM" },
+  { label: "Sunday", value: "Closed" },
+];
 
 export function StoreProfileView({
   activeStoreId,
@@ -58,13 +86,13 @@ export function StoreProfileView({
 
   const store = stores?.find((s) => s.id === activeStoreId);
   const location = store?.storeLocations;
-  const categoryName = categories?.find(
-    (c) => c.id === store?.categoryId,
-  )?.name;
+  const categoryName =
+    store?.primaryCategory?.name ||
+    categories?.find((c) => c.id === store?.primaryCategoryId)?.name;
 
   if (!isHydrated || storesLoading || categoriesLoading) {
     return (
-      <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 animate-pulse text-[var(--text-secondary)]">
+      <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 animate-pulse text-[var(--text-secondary)]">
         Loading your store profile...
       </div>
     );
@@ -72,7 +100,7 @@ export function StoreProfileView({
 
   if (storesError || categoriesError) {
     return (
-      <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
         <div className="p-6 border-rose-200 bg-rose-50/20 text-sm text-rose-600 rounded-lg">
           <strong className="font-semibold">
             We couldn&apos;t load your store details.
@@ -85,7 +113,7 @@ export function StoreProfileView({
 
   if (!store) {
     return (
-      <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 text-center">
+      <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 text-center">
         <p className="text-sm text-[var(--text-secondary)] mb-3">
           We couldn&apos;t find the store you&apos;re managing.
         </p>
@@ -100,151 +128,187 @@ export function StoreProfileView({
   }
 
   return (
-    <div className="bg-[var(--background-primary)] w-full max-w-4xl mx-auto rounded-xl border border-[var(--border-light)] shadow-sm overflow-hidden my-4 sm:my-8">
-      {/* Main Content Area */}
-      <div className="p-4 sm:p-6 lg:p-8">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
-              Store Profile
-            </h1>
-            <p className="text-sm text-[var(--text-secondary)] mt-1">
-              How your store appears to customers
-            </p>
+    <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div>
+          <div className="text-xs font-extrabold tracking-[0.14em] text-[var(--brand-core)] mb-2">
+            STORE PROFILE
           </div>
-          <Link
-            href="/seller/store-profile"
-            aria-label="Edit store profile"
-            title="Edit store profile"
-            className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--brand-core)] focus:ring-offset-2"
-            style={{
-              background: "var(--brand-core)",
-              color: "var(--background-primary)",
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Link>
+          <p className="text-sm font-medium text-[var(--text-secondary)]">
+            How your store appears to customers
+          </p>
         </div>
+        <Link
+          href="/seller/store-profile"
+          aria-label="Edit store profile"
+          title="Edit store profile"
+          className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--brand-core)] focus:ring-offset-2"
+          style={{
+            background: "var(--text-primary)",
+            color: "var(--background-primary)",
+          }}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          Edit
+        </Link>
+      </div>
 
-        <div className="space-y-8">
-          {/* SECTION 1: General */}
-          <section className="pb-8 border-b border-[var(--border-light)]">
-            <div className="mb-6">
-              <h2 className="text-lg font-medium text-[var(--text-primary)]">
-                General
-              </h2>
-              <p className="text-sm text-[var(--text-secondary)]">
-                Basic details customers see first
-              </p>
+      <div className="flex flex-col gap-6">
+        {/* SECTION 1: General */}
+        <Card className="p-8 rounded-2xl">
+          <SectionHeader
+            title="General"
+            description="Basic details customers see first"
+          />
+
+          <dl className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ValueBox label="Store name" className="col-span-1 md:col-span-2">
+              {store.storeName || "—"}
+            </ValueBox>
+            <ValueBox label="About" className="col-span-1 md:col-span-2">
+              {store.description || "No description yet"}
+            </ValueBox>
+            <ValueBox label="Phone">
+              {store.phone ? String(store.phone) : "No phone number"}
+            </ValueBox>
+            <ValueBox label="Email">
+              {store.email || "No email address"}
+            </ValueBox>
+            <div>
+              <div className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2">
+                Category
+              </div>
+              <span
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold"
+                style={{
+                  background: "var(--brand-light)",
+                  color: "var(--brand-burgundy)",
+                }}
+              >
+                {categoryName ||
+                  store?.primaryCategoryId ||
+                  "No category selected"}
+              </span>
             </div>
+          </dl>
+        </Card>
 
-            <dl className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="col-span-1 md:col-span-2">
-                <ValueCell label="Store name">
-                  {store.storeName || "—"}
-                </ValueCell>
-              </div>
-              <div className="col-span-1 md:col-span-2">
-                <ValueCell label="About">
-                  {store.description || "No description yet"}
-                </ValueCell>
-              </div>
-              <ValueCell label="Phone">
-                {store.phone ? String(store.phone) : "No phone number"}
-              </ValueCell>
-              <ValueCell label="Email">
-                {store.email || "No email address"}
-              </ValueCell>
-              <ValueCell label="Primary category">
-                {categoryName || store.categoryId || "No category selected"}
-              </ValueCell>
-            </dl>
-          </section>
+        {/* SECTION 2: Location and Hours */}
+        <Card className="p-8 rounded-2xl">
+          <SectionHeader
+            title="Location and Hours"
+            description="Where customers find you and when you are open"
+          />
 
-          {/* SECTION 2: Location and hours */}
-          <section className="pb-8 border-b border-[var(--border-light)]">
-            <div className="mb-6">
-              <h2 className="text-lg font-medium text-[var(--text-primary)]">
-                Location and hours
-              </h2>
-              <p className="text-sm text-[var(--text-secondary)]">
-                Where customers find you and when you are open
-              </p>
-            </div>
-
-            <dl className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="col-span-1 md:col-span-2">
-                <ValueCell label="Address">
-                  {location?.currentAddress || "No address set"}
-                </ValueCell>
-              </div>
-              <ValueCell label="City">{location?.city || "—"}</ValueCell>
-              <ValueCell label="Province/State">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-8">
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5 content-start">
+              <ValueBox label="Address" className="col-span-1 sm:col-span-2">
+                {location?.currentAddress || "No address set"}
+              </ValueBox>
+              <ValueBox label="City">{location?.city || "—"}</ValueBox>
+              <ValueBox label="Province/State">
                 {location?.province || "—"}
-              </ValueCell>
-              <ValueCell label="ZIP code">
+              </ValueBox>
+              <ValueBox label="ZIP code">
                 {location?.postalCode ? String(location.postalCode) : "—"}
-              </ValueCell>
-              <ValueCell label="Country">
+              </ValueBox>
+              <ValueBox label="Country">
                 {location?.country || "Philippines"}
-              </ValueCell>
+              </ValueBox>
             </dl>
 
-            <div className="mt-6">
-              <div className="h-[120px] w-full bg-[var(--background-secondary)] border border-[var(--border-default)] rounded-lg flex flex-col items-center justify-center text-[var(--text-secondary)]">
-                <MapPin
-                  size={24}
-                  className="mb-2 text-[var(--text-quaternary)]"
-                />
-                <span className="text-sm font-medium">Map pin location</span>
+            <div className="relative rounded-2xl overflow-hidden min-h-[220px] border border-[var(--border-default)] bg-[var(--background-secondary)] flex flex-col items-center justify-center text-[var(--text-secondary)]">
+              <MapPin size={28} className="mb-2 text-[var(--brand-core)]" />
+              <span className="text-sm font-medium">Map pin location</span>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-[var(--border-light)]">
+            <div className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-3">
+              Store hours
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-2">
+              {storeHours.map((row) => (
+                <div
+                  key={row.label}
+                  className="flex items-center justify-between text-sm font-medium text-[var(--text-secondary)] py-2 border-b border-[var(--border-light)]"
+                >
+                  <span>{row.label}</span>
+                  <span
+                    className={
+                      row.value === "Closed"
+                        ? "text-[var(--text-secondary)]"
+                        : "text-[var(--text-primary)] font-semibold"
+                    }
+                  >
+                    {row.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* SECTION 3: Status */}
+        <Card className="p-8 rounded-2xl">
+          <SectionHeader
+            title="Status"
+            description="Your store's visibility and standing"
+          />
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+            <div>
+              <div className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2.5">
+                Store status
+              </div>
+              {store.isActive ? (
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  Approved &amp; Active
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                  Hidden
+                </span>
+              )}
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2.5">
+                Store ID
+              </div>
+              <div className="text-sm font-semibold text-[var(--text-primary)] font-mono">
+                {store.id}
               </div>
             </div>
-          </section>
-
-          {/* SECTION 3: Status */}
-          <section>
-            <div className="mb-6">
-              <h2 className="text-lg font-medium text-[var(--text-primary)]">
-                Status
-              </h2>
-              <p className="text-sm text-[var(--text-secondary)]">
-                Your store&apos;s visibility and standing
-              </p>
-            </div>
-
-            <div className="border border-[var(--border-default)] rounded-xl p-6 bg-[var(--background-elevated)]">
-              <div className="mb-4">
-                {store.isActive ? (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400">
-                    Approved &amp; Active
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">
-                    Hidden
-                  </span>
-                )}
+            <div>
+              <div className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2.5">
+                Opened date
               </div>
-
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <ValueCell label="Store ID">
-                  <span className="font-mono">{store.id}</span>
-                </ValueCell>
-                <ValueCell label="Opened Date">
-                  {formatDate(store.createdAt)}
-                </ValueCell>
-                <ValueCell label="Rating">
-                  <span className="flex items-center gap-1">
-                    4.9{" "}
-                    <Star size={14} className="text-amber-400 fill-amber-400" />
-                  </span>
-                </ValueCell>
-                <ValueCell label="Followers">0</ValueCell>
-              </dl>
+              <div className="text-sm font-semibold text-[var(--text-primary)]">
+                {formatDate(store.createdAt)}
+              </div>
             </div>
-          </section>
-        </div>
+            <div>
+              <div className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2.5">
+                Rating
+              </div>
+              <div className="flex items-center gap-1.5 text-sm font-bold text-[var(--text-primary)]">
+                4.9
+                <Star size={15} className="text-amber-400 fill-amber-400" />
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2.5">
+                Followers
+              </div>
+              <div className="text-sm font-semibold text-[var(--text-primary)]">
+                0
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );

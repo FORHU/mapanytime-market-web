@@ -19,6 +19,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useAuth } from "../hooks/useAuth";
+import {
+  isSellerRole,
+  isBuyerRole,
+  isAdminRole,
+  isAgentRole,
+} from "../utils/resolveHomeRoute";
 import type { UserRole as ApiUserRole } from "../api/login.api";
 import type { LoginRole } from "../types";
 
@@ -147,12 +153,10 @@ export default function AuthCard({
       setLoadingStep("Loading workspace...");
 
       const roles = result.user?.roles || [];
-      const isBuyer = roles.includes("BUYER");
-      const isSeller = roles.includes("SELLER");
-      const isAdmin = roles.some((r: string) =>
-        ["SUPER_ADMIN", "DEVELOPER", "ADMIN"].includes(r),
-      );
-      const isAgent = roles.includes("SUPPORT_AGENT");
+      const isBuyer = isBuyerRole(roles);
+      const isSeller = isSellerRole(roles);
+      const isAdmin = isAdminRole(roles);
+      const isAgent = isAgentRole(roles);
 
       toast.dismiss(toastId);
 
@@ -247,12 +251,10 @@ export default function AuthCard({
 
   if (showDualRolePrompt && pendingAuthResult) {
     const roles = pendingAuthResult.user?.roles || [];
-    const isBuyer = roles.includes("BUYER");
-    const isSeller = roles.includes("SELLER");
-    const isAdmin = roles.some((r: string) =>
-      ["SUPER_ADMIN", "DEVELOPER", "ADMIN"].includes(r),
-    );
-    const isAgent = roles.includes("SUPPORT_AGENT");
+    const isBuyer = isBuyerRole(roles);
+    const isSeller = isSellerRole(roles);
+    const isAdmin = isAdminRole(roles);
+    const isAgent = isAgentRole(roles);
 
     return (
       <PageShell>

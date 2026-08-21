@@ -45,6 +45,7 @@ export const StoreProfileSchema = z
     createdAt: z.string().optional(),
     updatedAt: z.string().optional(),
     storeLocations: StoreProfileLocationSchema.optional(),
+    primaryCategory: StoreProfileCategorySchema.nullable().optional(),
   })
   .loose();
 

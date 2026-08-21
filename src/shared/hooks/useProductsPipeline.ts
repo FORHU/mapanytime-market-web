@@ -240,6 +240,7 @@ export const useProductsPipeline = (options: UseProductsPipelineOptions) => {
     page: data.page,
     limit: data.limit,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     isError: query.isError,
     error: query.error,
     addProduct: addProductMutation.mutateAsync,

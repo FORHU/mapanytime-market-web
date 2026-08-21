@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { MapPin, X, Plus, Star, SaveIcon } from "lucide-react";
+import { MapPin, X, Plus, Star, SaveIcon, ArrowLeft } from "lucide-react";
 import {
   useStoreProfiles,
   useStoreCategories,
@@ -171,18 +171,27 @@ export function StoreProfileSettings({
             Manage how your store appears to customers
           </p>
         </div>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{
-            background: "var(--brand-core)",
-            color: "var(--background-primary)",
-          }}
-        >
-          <SaveIcon className="h-4 w-4" />
-          {isSubmitting ? "Saving…" : "Save Profile"}
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/seller/store-profile/view"
+            className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold border border-[var(--border-default)] text-[var(--text-primary)] bg-[var(--background-elevated)] transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--brand-core)] focus:ring-offset-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Link>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{
+              background: "var(--brand-core)",
+              color: "var(--background-primary)",
+            }}
+          >
+            <SaveIcon className="h-4 w-4" />
+            {isSubmitting ? "Saving…" : "Save Profile"}
+          </button>
+        </div>
       </div>
 
       <div className="space-y-8">
@@ -277,29 +286,6 @@ export function StoreProfileSettings({
                   Could not load categories.
                 </p>
               )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
-                Subcategories
-              </label>
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] text-sm font-medium rounded-full">
-                  Smartphones
-                  <button
-                    type="button"
-                    className="text-[var(--brand-core)] hover:text-[var(--md-sys-color-on-primary-container)] focus:outline-none"
-                  >
-                    <X size={14} />
-                  </button>
-                </span>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 px-3 py-1 border border-dashed border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] text-sm font-medium rounded-full transition-colors focus:outline-none"
-                >
-                  <Plus size={14} /> Add
-                </button>
-              </div>
             </div>
           </div>
         </section>
