@@ -40,6 +40,9 @@ export const StoreProfileSchema = z
     // a GET it is always undefined, so read `primaryCategoryId ?? categoryId`.
     primaryCategoryId: z.string().nullable().optional(),
     categoryId: z.string().nullable().optional(),
+    logoUrl: z.string().nullable().optional(),
+    // Shown on the store's map marker (backed by Stores.bannerId).
+    bannerUrl: z.string().nullable().optional(),
     isActive: z.boolean().default(true),
     approvalStatus: z.enum(["PENDING", "ACTIVE", "REJECTED"]).optional(),
     createdAt: z.string().optional(),
@@ -62,6 +65,9 @@ export const UpdateStoreProfileSchema = z.object({
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   categoryId: z.string().optional(),
   isActive: z.boolean().optional(),
+  // Files row id from the presigned-upload flow (useS3AssetUpload("stores")).
+  // null clears the store's photo.
+  bannerId: z.string().nullable().optional(),
   currentAddress: z.string().optional(),
   city: z.string().optional(),
   province: z.string().optional(),

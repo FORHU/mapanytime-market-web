@@ -39,13 +39,7 @@ export const getStoreCategories =
   };
 
 /**
- * Update store profile settings.
- *
- * BROKEN - PATCH /v1/stores/:id is not registered by the API. store.route.ts
- * defines only GET /nearby, GET /my-stores, GET /:id, GET /:id/products and
- * POST /, so this 404s. Nothing calls it today (the Save button in
- * StoreProfileSettings is a no-op), so the break is latent rather than live.
- * See docs/connection-audit.md §1.
+ * Update store profile settings via `PATCH /v1/stores/:id`.
  */
 export const updateStoreProfile = async (
   storeId: string,

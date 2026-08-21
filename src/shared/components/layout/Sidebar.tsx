@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
-  Sparkles,
   ShoppingBag,
   BarChart3,
   Store,
@@ -128,14 +127,6 @@ export function Sidebar({
           href: "/seller/products",
           icon: Package,
           roles: ["SELLER", "ADMIN"],
-        },
-        {
-          label: "Import products",
-          href: "/seller/ai-upload",
-          icon: Sparkles,
-          roles: ["SELLER", "ADMIN"],
-          badge: "AI",
-          requiresStore: true,
         },
         {
           label: "Stock levels",
