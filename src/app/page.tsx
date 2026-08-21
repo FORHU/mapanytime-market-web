@@ -10,10 +10,14 @@ import { LandingBenefits } from "@/features/landing/components/LandingBenefits";
 import { LandingCTA } from "@/features/landing/components/LandingCTA";
 import { LandingFooter } from "@/features/landing/components/LandingFooter";
 import ExploreMapSection from "@/components/home/ExploreMapSection";
+import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
+import { resolveHomeRoute } from "@/features/auth/utils/resolveHomeRoute";
 import { useState, useEffect } from "react";
 
 export default function MapAnytimeLanding() {
   const landing = useLandingPage();
+  const { roles, isHydrated } = useCurrentUser();
+  const homeRoute = isHydrated ? resolveHomeRoute(roles) : undefined;
   const [mounted, setMounted] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
 
@@ -33,7 +37,7 @@ export default function MapAnytimeLanding() {
         }}
       />
 
-      <LandingNav scrolled={landing.scrolled} />
+      <LandingNav scrolled={landing.scrolled} homeRoute={homeRoute} />
 
       <LandingHero
         submitted={landing.submitted}

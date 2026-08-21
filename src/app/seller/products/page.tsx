@@ -13,7 +13,10 @@ import { PaginationControls } from "@/shared/pagination/PaginationControls";
 import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
 import { useStoreCategories } from "@/features/stores/hooks/useStoreCategories";
 import { useSubCategories } from "@/features/stores/hooks/useSubCategories";
-import { Plus, Search, X } from "lucide-react";
+import { useSellerCategoryTree } from "@/features/seller-catalog/hooks/useSellerCategoryTree";
+import { CategoryFilterSelect } from "@/features/seller-catalog/components/CategoryFilterSelect";
+import type { SellerCategoryNode } from "@/shared/contracts/products.contract";
+import { Loader2, Plus, Search, X } from "lucide-react";
 
 export default function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -40,12 +43,19 @@ export default function ProductsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch, selectedCategoryId, sortDirection]);
 
+  // Categories are scoped to the active store context, so a selection made in
+  // one store would otherwise persist into the next and silently match nothing.
+  useEffect(() => {
+    setSelectedCategoryId("");
+  }, [activeStoreId]);
+
   // Consume orchestrated features and handle state updates via callbacks
   const {
     products,
     total,
     totalPages,
     isLoading,
+    isFetching,
     isError,
     error,
     addProduct,
@@ -89,13 +99,30 @@ export default function ProductsPage() {
     isError: subCategoriesError,
   } = useSubCategories(mainCategory?.id ?? null);
 
-  const categoryOptions = useMemo(
-    () => (subCategories ?? []).map((c) => ({ id: c.id, name: c.name })),
-    [subCategories],
-  );
+  // The filter's own source. Unlike the two hooks above (which are store-scoped
+  // and feed ProductForm), this works in All-Stores mode, where it aggregates
+  // the categories across every store the seller owns.
+  const {
+    data: categoryTree,
+    isLoading: categoryTreeLoading,
+    isError: categoryTreeError,
+  } = useSellerCategoryTree(activeStoreId);
+
+  const selectedCategoryName = useMemo(() => {
+    if (!selectedCategoryId) return null;
+    const find = (nodes: SellerCategoryNode[]): string | null => {
+      for (const node of nodes) {
+        if (node.id === selectedCategoryId) return node.name;
+        const match = find(node.children);
+        if (match) return match;
+      }
+      return null;
+    };
+    return find(categoryTree ?? []);
+  }, [categoryTree, selectedCategoryId]);
 
   const emptyStateMessage = selectedCategoryId
-    ? 'No products found in this category. Try another category or select "All Categories".'
+    ? `No products found in ${selectedCategoryName ?? "this category"}. Try another category or select "All Categories".`
     : debouncedSearch
       ? "No products match your search. Try a different keyword."
       : 'You haven\'t added any products yet. Tap "Add product" to list your first one.';
@@ -141,12 +168,6 @@ export default function ProductsPage() {
       </div>
 
       {/* ASYNC STATE RENDERING ELEMENT TILES */}
-      {isLoading && (
-        <div className="p-8 text-center text-sm text-[var(--text-secondary)] animate-pulse">
-          Loading your products…
-        </div>
-      )}
-
       {isError && (
         <div className="p-4 border border-rose-200 dark:border-rose-900 bg-rose-50/60 dark:bg-rose-950/20 rounded-xl text-left text-sm text-rose-700 dark:text-rose-300">
           <strong className="font-semibold">
@@ -171,13 +192,22 @@ export default function ProductsPage() {
       )}
 
       {/* 2. ONLY SHOW THE PRODUCTS GRID IF THE FORM IS CLOSED */}
-      {!isFormOpen && !isLoading && !isError && (
+      {!isFormOpen && !isError && (
         <div className="space-y-4">
           {/* HIDE SEARCH AND FILTERS WHEN PRODUCT DETAIL IS OPEN */}
           {!selectedProduct && (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+            <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+              <div className="relative flex-1 min-w-[260px]">
+                {isFetching ? (
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2">
+                    {/* animate-spin's keyframe sets `transform: rotate(...)` directly, which
+                    would fight the -translate-y-1/2 above if both were on one element — so
+                    the spin lives on this inner span, unpositioned. */}
+                    <Loader2 className="w-4 h-4 text-[var(--text-tertiary)] animate-spin" />
+                  </span>
+                ) : (
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+                )}
                 <input
                   type="text"
                   placeholder="Search by name or brand"
@@ -193,7 +223,7 @@ export default function ProductsPage() {
                 onChange={(e) =>
                   setSortDirection((e.target.value as "asc" | "desc") || null)
                 }
-                className="px-4 py-2 text-sm border rounded-xl focus:outline-none focus:border-[var(--brand-core)] transition-colors sm:w-48"
+                className="px-4 py-2 text-sm border rounded-xl focus:outline-none focus:border-[var(--brand-core)] transition-colors w-full md:w-48"
                 style={{
                   background: "var(--background-secondary)",
                   borderColor: "var(--border-default)",
@@ -219,36 +249,21 @@ export default function ProductsPage() {
                   Price: High → Low
                 </option>
               </select>
-              <select
+              <CategoryFilterSelect
+                tree={categoryTree ?? []}
                 value={selectedCategoryId}
-                onChange={(e) => setSelectedCategoryId(e.target.value)}
-                className="px-4 py-2 text-sm border rounded-xl focus:outline-none focus:border-[var(--brand-core)] transition-colors sm:w-52"
-                style={{
-                  background: "var(--background-secondary)",
-                  borderColor: "var(--border-default)",
-                  color: "var(--text-primary)",
-                }}
-              >
-                <option
-                  value=""
-                  className="bg-[var(--background-secondary)] text-[var(--text-primary)]"
-                >
-                  All Categories
-                </option>
-                {categoryOptions.map((category) => (
-                  <option
-                    key={category.id}
-                    value={category.id}
-                    className="bg-[var(--background-secondary)] text-[var(--text-primary)]"
-                  >
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedCategoryId}
+                isLoading={categoryTreeLoading}
+                isError={categoryTreeError}
+              />
             </div>
           )}
 
-          {products.length === 0 && total === 0 ? (
+          {isLoading ? (
+            <div className="p-8 text-center text-sm text-[var(--text-secondary)] animate-pulse">
+              Loading your products…
+            </div>
+          ) : products.length === 0 && total === 0 ? (
             <div className="p-12 text-center border border-dashed rounded-xl text-sm text-[var(--text-secondary)]">
               {emptyStateMessage}
             </div>
@@ -286,7 +301,7 @@ export default function ProductsPage() {
               page={Math.min(page, Math.max(1, totalPages))}
               totalPages={totalPages}
               onPageChange={goTo}
-              isLoading={isLoading}
+              isLoading={isLoading || isFetching}
             />
           )}
         </div>

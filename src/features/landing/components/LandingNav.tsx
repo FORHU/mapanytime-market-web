@@ -6,9 +6,10 @@ import Link from "next/link";
 
 interface LandingNavProps {
   scrolled: boolean;
+  homeRoute?: string | null;
 }
 
-export function LandingNav({ scrolled }: LandingNavProps) {
+export function LandingNav({ scrolled, homeRoute }: LandingNavProps) {
   return (
     <header
       className={clsx(
@@ -43,18 +44,29 @@ export function LandingNav({ scrolled }: LandingNavProps) {
             Our vision
           </a>
         </nav>
-        <Link
-          href="/register"
-          className="text-[11px] font-semibold text-[#7693a1] transition duration-200 hover:text-white mr-4"
-        >
-          Register
-        </Link>
-        <Link
-          href="/login"
-          className="flex items-center gap-[7px] rounded-full border border-white/[0.13] bg-white/[0.06] px-4 py-[10px] text-[11px] font-bold text-white transition duration-[250ms] hover:-translate-y-0.5 hover:border-[rgba(34,211,238,0.4)] hover:bg-[rgba(34,211,238,0.1)] max-landing-sm:px-[11px] max-landing-sm:py-2 max-landing-sm:text-[9px]"
-        >
-          Login
-        </Link>
+        {homeRoute ? (
+          <Link
+            href={homeRoute}
+            className="flex items-center gap-[7px] rounded-full border border-white/[0.13] bg-white/[0.06] px-4 py-[10px] text-[11px] font-bold text-white transition duration-[250ms] hover:-translate-y-0.5 hover:border-[rgba(34,211,238,0.4)] hover:bg-[rgba(34,211,238,0.1)] max-landing-sm:px-[11px] max-landing-sm:py-2 max-landing-sm:text-[9px]"
+          >
+            Dashboard
+          </Link>
+        ) : (
+          <>
+            <Link
+              href="/register"
+              className="text-[11px] font-semibold text-[#7693a1] transition duration-200 hover:text-white mr-4"
+            >
+              Register
+            </Link>
+            <Link
+              href="/login"
+              className="flex items-center gap-[7px] rounded-full border border-white/[0.13] bg-white/[0.06] px-4 py-[10px] text-[11px] font-bold text-white transition duration-[250ms] hover:-translate-y-0.5 hover:border-[rgba(34,211,238,0.4)] hover:bg-[rgba(34,211,238,0.1)] max-landing-sm:px-[11px] max-landing-sm:py-2 max-landing-sm:text-[9px]"
+            >
+              Login
+            </Link>
+          </>
+        )}
       </div>
     </header>
   );

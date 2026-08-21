@@ -42,6 +42,41 @@ export const ProductsApiResponseSchema = z.object({
 });
 
 /**
+ * A node of GET /api/v1/products/my-categories — the category hierarchy the
+ * seller actually has products in, across one store or all of them.
+ *
+ * Depth is unbounded, so this is declared recursively rather than as a fixed
+ * two-level shape. Note the flat `CategorySchema` in stores.contract.ts is a
+ * strict 2-field object that strips nesting — it can't be reused here.
+ */
+export type SellerCategoryNode = {
+  id: string;
+  name: string;
+  parentId: string | null;
+  directCount: number;
+  totalCount: number;
+  children: SellerCategoryNode[];
+};
+
+export const SellerCategoryNodeSchema: z.ZodType<SellerCategoryNode> = z.lazy(
+  () =>
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      parentId: z.string().nullable(),
+      directCount: z.number(),
+      totalCount: z.number(),
+      children: z.array(SellerCategoryNodeSchema),
+    }),
+);
+
+export const SellerCategoryTreeResponseSchema = z.object({
+  status: z.string().optional(),
+  statusCode: z.number().optional(),
+  data: z.array(SellerCategoryNodeSchema),
+});
+
+/**
  * Input for PUT /api/v1/products/:id — the editable product fields exposed in
  * the seller ProductDetailDialog. Description is capped to 600 chars to match
  * the existing ProductForm rule. Stock is adjusted via the inventory restock

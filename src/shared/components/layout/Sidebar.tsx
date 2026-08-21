@@ -33,6 +33,25 @@ export interface ActiveStoreSummary {
   storeName: string;
 }
 
+/** Logo + wordmark. Shared so the linked and locked branding stay identical. */
+function BrandMark() {
+  return (
+    <>
+      <div className="w-8 h-8 rounded-xl bg-[var(--brand-core)] flex items-center justify-center text-white font-black text-sm shadow-md">
+        MA
+      </div>
+      <div className="flex flex-col text-left">
+        <span className="text-base font-semibold tracking-tight leading-none text-[var(--text-primary)]">
+          Map<span style={{ color: "var(--brand-core)" }}>Anytime</span>
+        </span>
+        <span className="text-xs text-[var(--text-secondary)] mt-0.5">
+          Seller tools
+        </span>
+      </div>
+    </>
+  );
+}
+
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -243,22 +262,29 @@ export function Sidebar({
         <div className="flex flex-col flex-1 min-h-0 space-y-6">
           {/* Header Branding */}
           <div className="flex items-center justify-between shrink-0">
-            <div
-              className="flex items-center gap-2.5 cursor-pointer"
-              onClick={() => !isLocked && router.push("/")}
-            >
-              <div className="w-8 h-8 rounded-xl bg-[var(--brand-core)] flex items-center justify-center text-white font-black text-sm shadow-md">
-                MA
+            {/* Points into the seller area, NOT "/". Sending a signed-in seller
+                to the public landing page read as being logged out — it has no
+                route back in. manage-stores is the seller hub that renders with
+                or without an active store, and is already where
+                handleClearContext lands.
+
+                A real <Link>, not a div+onClick: that gave no keyboard access,
+                no Enter activation and no ctrl/middle-click. When locked there
+                is nowhere to go, so it degrades to a plain div rather than a
+                dead anchor. */}
+            {isLocked ? (
+              <div className="flex items-center gap-2.5">
+                <BrandMark />
               </div>
-              <div className="flex flex-col text-left">
-                <span className="text-base font-semibold tracking-tight leading-none text-[var(--text-primary)]">
-                  Map<span style={{ color: "var(--brand-core)" }}>Anytime</span>
-                </span>
-                <span className="text-xs text-[var(--text-secondary)] mt-0.5">
-                  Seller tools
-                </span>
-              </div>
-            </div>
+            ) : (
+              <Link
+                href="/seller/manage-stores"
+                onClick={onClose}
+                className="flex items-center gap-2.5 cursor-pointer"
+              >
+                <BrandMark />
+              </Link>
+            )}
             <button
               onClick={onClose}
               className="p-1 rounded-lg md:hidden hover:bg-zinc-100 dark:hover:bg-zinc-800"

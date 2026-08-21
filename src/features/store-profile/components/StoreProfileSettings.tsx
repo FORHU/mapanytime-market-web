@@ -339,29 +339,6 @@ export function StoreProfileSettings({
                 </p>
               )}
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
-                Subcategories
-              </label>
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] text-sm font-medium rounded-full">
-                  Smartphones
-                  <button
-                    type="button"
-                    className="text-[var(--brand-core)] hover:text-[var(--md-sys-color-on-primary-container)] focus:outline-none"
-                  >
-                    <X size={14} />
-                  </button>
-                </span>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 px-3 py-1 border border-dashed border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] text-sm font-medium rounded-full transition-colors focus:outline-none"
-                >
-                  <Plus size={14} /> Add
-                </button>
-              </div>
-            </div>
           </div>
         </section>
 

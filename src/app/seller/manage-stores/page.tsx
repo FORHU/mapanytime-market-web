@@ -25,6 +25,12 @@ export default function ManageStoresPage() {
   const error = storesQuery.error ?? propertiesQuery.error;
 
   const handleSelectStore = (storeId: string) => {
+    const store = storesQuery.data?.find((s) => s.id === storeId);
+    if (store && store.approvalStatus !== "ACTIVE") {
+      toast.error("Cannot access store: currently under review.");
+      return;
+    }
+
     localStorage.setItem("active_store_context_id", storeId);
     localStorage.removeItem("active_property_context_id");
     router.push("/seller/dashboard");
