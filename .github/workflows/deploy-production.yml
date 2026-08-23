@@ -33,15 +33,6 @@ jobs:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
       IMAGE_TAG: production-${{ github.sha }}
-      # Runtime-only (never build args): the presign route handler at
-      # src/app/api/file-uploads/presigned-url reads these on the server. They
-      # must NOT be NEXT_PUBLIC_ or they would ship to the browser.
-      #
-      # Do NOT set AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY at job level —
-      # that would shadow `configure-aws-credentials`. That action exports
-      # the existing secrets.AWS_ACCESS_KEY_ID pair for later steps; the
-      # Deploy to EC2 step forwards those same vars over SSH (no second key).
-      AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
 
     steps:
       - name: Checkout
@@ -118,7 +109,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
 
-          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV,NEXT_PUBLIC_SOCKET_SERVER_URL,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_S3_BUCKET_NAME
+          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV,NEXT_PUBLIC_SOCKET_SERVER_URL,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY
 
           script: |
             set -euo pipefail
@@ -159,10 +150,6 @@ jobs:
               -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
               -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
               -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
-              -e AWS_REGION="${AWS_REGION:-}" \
-              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
-              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
-              -e AWS_S3_BUCKET_NAME="${AWS_S3_BUCKET_NAME:-}" \
               "$IMAGE"
 
             healthy=false
@@ -204,10 +191,6 @@ jobs:
               -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
               -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
               -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
-              -e AWS_REGION="${AWS_REGION:-}" \
-              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
-              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
-              -e AWS_S3_BUCKET_NAME="${AWS_S3_BUCKET_NAME:-}" \
               "$IMAGE"
 
             sleep 2
