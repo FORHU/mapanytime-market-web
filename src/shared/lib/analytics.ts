@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@/shared/config/api";
+import { getToken } from "@/shared/lib/token";
 
 const SESSION_KEY = "mapanytime_analytics_session_id";
 
@@ -47,15 +48,23 @@ export const trackEvent = async (
 ) => {
   if (typeof window === "undefined") return;
 
-  const sessionId = getSessionId();
-
   try {
+    const sessionId = getSessionId();
+    // Not routed through shared/lib/http.ts's fetcher: that helper treats a
+    // 401 as a reason to attempt token refresh and redirect to /login, which
+    // must never happen because of a background analytics call. Attach the
+    // token manually instead, so a signed-in user's events still carry userId
+    // (analytics.controller.ts reads it from req.user) without inheriting
+    // fetcher's auth-failure side effects.
+    const token = getToken();
+
     // `/api/v1`, not `/v1` — NEXT_PUBLIC_API_URL is an origin with no path and
     // routes.ts is mounted at app.use('/api', router).
     await fetch(`${API_BASE_URL}/api/v1/analytics/events`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({
         eventType,
