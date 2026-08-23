@@ -1,6 +1,3 @@
-"use client";
-
-import React from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/shared/components/ui/Card";
 import { LineChart } from "lucide-react";
