@@ -8,6 +8,7 @@ import { socketBackedQueryOptions } from "@/shared/lib/query-options";
 
 export interface OrderRecord {
   id: string;
+  storeId: string;
   sku: string;
   quantity: number;
   customer: string;
@@ -20,6 +21,9 @@ export interface OrderRecord {
   marketplaceFeeAmount?: number;
   sellerNetAmount?: number;
   totalAmount?: number;
+  /** From the order's latest payment row — 'CASH' for Cash on Pickup. */
+  paymentMethodType?: string;
+  paymentMethodCode?: string;
 }
 
 export interface OrdersPage {
@@ -99,12 +103,16 @@ function normalize(o: Record<string, any>): OrderRecord {
     o.quantity ||
     1;
 
+  const latestPaymentMethod = o.payment?.[0]?.paymentMethod;
+
   return {
     ...o,
     sku: itemNames,
     quantity: totalQty,
     customer: o.buyer?.displayName || o.customer || "Customer",
     stockSnapshot: typeof o.stockSnapshot === "number" ? o.stockSnapshot : null,
+    paymentMethodType: latestPaymentMethod?.type,
+    paymentMethodCode: latestPaymentMethod?.code,
   } as OrderRecord;
 }
 
@@ -302,6 +310,29 @@ export const useOrdersPipeline = (params: OrdersPipelineParams) => {
     },
   });
 
+  const generateCashPickupCodeMutation = useMutation({
+    mutationFn: async ({
+      orderId,
+      storeId,
+    }: {
+      orderId: string;
+      storeId: string;
+    }) => {
+      const res: any = await fetcher(
+        `/api/v1/orders/cash-pickup/generate-code`,
+        {
+          method: "POST",
+          body: JSON.stringify({ orderId, storeId }),
+        },
+      );
+      return res?.data as { code: string; expiresInSeconds: number };
+    },
+    // The order only actually completes once the buyer scans/confirms —
+    // generating the code doesn't change status, so no cache invalidation
+    // here. `useOrdersPipeline`'s socket listener picks up the eventual
+    // COMPLETED transition once the buyer confirms.
+  });
+
   return {
     orders: data.items,
     totalCount: data.total,
@@ -313,6 +344,8 @@ export const useOrdersPipeline = (params: OrdersPipelineParams) => {
       fulfillmentMutation.mutate({ orderId, status }),
     isMutationPending: fulfillmentMutation.isPending,
     mutationVariables: fulfillmentMutation.variables,
+    generateCashPickupCode: (orderId: string, storeId: string) =>
+      generateCashPickupCodeMutation.mutateAsync({ orderId, storeId }),
     forceManualRefresh: () => {
       queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ORDER_STATS_QUERY_KEY });
