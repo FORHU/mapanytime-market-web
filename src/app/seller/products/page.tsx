@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ProductForm from "@/features/seller-catalog/components/ProductForm";
 import { ProductTable } from "@/features/seller-catalog/components/ProductTable";
 import { ProductDetail } from "@/features/seller-catalog/components/ProductDetailDialog";
@@ -20,7 +20,10 @@ import { Loader2, Plus, Search, X } from "lucide-react";
 
 export default function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(
+  // Only the id is held here. The product itself is read back out of the query
+  // cache below, so the detail view always shows what the server actually
+  // stored rather than a locally-assembled guess at what the save did.
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
     null,
   );
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,6 +77,18 @@ export default function ProductsPage() {
     sortOrder: sortDirection ?? undefined,
     onMutationSuccess: () => setIsFormOpen(false),
   });
+
+  // Resolved from the current page rather than stored, so a refetch after a
+  // save flows straight through. `lastSelected` covers the gap while the
+  // refetch is in flight, and the case where an edit sorts the product off
+  // this page — without it the detail view would blink back to the table.
+  const lastSelected = useRef<ProductItem | null>(null);
+  const selectedProduct = useMemo(() => {
+    if (!selectedProductId) return null;
+    const fromList = products.find((p) => p.id === selectedProductId);
+    if (fromList) lastSelected.current = fromList;
+    return fromList ?? lastSelected.current;
+  }, [products, selectedProductId]);
 
   // Clamp an out-of-range page (e.g. the last item on page 5 was archived).
   useEffect(() => {
@@ -274,23 +289,18 @@ export default function ProductsPage() {
           ) : selectedProduct ? (
             <ProductDetail
               product={selectedProduct}
-              onBack={() => setSelectedProduct(null)}
+              onBack={() => setSelectedProductId(null)}
               onDelete={(id) =>
-                deleteProduct(id).then(() => setSelectedProduct(null))
+                deleteProduct(id).then(() => setSelectedProductId(null))
               }
               isDeleting={isDeleting}
-              onUpdate={(id, input) =>
-                updateProduct(id, input, selectedProduct).then((updated) => {
-                  setSelectedProduct(updated);
-                  return updated;
-                })
-              }
+              onUpdate={updateProduct}
               isUpdating={isUpdating}
             />
           ) : (
             <ProductTable
               products={products}
-              onSelect={setSelectedProduct}
+              onSelect={(product) => setSelectedProductId(product.id ?? null)}
               showStoreColumn={!activeStoreId}
             />
           )}

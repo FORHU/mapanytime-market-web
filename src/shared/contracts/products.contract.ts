@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { PRODUCT_LIMITS } from "@/shared/constants/product-limits.constant";
+import { ALL_PRODUCT_TAGS_TUPLE } from "@/shared/constants/product-tags.constant";
 
 export const SellerProductSchema = z.object({
   id: z.string(),
@@ -25,6 +27,8 @@ export const SellerProductSchema = z.object({
     )
     .optional(),
   store: z.object({ storeName: z.string() }).optional(),
+  /** Join records from GET /api/v1/products — flattened to tag names by the pipeline mapper. */
+  tags: z.array(z.object({ tag: z.object({ name: z.string() }) })).optional(),
 });
 
 export const ProductsListDataSchema = z.object({
@@ -83,15 +87,27 @@ export const SellerCategoryTreeResponseSchema = z.object({
  * endpoint, which only supports increases, so it must never be negative.
  */
 export const UpdateProductInputSchema = z.object({
-  name: z.string().min(1, "Product name is required"),
+  name: z
+    .string()
+    .min(1, "Product name is required")
+    .max(PRODUCT_LIMITS.NAME_MAX),
+  brand: z.string().max(PRODUCT_LIMITS.BRAND_MAX).optional(),
   description: z
     .string()
-    .max(600, "Description must be 600 characters or fewer"),
-  price: z.coerce.number().positive("Price must be a positive number"),
+    .max(
+      PRODUCT_LIMITS.DESCRIPTION_MAX,
+      `Description must be ${PRODUCT_LIMITS.DESCRIPTION_MAX} characters or fewer`,
+    ),
+  tags: z.array(z.enum(ALL_PRODUCT_TAGS_TUPLE)).optional(),
+  price: z.coerce
+    .number()
+    .positive("Price must be a positive number")
+    .max(PRODUCT_LIMITS.PRICE_MAX),
   stock: z.coerce
     .number()
     .int("Stock must be a non-negative whole number")
-    .min(0, "Stock must be a non-negative whole number"),
+    .min(0, "Stock must be a non-negative whole number")
+    .max(PRODUCT_LIMITS.STOCK_MAX),
 });
 
 export type SellerProduct = z.infer<typeof SellerProductSchema>;

@@ -1,22 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, Tag, Layers, Package, Trash2, Pencil } from "lucide-react";
+import { ArrowLeft, Package, Trash2, Pencil, MoreVertical } from "lucide-react";
 import { toast } from "sonner";
 import type { ProductItem } from "@/shared/hooks/useProductsPipeline";
+import {
+  TAG_LABELS,
+  type ProductTagType,
+} from "@/shared/constants/product-tags.constant";
 import type { UpdateProductInput } from "@/shared/contracts/products.contract";
 import { ProductEditForm } from "./ProductEditForm";
+import { ConfirmDialog } from "@/shared/components/ui/ConfirmDialog";
 
 interface ProductDetailProps {
   product: ProductItem;
-  onBack: () => void; // Renamed from onClose to onBack for page flow
+  onBack: () => void;
   onDelete: (id: string) => void;
   isDeleting: boolean;
-  onUpdate: (
-    productId: string,
-    input: UpdateProductInput,
-  ) => Promise<ProductItem>;
+  onUpdate: (productId: string, input: UpdateProductInput) => Promise<void>;
   isUpdating: boolean;
 }
 
@@ -29,11 +31,35 @@ export function ProductDetail({
   isUpdating,
 }: ProductDetailProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  // Reset editing state if the product changes
   useEffect(() => {
     setIsEditing(false);
+    setIsMenuOpen(false);
+    setIsConfirmOpen(false);
   }, [product.id]);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMenuOpen]);
 
   const handleUpdate = async (input: UpdateProductInput) => {
     try {
@@ -54,200 +80,233 @@ export function ProductDetail({
   });
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5 rounded-3xl border border-[var(--border-default)] bg-[var(--background-primary)] p-6 shadow-sm sm:p-10">
+    <div className="mx-auto w-full max-w-6xl rounded-3xl border border-[var(--border-default)] bg-[var(--background-primary)] p-6 sm:p-10">
       {/* Header / Navigation */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border-light)] pb-6">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-8">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)]"
+          className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold  bg-[var(--brand-dark)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)]"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Products
+          Back
         </button>
 
         {!isEditing && (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors bg-[var(--background-secondary)] hover:bg-[var(--border-light)] text-[var(--text-primary)] border border-[var(--border-light)]"
-            aria-label="Edit product"
-          >
-            <Pencil className="h-4 w-4 text-emerald-500" />
-            Edit Product
-          </button>
-        )}
-      </div>
-
-      <div className="space-y-8">
-        <div>
-          <h2
-            id="product-detail-title"
-            className="text-3xl font-bold tracking-tight text-[var(--text-primary)] sm:text-4xl"
-          >
-            {product.name}
-          </h2>
-          {product.brand && (
-            <p
-              className="mt-2 text-lg font-medium"
-              style={{ color: "var(--text-secondary)" }}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setIsMenuOpen((open) => !open)}
+              disabled={isDeleting}
+              aria-label="More actions"
+              aria-haspopup="menu"
+              aria-expanded={isMenuOpen}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-tertiary)] transition-colors hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40"
             >
-              Brand: {product.brand}
-            </p>
-          )}
-        </div>
-
-        {isEditing ? (
-          <div className="mx-auto max-w-2xl rounded-2xl bg-[var(--background-secondary)] p-6 border border-[var(--border-light)]">
-            <ProductEditForm
-              product={product}
-              isSaving={isUpdating}
-              onCancel={() => setIsEditing(false)}
-              onSubmit={handleUpdate}
-            />
-          </div>
-        ) : (
-          <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr] lg:gap-12">
-            {/* Left Column: Image */}
-            <div className="space-y-4">
-              {product.imageUrl ? (
-                <div className="relative aspect-square w-full overflow-hidden rounded-3xl border border-[var(--border-light)] bg-[var(--background-secondary)]">
-                  <Image
-                    src={product.imageUrl}
-                    alt={product.name}
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    className="object-contain p-6"
-                    unoptimized
-                  />
-                </div>
-              ) : (
-                <div
-                  className="flex aspect-square w-full items-center justify-center rounded-3xl border border-[var(--border-light)]"
-                  style={{ background: "var(--background-secondary)" }}
-                >
-                  <Package
-                    className="h-20 w-20"
-                    style={{ color: "var(--text-tertiary)" }}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Right Column: Details */}
-            <div className="flex flex-col space-y-8">
-              <div className="flex flex-wrap gap-3">
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium"
-                  style={{
-                    borderColor: "var(--border-light)",
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  <Tag className="h-4 w-4" />
-                  {product.category}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium ${
-                    product.stock === 0
-                      ? "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-400"
-                      : "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400"
-                  }`}
-                >
-                  <Package className="h-4 w-4" />
-                  {product.stock === 0
-                    ? "Out of stock"
-                    : `${product.stock} in stock`}
-                </span>
-                {product.tags && product.tags.length > 0 && (
-                  <span
-                    className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium"
-                    style={{
-                      borderColor: "var(--border-light)",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    <Layers className="h-4 w-4" />
-                    {product.tags.join(", ")}
-                  </span>
-                )}
-              </div>
-
-              {product.description && (
-                <div className="rounded-2xl bg-[var(--background-secondary)] p-6">
-                  <h3
-                    className="text-sm font-bold uppercase tracking-wider"
-                    style={{ color: "var(--text-tertiary)" }}
-                  >
-                    Description
-                  </h3>
-                  <p
-                    className="mt-3 text-base leading-relaxed"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    {product.description}
-                  </p>
-                </div>
-              )}
-
+              <MoreVertical className="h-5 w-5" />
+            </button>
+            {isMenuOpen && (
               <div
-                className="mt-auto rounded-2xl border p-6 shadow-sm"
+                role="menu"
+                aria-label="Product actions"
+                className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-2xl border bg-[var(--background-primary)] py-1.5 shadow-xl"
                 style={{ borderColor: "var(--border-light)" }}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3
-                      className="text-sm font-bold uppercase tracking-wider"
-                      style={{ color: "var(--text-tertiary)" }}
-                    >
-                      Price
-                    </h3>
-                    <p className="mt-2 text-4xl font-bold text-[var(--text-primary)]">
-                      ₱{formattedPrice}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <h3
-                      className="text-sm font-bold uppercase tracking-wider"
-                      style={{ color: "var(--text-tertiary)" }}
-                    >
-                      Stock
-                    </h3>
-                    <p
-                      className={`mt-2 text-2xl font-semibold ${
-                        product.stock === 0
-                          ? "text-rose-600 dark:text-rose-400"
-                          : "text-emerald-600 dark:text-emerald-400"
-                      }`}
-                    >
-                      {product.stock === 0
-                        ? "Unavailable"
-                        : `${product.stock} units`}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4">
                 <button
+                  role="menuitem"
                   onClick={() => {
-                    if (
-                      window.confirm(
-                        "Are you sure you want to delete this product? This action cannot be undone.",
-                      )
-                    ) {
-                      onDelete(product.id!);
-                    }
+                    setIsMenuOpen(false);
+                    setIsEditing(true);
+                  }}
+                  className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)]"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit product
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setIsConfirmOpen(true);
                   }}
                   disabled={isDeleting}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 text-base font-semibold text-rose-500 transition-colors hover:bg-rose-500 hover:text-white disabled:opacity-40 border border-rose-200 dark:border-rose-900"
+                  className="flex w-full items-center gap-2.5 border-t border-[var(--border-light)] px-4 py-3 text-left text-sm font-medium text-[#E8567D] transition-colors hover:bg-[#E8567D]/10 disabled:opacity-40"
                 >
-                  <Trash2 className="h-5 w-5" />
-                  {isDeleting ? "Deleting…" : "Delete Product"}
+                  <Trash2 className="h-4 w-4" />
+                  Archive product
                 </button>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
+
+      {isEditing ? (
+        <div className="mx-auto max-w-2xl rounded-2xl bg-[var(--background-secondary)] p-6 border border-[var(--border-light)]">
+          <ProductEditForm
+            product={product}
+            isSaving={isUpdating}
+            onCancel={() => setIsEditing(false)}
+            onSubmit={handleUpdate}
+          />
+        </div>
+      ) : (
+        <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr] lg:gap-12">
+          {/* Left Column: Product Image */}
+          <div>
+            {product.imageUrl ? (
+              <div className="relative aspect-square w-full overflow-hidden rounded-3xl border-2 border-dashed border-[var(--border-light)] bg-[var(--background-secondary)]">
+                <Image
+                  src={product.imageUrl}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <div
+                className="flex aspect-square w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-[var(--border-light)]"
+                style={{ background: "var(--background-secondary)" }}
+              >
+                <Package
+                  className="h-20 w-20 mb-2"
+                  style={{ color: "var(--text-tertiary)" }}
+                />
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  No product photo
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Product Details */}
+          <div className="flex flex-col space-y-6 overflow-hidden min-w-0">
+            {/* Brand / Manufacturer */}
+            {product.brand && (
+              <div className="w-full overflow-hidden">
+                <p
+                  className="text-xs font-bold uppercase tracking-widest break-words overflow-hidden"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  {product.brand}
+                </p>
+              </div>
+            )}
+
+            {/* Product Title */}
+            <div className="w-full overflow-hidden">
+              <h1
+                id="product-detail-title"
+                className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--text-primary)] break-words overflow-hidden"
+              >
+                {product.name}
+              </h1>
+            </div>
+
+            {/* Price and Status Badge */}
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-4xl font-bold text-[var(--text-primary)]">
+                  ₱{formattedPrice}
+                </p>
+              </div>
+              <div>
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium ${
+                    product.stock === 0
+                      ? "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400"
+                      : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                  }`}
+                >
+                  <span className="h-2 w-2 rounded-full bg-current"></span>
+                  {product.stock === 0 ? "Out of Stock" : "In Stock"}
+                </span>
+              </div>
+            </div>
+
+            {/* Product Description */}
+            {product.description && (
+              <div className="w-full overflow-hidden">
+                <p
+                  className="text-base leading-relaxed break-words overflow-hidden"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {product.description}
+                </p>
+              </div>
+            )}
+
+            {/* Product Tags */}
+            {product.tags && product.tags.length > 0 && (
+              <div>
+                <p
+                  className="mb-3 text-sm font-semibold"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  Tags
+                </p>
+
+                <div className="flex flex-wrap gap-3">
+                  {product.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center rounded-full border border-[var(--border-light)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)]"
+                    >
+                      {TAG_LABELS[tag as ProductTagType] ?? tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Product Details Card */}
+            <div
+              className="rounded-2xl border p-6"
+              style={{ borderColor: "var(--border-light)" }}
+            >
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: "var(--text-tertiary)" }}
+                  >
+                    Stock
+                  </span>
+                  <span className="text-sm font-semibold text-[var(--text-primary)]">
+                    {product.stock} units
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-[var(--border-light)] pt-4">
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: "var(--text-tertiary)" }}
+                  >
+                    Category
+                  </span>
+                  <span className="text-sm font-semibold text-[var(--text-primary)]">
+                    {product.category}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={isConfirmOpen}
+        title="Archive this product?"
+        description={`"${product.name}" will be archived and hidden from your storefront. Existing orders keep their record of it.`}
+        confirmLabel="Archive"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={() => onDelete(product.id!)}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </div>
   );
 }

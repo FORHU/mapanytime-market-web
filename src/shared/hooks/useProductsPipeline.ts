@@ -90,6 +90,7 @@ function mapProductItem(product: SellerProduct): ProductItem {
     stock: product.inventory?.[0]?.quantityOnHand || 0,
     imageUrl: product.productImages?.[0]?.file?.url || undefined,
     storeName: product.store?.storeName,
+    tags: product.tags?.map((productTag) => productTag.tag.name) ?? [],
   };
 }
 
@@ -196,33 +197,17 @@ export const useProductsPipeline = (options: UseProductsPipelineOptions) => {
     mutationFn: async ({
       productId,
       input,
-      current,
     }: {
       productId: string;
       input: UpdateProductInput;
-      current: ProductItem;
-    }): Promise<ProductItem> => {
-      const { name, description, price, stock } = input;
-
+    }): Promise<void> => {
+      // Fields and stock go in one request: the server applies both inside a
+      // single transaction, so an edit can no longer half-land the way two
+      // sequential calls could.
       await fetcher(`/api/v1/products/${productId}`, {
         method: "PUT",
-        body: JSON.stringify({ name, description, price }),
+        body: JSON.stringify(input),
       });
-
-      // The backend computes the delta transactionally from the absolute target,
-      // so stock can be increased or decreased safely.
-      await fetcher(`/api/v1/inventory/${productId}/adjust`, {
-        method: "PATCH",
-        body: JSON.stringify({ targetQuantity: stock }),
-      });
-
-      return {
-        ...current,
-        name,
-        description,
-        price: price.toString(),
-        stock,
-      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -247,11 +232,8 @@ export const useProductsPipeline = (options: UseProductsPipelineOptions) => {
     isAdding: addProductMutation.isPending,
     deleteProduct: deleteProductMutation.mutateAsync,
     isDeleting: deleteProductMutation.isPending,
-    updateProduct: (
-      productId: string,
-      input: UpdateProductInput,
-      current: ProductItem,
-    ) => updateProductMutation.mutateAsync({ productId, input, current }),
+    updateProduct: (productId: string, input: UpdateProductInput) =>
+      updateProductMutation.mutateAsync({ productId, input }),
     isUpdating: updateProductMutation.isPending,
   };
 };
