@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { MapPin, X, Plus, Star, SaveIcon, ImagePlus } from "lucide-react";
+import { MapPin, Star, SaveIcon, ImagePlus } from "lucide-react";
 import {
   useStoreProfiles,
   useStoreCategories,

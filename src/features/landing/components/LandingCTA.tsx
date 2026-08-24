@@ -1,5 +1,3 @@
-"use client";
-
 import { ArrowRight, Store } from "lucide-react";
 import Link from "next/link";
 

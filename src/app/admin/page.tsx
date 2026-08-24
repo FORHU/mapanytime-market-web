@@ -6,7 +6,6 @@
 // has no period-over-period comparison to base them on, and a fabricated delta
 // beside a real figure is worse than no delta.
 // See mapanytime-api/docs/payments-rework-review.md §13.
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
   Store,
@@ -203,12 +202,10 @@ export default function AdminDashboardPage() {
         {kpiCards.map((kpi, idx) => {
           const Icon = kpi.icon;
           return (
-            <motion.div
+            <div
               key={kpi.title}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.08 }}
-              className={`p-6 rounded-2xl border ${kpi.border} bg-[var(--background-secondary)]/60 backdrop-blur-md space-y-4 hover:border-sky-500/40 transition-all`}
+              style={{ animationDelay: `${idx * 0.08}s` }}
+              className={`animate-fade-in-up p-6 rounded-2xl border ${kpi.border} bg-[var(--background-secondary)]/60 backdrop-blur-md space-y-4 hover:border-sky-500/40 transition-all`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
@@ -226,7 +223,7 @@ export default function AdminDashboardPage() {
                   <span className={kpi.color}>{kpi.change}</span>
                 </div>
               </div>
-            </motion.div>
+            </div>
           );
         })}
       </div>

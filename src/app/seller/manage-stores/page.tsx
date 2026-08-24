@@ -26,6 +26,8 @@ export default function ManageStoresPage() {
 
   const handleSelectStore = (storeId: string) => {
     const store = storesQuery.data?.find((s) => s.id === storeId);
+    // FIXME: blocks legacy stores with approvalStatus undefined + isActive:true,
+    // which StoreManagementDashboard's badge treats as ACTIVE. Match that fallback here.
     if (store && store.approvalStatus !== "ACTIVE") {
       toast.error("Cannot access store: currently under review.");
       return;

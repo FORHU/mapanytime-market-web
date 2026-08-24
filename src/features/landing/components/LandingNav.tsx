@@ -1,5 +1,3 @@
-"use client";
-
 import clsx from "clsx";
 import { LogoIcon } from "./ui/LogoIcon";
 import Link from "next/link";

@@ -41,6 +41,10 @@ const config: Config = {
           from: { opacity: "0.8", transform: "scale(0.6)" },
           to: { opacity: "0", transform: "scale(2.6)" },
         },
+        "fade-in-up": {
+          from: { opacity: "0", transform: "translateY(15px)" },
+          to: { opacity: "1", transform: "none" },
+        },
       },
       animation: {
         "hero-in": "hero-in 0.9s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -50,6 +54,7 @@ const config: Config = {
         "ai-float": "ai-float 5s ease-in-out infinite",
         scan: "scan 2.5s ease-in-out infinite",
         "location-pulse": "location-pulse 2s ease-out infinite",
+        "fade-in-up": "fade-in-up 0.4s ease-out both",
       },
       colors: {
         "surface-tint": "var(--md-sys-color-surface-tint)",

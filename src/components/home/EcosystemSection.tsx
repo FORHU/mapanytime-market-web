@@ -1,5 +1,3 @@
-"use client";
-
 import { Handshake, Store, ShoppingCart, ArrowRight } from "lucide-react";
 
 export default function EcosystemSection() {

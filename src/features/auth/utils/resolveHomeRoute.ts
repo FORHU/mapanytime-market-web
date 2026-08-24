@@ -7,6 +7,8 @@
  * single-role behaviour is unchanged by the extraction.
  */
 
+// TODO: duplicates the same literal list in AdminAuthGate.tsx (and inline
+// copies in SellerLayout.tsx / buyer/layout.tsx) — extract to one shared source.
 export const ADMIN_ROLES = ["SUPER_ADMIN", "DEVELOPER", "ADMIN"];
 
 export function isSellerRole(roles: string[]) {
