@@ -18,6 +18,18 @@ export const AdFormatSchema = z.enum([
   "SPONSORED_SEARCH",
 ]);
 
+/**
+ * Derived server-side from (startAt, expiresAt, isActive) — never sent by the
+ * client. `isActive` alone no longer means "live"; it is the seller's pause
+ * switch, and this is the field to render.
+ */
+export const AdWindowStateSchema = z.enum([
+  "SCHEDULED",
+  "LIVE",
+  "PAUSED",
+  "ENDED",
+]);
+
 export const PromotionProductLinkSchema = z.object({
   productId: z.string(),
   variantId: z.string().nullable().optional(),
@@ -39,7 +51,10 @@ export const PromotionSchema = z
     buyQuantity: z.number().nullable().optional(),
     freeQuantity: z.number().nullable().optional(),
     isActive: z.boolean(),
+    startAt: z.string().nullable().optional(),
     expiresAt: z.string().nullable().optional(),
+    state: AdWindowStateSchema.optional(),
+    storeTimezone: z.string().optional(),
     goal: AdGoalSchema.nullable().optional(),
     format: AdFormatSchema.nullable().optional(),
     radiusKm: z.number().nullable().optional(),
@@ -53,7 +68,27 @@ export const PromotionSchema = z
   })
   .loose();
 
-export const PromotionsResponseSchema = z.array(PromotionSchema);
+/**
+ * The list endpoint now wraps its rows so it can carry `serverTime`, which the
+ * UI uses to measure its own clock drift instead of trusting the browser for
+ * countdowns and past-time checks. The bare-array form is still accepted so a
+ * web deploy that lands before the API one keeps working.
+ */
+export const PromotionsResponseSchema = z.union([
+  z.object({
+    serverTime: z.string(),
+    items: z.array(PromotionSchema),
+  }),
+  z.array(PromotionSchema),
+]);
+
+export function unwrapPromotions(response: PromotionsResponse): {
+  items: Promotion[];
+  serverTime: string | null;
+} {
+  if (Array.isArray(response)) return { items: response, serverTime: null };
+  return { items: response.items, serverTime: response.serverTime };
+}
 
 export const PromotionFieldsSchema = z.object({
   kind: PromotionKindSchema,
@@ -67,7 +102,8 @@ export const PromotionFieldsSchema = z.object({
   discountValue: z.number().positive().optional(),
   buyQuantity: z.number().int().min(1).optional(),
   freeQuantity: z.number().int().min(1).optional(),
-  expiresAt: z.string().optional(),
+  startAt: z.string().nullable().optional(),
+  expiresAt: z.string().nullable().optional(),
   goal: AdGoalSchema.optional(),
   format: AdFormatSchema.optional(),
   radiusKm: z.number().int().min(1).max(50).optional(),
@@ -82,6 +118,7 @@ export const CreatePromotionPayloadSchema = PromotionFieldsSchema.extend({
   storeId: z.string(),
 });
 
+export type AdWindowState = z.infer<typeof AdWindowStateSchema>;
 export type PromotionKind = z.infer<typeof PromotionKindSchema>;
 export type DiscountType = z.infer<typeof DiscountTypeSchema>;
 export type AdGoal = z.infer<typeof AdGoalSchema>;

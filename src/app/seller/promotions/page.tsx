@@ -17,11 +17,14 @@ export default function PromotionsPage() {
   );
 
   const {
-    data: promotions,
+    data: promotionsList,
     isLoading,
     isError,
     error,
   } = usePromotions(activeStoreId);
+
+  const promotions = promotionsList?.items;
+  const serverTime = promotionsList?.serverTime ?? null;
 
   const closeForm = () => {
     setIsFormOpen(false);
@@ -105,6 +108,7 @@ export default function PromotionsPage() {
             <PromotionsTable
               storeId={activeStoreId}
               promotions={promotions}
+              serverTime={serverTime}
               onEdit={openForEdit}
             />
           )}

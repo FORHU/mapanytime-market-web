@@ -8,6 +8,20 @@ import {
   useUpdatePromotion,
 } from "../hooks/usePromotionMutations";
 import { ProductPickerField } from "./ProductPickerField";
+import {
+  DEFAULT_TIME_ZONE,
+  DEFAULT_START_TIME,
+  DEFAULT_END_TIME,
+  MIN_WINDOW_MS,
+  START_GRACE_MS,
+  browserTimeZone,
+  isoToWallClock,
+  wallClockToIso,
+  timeZoneAbbreviation,
+  formatDuration,
+  formatRelative,
+  formatInZone,
+} from "../lib/schedule";
 import type {
   Promotion,
   PromotionKind,
@@ -128,9 +142,18 @@ export function PromotionForm({
   const [freeQuantity, setFreeQuantity] = useState(
     promotion?.freeQuantity != null ? String(promotion.freeQuantity) : "",
   );
-  const [expiresAt, setExpiresAt] = useState(
-    promotion?.expiresAt ? promotion.expiresAt.slice(0, 10) : "",
-  );
+  // The store's zone, not the browser's, is what every entered wall-clock time
+  // means. It rides along on the promotion payload; new promotions fall back to
+  // the platform default until the store's own zone is known.
+  const timeZone = promotion?.storeTimezone ?? DEFAULT_TIME_ZONE;
+
+  const initialStart = isoToWallClock(promotion?.startAt, timeZone);
+  const initialEnd = isoToWallClock(promotion?.expiresAt, timeZone);
+
+  const [startDate, setStartDate] = useState(initialStart.date);
+  const [startTime, setStartTime] = useState(initialStart.time);
+  const [expiresDate, setExpiresDate] = useState(initialEnd.date);
+  const [expiresTime, setExpiresTime] = useState(initialEnd.time);
   const [goal, setGoal] = useState<AdGoal>(promotion?.goal ?? "STORE_VISITS");
   const [format, setFormat] = useState<AdFormat>(
     promotion?.format ?? "MAP_FLOATING_CARD",
@@ -158,10 +181,72 @@ export function PromotionForm({
   const requiresProducts =
     kind === "EVENT" || (kind === "PROMO" && discountType !== "");
 
+  const viewerZone = browserTimeZone();
+  const zoneDiffers = viewerZone !== timeZone;
+  const zoneAbbr = timeZoneAbbreviation(timeZone);
+
+  // A promotion already running can't have its start rewritten — impressions
+  // and spend were attributed against the original one.
+  const startLocked =
+    promotion?.state === "LIVE" || promotion?.state === "ENDED";
+
+  const startIso = wallClockToIso(
+    startDate,
+    startTime || DEFAULT_START_TIME,
+    timeZone,
+  );
+  const expiresIso = wallClockToIso(
+    expiresDate,
+    expiresTime || DEFAULT_END_TIME,
+    timeZone,
+  );
+
+  const setStartToNow = () => {
+    const nowLocal = isoToWallClock(new Date().toISOString(), timeZone);
+    setStartDate(nowLocal.date);
+    setStartTime(nowLocal.time);
+  };
+
   const validate = (): PromotionFields | null => {
     const nextErrors: Record<string, string> = {};
     if (!title.trim()) nextErrors.title = "Title is required";
     if (!description.trim()) nextErrors.description = "Description is required";
+
+    // ── Schedule window ───────────────────────────────────────────────────
+    if (startTime && !startDate) {
+      nextErrors.startDate = "Pick a start date, or clear the time.";
+    }
+    if (expiresTime && !expiresDate) {
+      nextErrors.expiresDate = "Pick an end date, or clear the time.";
+    }
+
+    if (startIso && expiresIso) {
+      const durationMs =
+        new Date(expiresIso).getTime() - new Date(startIso).getTime();
+
+      if (durationMs <= 0) {
+        nextErrors.expiresDate = `End time must be after the start time. Pick a time later than ${formatInZone(startIso, timeZone)}.`;
+      } else if (durationMs < MIN_WINDOW_MS) {
+        const minutes = Math.round(durationMs / 60000);
+        nextErrors.expiresDate = `This promotion would run for ${minutes} minute${minutes === 1 ? "" : "s"}. Give it at least 5 minutes so it can be shown to buyers.`;
+      }
+    }
+
+    // Only checked for a start the seller can still change: a running
+    // promotion's start is in the past by definition.
+    if (startIso && !startLocked) {
+      const unchanged = promotion?.startAt
+        ? new Date(promotion.startAt).getTime() === new Date(startIso).getTime()
+        : false;
+
+      if (
+        !unchanged &&
+        new Date(startIso).getTime() < Date.now() - START_GRACE_MS
+      ) {
+        nextErrors.startDate =
+          "That start time has already passed. Pick a future time, or choose Start now.";
+      }
+    }
 
     if (kind === "PROMO" && discountType === "BOGO") {
       if (!buyQuantity || Number(buyQuantity) < 1)
@@ -206,12 +291,12 @@ export function PromotionForm({
         kind === "PROMO" && discountType === "BOGO"
           ? Number(freeQuantity)
           : undefined,
-      // A plain YYYY-MM-DD parses as UTC midnight (start of day) — sellers
-      // pick a date meaning "valid through end of that day", so anchor to
-      // 23:59:59 local time instead, or the promo expires a day early.
-      expiresAt: expiresAt
-        ? new Date(`${expiresAt}T23:59:59`).toISOString()
-        : undefined,
+      // Both instants are resolved against the STORE's zone, not the browser's.
+      // A seller travelling abroad must not write a different instant than the
+      // same seller at their desk for the same picked time. Omitted entirely
+      // when locked, so the server never sees an attempt to move a live start.
+      ...(startLocked ? {} : { startAt: startIso ?? null }),
+      expiresAt: expiresIso ?? null,
       goal,
       format,
       radiusKm: radiusKm ? Number(radiusKm) : undefined,
@@ -405,15 +490,121 @@ export function PromotionForm({
           </Field>
         )}
 
-      <Field label="Expires on">
-        <input
-          type="date"
-          className={inputClass()}
-          style={inputStyle()}
-          value={expiresAt}
-          onChange={(e) => setExpiresAt(e.target.value)}
-        />
-      </Field>
+      <fieldset
+        className="rounded-xl border p-4"
+        style={{ borderColor: "var(--border-light)" }}
+      >
+        <legend className="px-1.5 text-sm font-medium text-[var(--text-primary)]">
+          Schedule
+        </legend>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-[1fr_auto] gap-3">
+            <Field label="Starts on" error={errors.startDate}>
+              <input
+                type="date"
+                className={inputClass()}
+                style={inputStyle()}
+                value={startDate}
+                disabled={startLocked}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </Field>
+            <Field label="at">
+              <input
+                type="time"
+                step={60}
+                className={`${inputClass()} w-32`}
+                style={inputStyle()}
+                value={startTime}
+                disabled={startLocked}
+                placeholder={DEFAULT_START_TIME}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
+            </Field>
+          </div>
+
+          {startLocked ? (
+            <p className="text-xs text-[var(--text-secondary)]">
+              This promotion has already started, so its start time is locked.
+              You can still change when it ends.
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={setStartToNow}
+              className="text-xs font-medium underline underline-offset-2"
+              style={{ color: "var(--primary)" }}
+            >
+              Start now
+            </button>
+          )}
+
+          <div className="grid grid-cols-[1fr_auto] gap-3">
+            <Field label="Ends on" error={errors.expiresDate}>
+              <input
+                type="date"
+                className={inputClass()}
+                style={inputStyle()}
+                value={expiresDate}
+                onChange={(e) => setExpiresDate(e.target.value)}
+              />
+            </Field>
+            <Field label="at">
+              <input
+                type="time"
+                step={60}
+                className={`${inputClass()} w-32`}
+                style={inputStyle()}
+                value={expiresTime}
+                placeholder={DEFAULT_END_TIME}
+                onChange={(e) => setExpiresTime(e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <div className="space-y-1 text-xs text-[var(--text-secondary)]">
+            <p>
+              Times are in store time —{" "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {timeZone}
+                {zoneAbbr && ` (${zoneAbbr})`}
+              </span>
+              .
+            </p>
+            {/* Shown only on mismatch. Displaying a conversion permanently
+                trains sellers to distrust fields that are in fact correct. */}
+            {zoneDiffers && (startIso || expiresIso) && (
+              <p>
+                Your device is on {viewerZone}, where this is{" "}
+                {startIso && formatInZone(startIso, viewerZone)}
+                {startIso && expiresIso && " to "}
+                {expiresIso && formatInZone(expiresIso, viewerZone)}.
+              </p>
+            )}
+            {!startDate && !expiresDate && (
+              <p>Leave both blank to start immediately and run indefinitely.</p>
+            )}
+          </div>
+
+          {/* Reads as a sentence, which catches an AM/PM slip or a wrong month
+              faster than any validation rule. */}
+          {startIso && expiresIso && !errors.expiresDate && (
+            <p
+              className="border-t pt-3 text-sm text-[var(--text-secondary)]"
+              style={{ borderColor: "var(--border-light)" }}
+            >
+              Runs for{" "}
+              <span className="font-semibold text-[var(--text-primary)]">
+                {formatDuration(
+                  new Date(expiresIso).getTime() - new Date(startIso).getTime(),
+                )}
+              </span>{" "}
+              — starts {formatRelative(startIso)}.
+            </p>
+          )}
+        </div>
+      </fieldset>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <Field label="Goal">

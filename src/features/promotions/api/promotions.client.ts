@@ -2,19 +2,30 @@ import { fetcher } from "@/shared/lib/http";
 import {
   PromotionSchema,
   PromotionsResponseSchema,
+  unwrapPromotions,
   type Promotion,
-  type PromotionsResponse,
   type PromotionFields,
   type CreatePromotionPayload,
 } from "../contracts/promotions.contract";
 
+export interface PromotionsList {
+  items: Promotion[];
+  /**
+   * The API's clock at response time. Countdowns and past-time checks are
+   * offset by the difference against the browser's clock, so a seller whose
+   * device runs a few minutes fast doesn't see a live promo as "starts in
+   * 3 minutes" or get a valid start time rejected as past.
+   */
+  serverTime: string | null;
+}
+
 export const listPromotions = async (
   storeId: string,
-): Promise<PromotionsResponse> => {
+): Promise<PromotionsList> => {
   const res = await fetcher<{ data: unknown }>(
     `/api/v1/merchant-ads?storeId=${encodeURIComponent(storeId)}`,
   );
-  return PromotionsResponseSchema.parse(res.data);
+  return unwrapPromotions(PromotionsResponseSchema.parse(res.data));
 };
 
 export const createPromotion = async (
