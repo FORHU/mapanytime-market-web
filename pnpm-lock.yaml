@@ -7,6 +7,9 @@ settings:
 importers:
   .:
     dependencies:
+      "@date-fns/tz":
+        specifier: ^1.5.0
+        version: 1.5.0
       "@tanstack/react-query":
         specifier: ^5.101.2
         version: 5.101.2(react@19.2.7)
@@ -1244,6 +1247,12 @@ packages:
         integrity: sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw==,
       }
     engines: { node: ">=18" }
+
+  "@date-fns/tz@1.5.0":
+    resolution:
+      {
+        integrity: sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg==,
+      }
 
   "@emnapi/core@1.10.0":
     resolution:
@@ -10533,6 +10542,8 @@ snapshots:
       "@csstools/css-tokenizer": 3.0.4
 
   "@csstools/css-tokenizer@3.0.4": {}
+
+  "@date-fns/tz@1.5.0": {}
 
   "@emnapi/core@1.10.0":
     dependencies:
