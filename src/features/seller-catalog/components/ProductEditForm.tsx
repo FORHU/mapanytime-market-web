@@ -1,9 +1,19 @@
 "use client";
 
-import React, { useState, type FormEvent } from "react";
-import { Save, X } from "lucide-react";
+import React, { useState, useEffect, type FormEvent } from "react";
+import { Save, X, AlertCircle, CheckCircle2 } from "lucide-react";
 import type { ProductItem } from "@/shared/hooks/useProductsPipeline";
 import type { UpdateProductInput } from "@/shared/contracts/products.contract";
+import {
+  ALL_PRODUCT_TAGS,
+  type ProductTagType,
+} from "@/shared/constants/product-tags.constant";
+import {
+  PRODUCT_LIMITS,
+  PRICE_MAX_LABEL,
+  STOCK_MAX_LABEL,
+} from "@/shared/constants/product-limits.constant";
+import TagSelector from "./TagSelector";
 
 interface ProductEditFormProps {
   product: ProductItem;
@@ -13,7 +23,10 @@ interface ProductEditFormProps {
 }
 
 const inputClassName =
-  "w-full rounded-xl border border-[var(--border-default)] bg-[var(--background-secondary)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] outline-none transition-all focus:border-[var(--brand-core)] focus:ring-1 focus:ring-[var(--brand-core)]";
+  "w-full rounded-xl border border-[var(--border-default)] bg-[var(--background-secondary)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] outline-none transition-all focus:border-[var(--brand-core)] focus:ring-2 focus:ring-[var(--brand-core)]/20";
+
+const errorInputClassName =
+  "border-red-500 focus:border-red-500 focus:ring-red-500/20";
 
 export function ProductEditForm({
   product,
@@ -21,43 +34,188 @@ export function ProductEditForm({
   onCancel,
   onSubmit,
 }: ProductEditFormProps) {
-  const [name, setName] = useState(product.name);
-  const [description, setDescription] = useState(product.description);
-  const [price, setPrice] = useState(String(product.price || ""));
-  const [stock, setStock] = useState(String(product.stock));
+  // Form state - ensure all values are strings
+  const [name, setName] = useState(String(product.name || ""));
+  const [brand, setBrand] = useState(String(product.brand || ""));
+  const [description, setDescription] = useState(
+    String(product.description || ""),
+  );
+  // Filtered rather than cast: a tag the API knows but this build doesn't would
+  // otherwise sit invisibly in state and get resubmitted, failing validation
+  // with an error pointing at a tag the seller never touched.
+  const [tags, setTags] = useState<ProductTagType[]>(() =>
+    (product.tags ?? []).filter((tag): tag is ProductTagType =>
+      (ALL_PRODUCT_TAGS as readonly string[]).includes(tag),
+    ),
+  );
+  // `?? ""` rather than `|| ""`: stock 0 is a real value, and `0 || ""` seeded
+  // the field empty — which made every out-of-stock product open dirty and then
+  // fail submit with "Stock quantity is required".
+  const [price, setPrice] = useState(String(product.price ?? ""));
+  const [stock, setStock] = useState(String(product.stock ?? ""));
+
+  // UI state
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isDirty, setIsDirty] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Track if form has unsaved changes (only for submitted fields)
+  useEffect(() => {
+    const productTags = Array.isArray(product.tags) ? product.tags : [];
+    const tagsChanged =
+      tags.length !== productTags.length ||
+      tags.some((tag, i) => tag !== productTags[i]);
+
+    const hasChanges =
+      name !== product.name ||
+      brand !== product.brand ||
+      description !== product.description ||
+      tagsChanged ||
+      price !== String(product.price ?? "") ||
+      stock !== String(product.stock ?? "");
+
+    setIsDirty(hasChanges);
+  }, [name, brand, description, tags, price, stock, product]);
 
   const clearError = (field: string) => {
     setErrors((prev) => {
-      if (!prev[field]) return prev;
       const next = { ...prev };
       delete next[field];
       return next;
     });
   };
 
+  const markTouched = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
+  const validateField = (
+    field: string,
+    value: string | string[],
+  ): string | null => {
+    switch (field) {
+      case "name": {
+        if (typeof value !== "string") return "Invalid value";
+        if (!value.trim()) {
+          return "Product name is required";
+        }
+        if (value.length > PRODUCT_LIMITS.NAME_MAX) {
+          return `Product name must be ${PRODUCT_LIMITS.NAME_MAX} characters or less`;
+        }
+        return null;
+      }
+
+      case "brand": {
+        if (typeof value !== "string") return "Invalid value";
+        if (value.length > PRODUCT_LIMITS.BRAND_MAX) {
+          return `Brand name must be ${PRODUCT_LIMITS.BRAND_MAX} characters or less`;
+        }
+        return null;
+      }
+
+      case "description": {
+        if (typeof value !== "string") return "Invalid value";
+        if (!value.trim()) {
+          return "Description is required";
+        }
+        if (value.length > PRODUCT_LIMITS.DESCRIPTION_MAX) {
+          return `Description must be ${PRODUCT_LIMITS.DESCRIPTION_MAX} characters or less`;
+        }
+        return null;
+      }
+
+      case "price": {
+        if (typeof value !== "string") return "Invalid value";
+        const priceValue = Number(value);
+        if (!value || value === "") {
+          return "Price is required";
+        }
+        if (!Number.isFinite(priceValue)) {
+          return "Price must be a valid number";
+        }
+        if (priceValue < 0.01) {
+          return "Price must be at least ₱0.01";
+        }
+        if (priceValue > PRODUCT_LIMITS.PRICE_MAX) {
+          return `Price cannot exceed ₱${PRICE_MAX_LABEL}`;
+        }
+        return null;
+      }
+
+      case "stock": {
+        if (typeof value !== "string") return "Invalid value";
+        const stockValue = Number(value);
+        if (!value || value === "") {
+          return "Stock quantity is required";
+        }
+        if (!Number.isInteger(stockValue)) {
+          return "Stock must be a whole number";
+        }
+        if (stockValue < 0) {
+          return "Stock cannot be negative";
+        }
+        if (stockValue > PRODUCT_LIMITS.STOCK_MAX) {
+          return `Stock cannot exceed ${STOCK_MAX_LABEL} units`;
+        }
+        return null;
+      }
+
+      default:
+        return null;
+    }
+  };
+
+  const handleFieldChange =
+    (field: string, setter: (value: string) => void) => (value: string) => {
+      setter(value);
+      clearError(field);
+      if (touched[field]) {
+        const error = validateField(field, value);
+        if (error) {
+          setErrors((prev) => ({ ...prev, [field]: error }));
+        }
+      }
+    };
+
+  const handleFieldBlur = (field: string, value: string) => {
+    markTouched(field);
+    const error = validateField(field, value);
+    if (error) {
+      setErrors((prev) => ({ ...prev, [field]: error }));
+    } else {
+      clearError(field);
+    }
+  };
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
+    // Mark all fields as touched
+    setTouched({
+      name: true,
+      brand: true,
+      description: true,
+      price: true,
+      stock: true,
+    });
+
+    // Validate all fields
     const nextErrors: Record<string, string> = {};
 
-    if (!name.trim()) {
-      nextErrors.name = "Product name is required";
-    }
+    const nameError = validateField("name", name);
+    if (nameError) nextErrors.name = nameError;
 
-    if (description.length > 600) {
-      nextErrors.description = "Description must be 600 characters or fewer";
-    }
+    const brandError = validateField("brand", brand);
+    if (brandError) nextErrors.brand = brandError;
 
-    const priceValue = Number(price);
-    if (price === "" || !Number.isFinite(priceValue) || priceValue <= 0) {
-      nextErrors.price = "Price must be a positive number";
-    }
+    const descriptionError = validateField("description", description);
+    if (descriptionError) nextErrors.description = descriptionError;
 
-    const stockValue = Number(stock);
-    if (stock === "" || !Number.isInteger(stockValue) || stockValue < 0) {
-      nextErrors.stock = "Stock must be a non-negative whole number";
-    }
+    const priceError = validateField("price", price);
+    if (priceError) nextErrors.price = priceError;
+
+    const stockError = validateField("stock", stock);
+    if (stockError) nextErrors.stock = stockError;
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
@@ -67,9 +225,11 @@ export function ProductEditForm({
     setErrors({});
     await onSubmit({
       name: name.trim(),
-      description,
-      price: priceValue,
-      stock: stockValue,
+      brand: brand.trim(),
+      description: description.trim(),
+      tags,
+      price: Number(price),
+      stock: Number(stock),
     });
   };
 
@@ -81,164 +241,330 @@ export function ProductEditForm({
     };
   };
 
+  const getInputClass = (field: string) => {
+    return errors[field]
+      ? `${inputClassName} ${errorInputClassName}`
+      : inputClassName;
+  };
+
+  const stockDifference = Number(stock) - product.stock;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div>
-        <label
-          htmlFor="edit-product-name"
-          className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
-        >
-          Product name <span className="text-rose-500">*</span>
-        </label>
-        <input
-          id="edit-product-name"
-          type="text"
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            clearError("name");
-          }}
-          className={inputClassName}
-          {...fieldErrorProps("name")}
-        />
-        {errors.name && (
-          <p
-            id="name-error"
-            role="alert"
-            className="mt-1 text-xs text-rose-500"
-          >
-            {errors.name}
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label
-          htmlFor="edit-product-description"
-          className="mb-1.5 flex items-baseline justify-between text-sm font-medium text-[var(--text-primary)]"
-        >
-          <span>Description</span>
-          <span className="text-xs text-[var(--text-secondary)]">
-            {description.length}/600
-          </span>
-        </label>
-        <textarea
-          id="edit-product-description"
-          rows={3}
-          value={description}
-          onChange={(e) => {
-            setDescription(e.target.value.slice(0, 600));
-            clearError("description");
-          }}
-          className={`${inputClassName} resize-none`}
-          {...fieldErrorProps("description")}
-        />
-        {errors.description && (
-          <p
-            id="description-error"
-            role="alert"
-            className="mt-1 text-xs text-rose-500"
-          >
-            {errors.description}
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label
-          htmlFor="edit-product-price"
-          className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
-        >
-          Price <span className="text-rose-500">*</span>
-        </label>
-        <div className="relative">
-          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[var(--text-secondary)]">
-            ₱
-          </span>
-          <input
-            id="edit-product-price"
-            type="number"
-            min="0.01"
-            step="0.01"
-            inputMode="decimal"
-            value={price}
-            onChange={(e) => {
-              setPrice(e.target.value);
-              clearError("price");
-            }}
-            className={`${inputClassName} pl-7`}
-            {...fieldErrorProps("price")}
-          />
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Unsaved changes indicator */}
+      {isDirty && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-700">You have unsaved changes</p>
         </div>
-        {errors.price && (
-          <p
-            id="price-error"
-            role="alert"
-            className="mt-1 text-xs text-rose-500"
+      )}
+
+      {/* PRODUCT BASICS SECTION */}
+      <div className="space-y-5 pb-6 border-b border-[var(--border-light)]">
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
+            Product Basics
+          </h3>
+        </div>
+
+        {/* Product Name */}
+        <div>
+          <label
+            htmlFor="edit-product-name"
+            className="mb-1.5 flex items-baseline justify-between"
           >
-            {errors.price}
-          </p>
-        )}
+            <span className="text-sm font-medium text-[var(--text-primary)]">
+              Product name <span className="text-red-500">*</span>
+            </span>
+            <span className="text-xs text-[var(--text-secondary)]">
+              {name.length}/{PRODUCT_LIMITS.NAME_MAX}
+            </span>
+          </label>
+          <input
+            id="edit-product-name"
+            type="text"
+            placeholder="Enter product name"
+            maxLength={PRODUCT_LIMITS.NAME_MAX}
+            value={name}
+            onChange={(e) => handleFieldChange("name", setName)(e.target.value)}
+            onBlur={() => handleFieldBlur("name", name)}
+            className={getInputClass("name")}
+            {...fieldErrorProps("name")}
+            disabled={isSaving}
+          />
+          {errors.name && (
+            <p
+              id="name-error"
+              role="alert"
+              className="mt-1.5 flex items-center gap-1 text-xs text-red-500"
+            >
+              <AlertCircle className="h-3 w-3" />
+              {errors.name}
+            </p>
+          )}
+          {!errors.name && touched.name && (
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-green-600">
+              <CheckCircle2 className="h-3 w-3" />
+              Looks good
+            </p>
+          )}
+        </div>
+
+        {/* Brand */}
+        <div>
+          <label
+            htmlFor="edit-product-brand"
+            className="mb-1.5 flex items-baseline justify-between"
+          >
+            <span className="text-sm font-medium text-[var(--text-primary)]">
+              Brand
+            </span>
+            <span className="text-xs text-[var(--text-secondary)]">
+              {brand.length}/{PRODUCT_LIMITS.BRAND_MAX}
+            </span>
+          </label>
+          <input
+            id="edit-product-brand"
+            type="text"
+            placeholder="e.g., Nike, Samsung"
+            maxLength={PRODUCT_LIMITS.BRAND_MAX}
+            value={brand}
+            onChange={(e) =>
+              handleFieldChange("brand", setBrand)(e.target.value)
+            }
+            onBlur={() => handleFieldBlur("brand", brand)}
+            className={getInputClass("brand")}
+            {...fieldErrorProps("brand")}
+            disabled={isSaving}
+          />
+          {errors.brand && (
+            <p
+              id="brand-error"
+              role="alert"
+              className="mt-1.5 flex items-center gap-1 text-xs text-red-500"
+            >
+              <AlertCircle className="h-3 w-3" />
+              {errors.brand}
+            </p>
+          )}
+        </div>
       </div>
 
-      <div>
-        <label
-          htmlFor="edit-product-stock"
-          className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
-        >
-          Stock <span className="text-rose-500">*</span>
-        </label>
-        <input
-          id="edit-product-stock"
-          type="number"
-          min="0"
-          step="1"
-          inputMode="numeric"
-          value={stock}
-          onChange={(e) => {
-            setStock(e.target.value);
-            clearError("stock");
+      {/* DESCRIPTION & DETAILS SECTION */}
+      <div className="space-y-5 pb-6 border-b border-[var(--border-light)]">
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
+            Description & Details
+          </h3>
+        </div>
+
+        {/* Description */}
+        <div>
+          <label
+            htmlFor="edit-product-description"
+            className="mb-1.5 flex items-baseline justify-between"
+          >
+            <span className="text-sm font-medium text-[var(--text-primary)]">
+              Description <span className="text-red-500">*</span>
+            </span>
+            <span className="text-xs text-[var(--text-secondary)]">
+              {description.length}/{PRODUCT_LIMITS.DESCRIPTION_MAX}
+            </span>
+          </label>
+          <textarea
+            id="edit-product-description"
+            rows={5}
+            placeholder="Describe your product details, features, and benefits..."
+            maxLength={PRODUCT_LIMITS.DESCRIPTION_MAX}
+            value={description}
+            onChange={(e) =>
+              handleFieldChange("description", setDescription)(e.target.value)
+            }
+            onBlur={() => handleFieldBlur("description", description)}
+            className={`${getInputClass("description")} resize-none`}
+            {...fieldErrorProps("description")}
+            disabled={isSaving}
+          />
+          {errors.description && (
+            <p
+              id="description-error"
+              role="alert"
+              className="mt-1.5 flex items-center gap-1 text-xs text-red-500"
+            >
+              <AlertCircle className="h-3 w-3" />
+              {errors.description}
+            </p>
+          )}
+          {!errors.description && touched.description && (
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-green-600">
+              <CheckCircle2 className="h-3 w-3" />
+              Description is complete
+            </p>
+          )}
+        </div>
+
+        {/* Tags */}
+        <div>
+          <label className="mb-1.5 flex items-baseline justify-between">
+            <span className="text-sm font-medium text-[var(--text-primary)]">
+              Tags
+            </span>
+            <span className="text-xs text-[var(--text-secondary)]">
+              {tags.length} selected
+            </span>
+          </label>
+
+          <TagSelector selected={tags} onChange={setTags} />
+        </div>
+      </div>
+
+      {/* PRICING & INVENTORY SECTION */}
+      <div className="space-y-5 pb-6">
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
+            Pricing & Inventory
+          </h3>
+        </div>
+
+        {/* Price */}
+        <div>
+          <label
+            htmlFor="edit-product-price"
+            className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
+          >
+            Price <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[var(--text-secondary)] font-medium">
+              ₱
+            </span>
+            <input
+              id="edit-product-price"
+              type="number"
+              min="0.01"
+              step="0.01"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={price}
+              onChange={(e) =>
+                handleFieldChange("price", setPrice)(e.target.value)
+              }
+              onBlur={() => handleFieldBlur("price", price)}
+              className={`${getInputClass("price")} pl-7`}
+              {...fieldErrorProps("price")}
+              disabled={isSaving}
+            />
+          </div>
+          {errors.price && (
+            <p
+              id="price-error"
+              role="alert"
+              className="mt-1.5 flex items-center gap-1 text-xs text-red-500"
+            >
+              <AlertCircle className="h-3 w-3" />
+              {errors.price}
+            </p>
+          )}
+          {!errors.price && touched.price && (
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-green-600">
+              <CheckCircle2 className="h-3 w-3" />
+              Price is valid
+            </p>
+          )}
+        </div>
+
+        {/* Stock */}
+        <div>
+          <label
+            htmlFor="edit-product-stock"
+            className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
+          >
+            Stock <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="edit-product-stock"
+            type="number"
+            min="0"
+            step="1"
+            inputMode="numeric"
+            placeholder="0"
+            value={stock}
+            onChange={(e) =>
+              handleFieldChange("stock", setStock)(e.target.value)
+            }
+            onBlur={() => handleFieldBlur("stock", stock)}
+            className={getInputClass("stock")}
+            {...fieldErrorProps("stock")}
+            disabled={isSaving}
+          />
+          <div className="mt-1.5 flex items-baseline justify-between">
+            <p className="text-xs text-[var(--text-secondary)]">
+              Current: <span className="font-semibold">{product.stock}</span>{" "}
+              units
+            </p>
+            {stockDifference !== 0 && (
+              <p
+                className={`text-xs font-medium ${
+                  stockDifference > 0 ? "text-green-600" : "text-amber-600"
+                }`}
+              >
+                {stockDifference > 0 ? "+" : ""}
+                {stockDifference} units
+              </p>
+            )}
+          </div>
+          {errors.stock && (
+            <p
+              id="stock-error"
+              role="alert"
+              className="mt-1.5 flex items-center gap-1 text-xs text-red-500"
+            >
+              <AlertCircle className="h-3 w-3" />
+              {errors.stock}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ACTION BUTTONS */}
+      <div className="flex flex-col gap-3 pt-6 border-t border-[var(--border-light)] sm:flex-row-reverse">
+        <button
+          type="submit"
+          disabled={isSaving || !isDirty}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{
+            background:
+              isSaving || !isDirty
+                ? "var(--border-default)"
+                : "var(--brand-core)",
+            color:
+              isSaving || !isDirty
+                ? "var(--text-secondary)"
+                : "var(--background-primary)",
           }}
-          className={inputClassName}
-          {...fieldErrorProps("stock")}
-        />
-        <p className="mt-1 text-xs text-[var(--text-secondary)]">
-          Current stock: {product.stock}
-        </p>
-        {errors.stock && (
-          <p
-            id="stock-error"
-            role="alert"
-            className="mt-1 text-xs text-rose-500"
-          >
-            {errors.stock}
-          </p>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+        >
+          {isSaving ? (
+            <>
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              Saving…
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              Save Changes
+            </>
+          )}
+        </button>
         <button
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="flex-1 rounded-xl border border-[var(--border-default)] px-4 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--background-secondary)] disabled:opacity-40"
+          className="flex-1 rounded-xl border border-[var(--border-default)] px-4 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--background-secondary)] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <span className="inline-flex items-center justify-center gap-2">
             <X className="h-4 w-4" />
             Cancel
           </span>
-        </button>
-        <button
-          type="submit"
-          disabled={isSaving}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-40"
-          style={{
-            background: "var(--brand-core)",
-            color: "var(--background-primary)",
-          }}
-        >
-          <Save className="h-4 w-4" />
-          {isSaving ? "Saving…" : "Save Changes"}
         </button>
       </div>
     </form>

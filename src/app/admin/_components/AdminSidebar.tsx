@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ExternalLink,
   LogOut,
+  CheckCircle,
 } from "lucide-react";
 
 interface AdminNavChild {
@@ -51,6 +52,12 @@ const navItems: AdminNavItem[] = [
         name: "Store Approvals",
         href: "/admin/stores",
         icon: Store,
+        roles: ["ADMIN"],
+      },
+      {
+        name: "Seller Approvals",
+        href: "/admin/sellers",
+        icon: CheckCircle,
         roles: ["ADMIN"],
       },
       {
