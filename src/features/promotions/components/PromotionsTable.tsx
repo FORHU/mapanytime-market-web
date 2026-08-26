@@ -1,8 +1,9 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Card } from "@/shared/components/ui/Card";
-import { Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import {
   useDeletePromotion,
   useTogglePromotion,
@@ -110,6 +111,31 @@ export function PromotionsTable({
   const toggleMutation = useTogglePromotion(storeId);
   const deleteMutation = useDeletePromotion(storeId);
 
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const closeMenu = useCallback(() => setOpenMenuId(null), []);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+
+    const handlePointerDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        closeMenu();
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeMenu();
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openMenuId, closeMenu]);
+
   // Countdowns are measured against the server's clock, so a device running a
   // few minutes fast doesn't label a live promotion "starts in 3 minutes".
   const now = serverTime ? new Date(serverTime) : new Date();
@@ -216,32 +242,65 @@ export function PromotionsTable({
                             ? "Pause this promotion"
                             : "Resume this promotion"
                       }
-                      className="rounded-full px-2.5 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                      // Updated classes below:
+                      className="cursor-pointer rounded-full border border-black/10 px-3 py-1 text-xs font-bold shadow-sm transition-all duration-200 hover:-translate-y-[2px] hover:shadow-md hover:brightness-95 active:translate-y-0 active:scale-95 disabled:pointer-events-none disabled:opacity-60 dark:border-white/10"
                       style={{ background: chip.background, color: chip.color }}
                     >
                       {chip.label}
                     </button>
                   </td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => onEdit(promotion)}
-                        className="rounded-lg p-1.5 hover:bg-[var(--background-tertiary)]"
-                        aria-label="Edit"
+                  <td className="px-4 py-4 relative">
+                    <div className="flex items-center justify-end">
+                      <div
+                        className="relative"
+                        ref={openMenuId === promotion.id ? menuRef : undefined}
                       >
-                        <Pencil
-                          className="h-4 w-4"
-                          style={{ color: "var(--text-secondary)" }}
-                        />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(promotion)}
-                        disabled={deleteMutation.isPending}
-                        className="rounded-lg p-1.5 hover:bg-[var(--background-tertiary)] disabled:opacity-60"
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="h-4 w-4 text-rose-500" />
-                      </button>
+                        <button
+                          onClick={() =>
+                            setOpenMenuId(
+                              openMenuId === promotion.id ? null : promotion.id,
+                            )
+                          }
+                          aria-label="More actions"
+                          aria-haspopup="menu"
+                          aria-expanded={openMenuId === promotion.id}
+                          className="rounded-lg p-1.5 hover:bg-[var(--background-tertiary)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                        {openMenuId === promotion.id && (
+                          <div
+                            role="menu"
+                            aria-label="Promotion actions"
+                            className="absolute right-0 top-9 z-50 w-40 overflow-hidden rounded-xl border bg-[var(--background-primary)] py-1 shadow-xl"
+                            style={{ borderColor: "var(--border-light)" }}
+                          >
+                            <button
+                              role="menuitem"
+                              onClick={() => {
+                                closeMenu();
+                                onEdit(promotion);
+                              }}
+                              className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)]"
+                            >
+                              <Pencil className="h-4 w-4" />
+                              Edit
+                            </button>
+                            <button
+                              role="menuitem"
+                              onClick={() => {
+                                closeMenu();
+                                handleDelete(promotion);
+                              }}
+                              disabled={deleteMutation.isPending}
+                              className="flex w-full items-center gap-2.5 border-t border-[var(--border-light)] px-3.5 py-2.5 text-left text-sm font-medium text-rose-500 transition-colors hover:bg-rose-500/10 disabled:opacity-40"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
                 </tr>

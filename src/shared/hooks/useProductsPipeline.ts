@@ -5,6 +5,7 @@ import {
   ProductsApiResponseSchema,
   type SellerProduct,
   type UpdateProductInput,
+  type ProductOptionInput,
 } from "@/shared/contracts/products.contract";
 
 export interface ProductItem {
@@ -20,6 +21,8 @@ export interface ProductItem {
   imageUrl?: string;
   imageIds?: string[];
   storeName?: string;
+  /** Option tier, flattened. Absent means the product has no options. */
+  options?: ProductOptionInput[];
 }
 
 export interface ProductsPage {
@@ -78,7 +81,8 @@ const fetchProducts = async (
   };
 };
 
-function mapProductItem(product: SellerProduct): ProductItem {
+/** Exported for testing — it is the only place the API shape becomes UI shape. */
+export function mapProductItem(product: SellerProduct): ProductItem {
   return {
     id: product.id,
     name: product.name,
@@ -91,6 +95,13 @@ function mapProductItem(product: SellerProduct): ProductItem {
     imageUrl: product.productImages?.[0]?.file?.url || undefined,
     storeName: product.store?.storeName,
     tags: product.tags?.map((productTag) => productTag.tag.name) ?? [],
+    // Flattened the way tags are: values[].value → string[], which is the shape
+    // both forms and the detail panel want. Stays `undefined` rather than `[]`
+    // when absent, so a pre-option-tier product opens clean in the edit form.
+    options: product.options?.map((option) => ({
+      name: option.name,
+      values: option.values.map((v) => v.value),
+    })),
   };
 }
 
@@ -169,6 +180,10 @@ export const useProductsPipeline = (options: UseProductsPipelineOptions) => {
           isActive: true,
           initialStock: newProduct.stock || 0,
           imageIds: newProduct.imageIds || [],
+          // Left off `undefined` rather than `[]` so the key is omitted entirely
+          // for a product with no options — the server reads a present-but-empty
+          // array as "clear them all".
+          ...(newProduct.options ? { options: newProduct.options } : {}),
         }),
       });
 
