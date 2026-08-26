@@ -35,6 +35,17 @@ export const PromotionProductLinkSchema = z.object({
   variantId: z.string().nullable().optional(),
 });
 
+export const PromotionBadgeSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  label: z.string(),
+  description: z.string().nullable().optional(),
+  position: z.number(),
+  isActive: z.boolean(),
+});
+
+export type PromotionBadge = z.infer<typeof PromotionBadgeSchema>;
+
 export const PromotionSchema = z
   .object({
     id: z.string(),
@@ -43,6 +54,7 @@ export const PromotionSchema = z
     title: z.string(),
     description: z.string(),
     imageUrl: z.string().nullable().optional(),
+    badgeId: z.string().nullable().optional(),
     badgeLabel: z.string().nullable().optional(),
     ctaLabel: z.string().nullable().optional(),
     salaryLabel: z.string().nullable().optional(),
@@ -95,7 +107,8 @@ export const PromotionFieldsSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   imageUrl: z.string().optional(),
-  badgeLabel: z.string().optional(),
+  badgeId: z.string().nullable().optional(),
+  badgeLabel: z.string().nullable().optional(),
   ctaLabel: z.string().optional(),
   salaryLabel: z.string().optional(),
   discountType: DiscountTypeSchema.optional(),

@@ -1,11 +1,14 @@
+import { z } from "zod";
 import { fetcher } from "@/shared/lib/http";
 import {
   PromotionSchema,
   PromotionsResponseSchema,
+  PromotionBadgeSchema,
   unwrapPromotions,
   type Promotion,
   type PromotionFields,
   type CreatePromotionPayload,
+  type PromotionBadge,
 } from "../contracts/promotions.contract";
 
 export interface PromotionsList {
@@ -53,6 +56,11 @@ export const deletePromotion = async (id: string): Promise<void> => {
   await fetcher(`/api/v1/merchant-ads/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
+};
+
+export const listPromotionBadges = async (): Promise<PromotionBadge[]> => {
+  const res = await fetcher<{ data: unknown }>("/api/v1/merchant-ads/badges");
+  return z.array(PromotionBadgeSchema).parse(res.data);
 };
 
 export const togglePromotion = async (
