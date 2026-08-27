@@ -2,6 +2,13 @@ import { z } from "zod";
 import { PRODUCT_LIMITS } from "@/shared/constants/product-limits.constant";
 import { ALL_PRODUCT_TAGS_TUPLE } from "@/shared/constants/product-tags.constant";
 
+export const ProductOptionSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  position: z.number().optional(),
+  values: z.array(z.object({ id: z.string().optional(), value: z.string() })),
+});
+
 export const SellerProductSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -29,6 +36,7 @@ export const SellerProductSchema = z.object({
   store: z.object({ storeName: z.string() }).optional(),
   /** Join records from GET /api/v1/products — flattened to tag names by the pipeline mapper. */
   tags: z.array(z.object({ tag: z.object({ name: z.string() }) })).optional(),
+  options: z.array(ProductOptionSchema).optional(),
 });
 
 export const ProductsListDataSchema = z.object({
@@ -108,7 +116,22 @@ export const UpdateProductInputSchema = z.object({
     .int("Stock must be a non-negative whole number")
     .min(0, "Stock must be a non-negative whole number")
     .max(PRODUCT_LIMITS.STOCK_MAX),
+  /**
+   * Replace-all, matching `tags` and the server contract: an array is the whole
+   * option set, `[]` clears it, omitting the key leaves options untouched.
+   */
+  options: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        values: z.array(z.string().min(1)).min(1),
+      }),
+    )
+    .optional(),
 });
+
+/** Flattened option shape used by the forms and the wire payload. */
+export type ProductOptionInput = { name: string; values: string[] };
 
 export type SellerProduct = z.infer<typeof SellerProductSchema>;
 export type ProductsListData = z.infer<typeof ProductsListDataSchema>;

@@ -10,4 +10,6 @@ export const sellerCatalogKeys = {
   // refetches the tree rather than reusing the previous store's categories.
   myCategoryTree: (storeId: string | null) =>
     [...sellerCatalogKeys.all, "my-category-tree", storeId ?? "all"] as const,
+  variantSuggestions: (categoryId: string) =>
+    [...sellerCatalogKeys.all, "variant-suggestions", categoryId] as const,
 } as const;

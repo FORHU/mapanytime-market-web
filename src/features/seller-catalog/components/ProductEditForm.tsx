@@ -14,6 +14,14 @@ import {
   STOCK_MAX_LABEL,
 } from "@/shared/constants/product-limits.constant";
 import TagSelector from "./TagSelector";
+import { VariantsBuilder } from "./VariantsBuilder";
+import { useCategoryVariantSuggestions } from "../hooks/useCategoryVariantSuggestions";
+import {
+  toVariantDrafts,
+  toOptionsPayload,
+  canonicalOptions,
+  type VariantDraft,
+} from "../lib/variant-options";
 
 interface ProductEditFormProps {
   product: ProductItem;
@@ -53,6 +61,18 @@ export function ProductEditForm({
   // fail submit with "Stock quantity is required".
   const [price, setPrice] = useState(String(product.price ?? ""));
   const [stock, setStock] = useState(String(product.stock ?? ""));
+  const [variants, setVariants] = useState<VariantDraft[]>(() =>
+    toVariantDrafts(product.options),
+  );
+
+  // No category picker here — category is create-only — but ProductItem carries
+  // categoryId, and the server merges the ancestors, so this alone yields both
+  // the sub-category's suggestions and its root's.
+  const { data: suggestionData, isLoading: suggestionsLoading } =
+    useCategoryVariantSuggestions(product.categoryId ?? null);
+
+  const variantSuggestions =
+    suggestionData?.suggestions.map((s) => s.name) ?? [];
 
   // UI state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -66,16 +86,25 @@ export function ProductEditForm({
       tags.length !== productTags.length ||
       tags.some((tag, i) => tag !== productTags[i]);
 
+    // Compared as canonical strings, not deep-compared: `id` is regenerated on
+    // every load and `draft` is transient, so a structural compare would report
+    // permanently dirty. This also makes a product created before the option
+    // tier open CLEAN, since canonicalOptions(undefined) === canonicalOptions([]).
+    const variantsChanged =
+      canonicalOptions(toOptionsPayload(variants)) !==
+      canonicalOptions(product.options);
+
     const hasChanges =
       name !== product.name ||
       brand !== product.brand ||
       description !== product.description ||
       tagsChanged ||
       price !== String(product.price ?? "") ||
-      stock !== String(product.stock ?? "");
+      stock !== String(product.stock ?? "") ||
+      variantsChanged;
 
     setIsDirty(hasChanges);
-  }, [name, brand, description, tags, price, stock, product]);
+  }, [name, brand, description, tags, price, stock, variants, product]);
 
   const clearError = (field: string) => {
     setErrors((prev) => {
@@ -217,6 +246,15 @@ export function ProductEditForm({
     const stockError = validateField("stock", stock);
     if (stockError) nextErrors.stock = stockError;
 
+    // Blocked rather than silently dropped: the payload builder would discard a
+    // named option with no values, and the seller would never see it go.
+    const orphanOption = variants.find(
+      (v) => v.name.trim() && v.values.length === 0 && !v.draft.trim(),
+    );
+    if (orphanOption) {
+      nextErrors.variants = `Add at least one value to "${orphanOption.name.trim()}", or remove the option.`;
+    }
+
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
@@ -230,6 +268,9 @@ export function ProductEditForm({
       tags,
       price: Number(price),
       stock: Number(stock),
+      // `[]` when the seller cleared every option, so the server clears them;
+      // `undefined` only when there were none to begin with.
+      options: toOptionsPayload(variants) ?? (product.options ? [] : undefined),
     });
   };
 
@@ -524,6 +565,21 @@ export function ProductEditForm({
             </p>
           )}
         </div>
+      </div>
+
+      {/* VARIANTS & OPTIONS */}
+      <div className="space-y-5 pb-6">
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+          Variants &amp; Options
+        </h3>
+        <VariantsBuilder
+          variants={variants}
+          setVariants={setVariants}
+          suggestions={variantSuggestions}
+          suggestionsLoading={suggestionsLoading}
+          disabled={isSaving}
+          error={errors.variants}
+        />
       </div>
 
       {/* ACTION BUTTONS */}

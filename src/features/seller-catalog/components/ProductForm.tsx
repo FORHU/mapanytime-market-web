@@ -15,6 +15,9 @@ import {
   STOCK_MAX_LABEL,
 } from "@/shared/constants/product-limits.constant";
 import TagSelector from "./TagSelector";
+import { VariantsBuilder } from "./VariantsBuilder";
+import { useCategoryVariantSuggestions } from "../hooks/useCategoryVariantSuggestions";
+import { toOptionsPayload, type VariantDraft } from "../lib/variant-options";
 import {
   Tag,
   DollarSign,
@@ -32,13 +35,6 @@ import {
   Trash2,
   AlertTriangle,
 } from "lucide-react";
-
-const emptyVariant = () => ({
-  id: crypto.randomUUID(),
-  name: "",
-  values: [] as string[],
-  draft: "",
-});
 
 // Shared with the edit form and mirrored from the API, so a product created
 // here can always be saved there. These used to be per-form constants that
@@ -139,9 +135,9 @@ function FieldLabel({
 }) {
   return (
     <div>
-      <div className="mb-2 flex items-baseline justify-between">
+      <div className="mb-1.5 flex items-baseline justify-between">
         <label
-          className="flex min-w-0 items-center gap-1.5 text-sm font-medium"
+          className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold"
           style={{ color: "var(--text-primary)" }}
         >
           {Icon && (
@@ -157,7 +153,7 @@ function FieldLabel({
           // max-w + truncate: the price hint renders a formatted currency string,
           // which must never widen the row past the card it sits in.
           <span
-            className="ml-2 max-w-[55%] shrink-0 truncate text-xs"
+            className="ml-2 max-w-[55%] shrink-0 truncate text-[11px]"
             style={{ color: "var(--text-secondary)" }}
             title={hint}
           >
@@ -166,7 +162,9 @@ function FieldLabel({
         )}
       </div>
       {hint && hintAsHelper && (
-        <p className="mb-2 text-xs" style={{ color: "var(--text-secondary)" }}>
+        // Helper sits in the brand tint, not the muted grey: it names the parent
+        // category the sub-category list is scoped to, which is context, not noise.
+        <p className="mb-1.5 text-xs" style={{ color: "var(--brand-core)" }}>
           {hint}
         </p>
       )}
@@ -186,7 +184,7 @@ function TextInput({
     <input
       {...props}
       className={
-        "w-full overflow-hidden text-ellipsis rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all duration-200 focus:glow-primary " +
+        "h-[42px] w-full overflow-hidden text-ellipsis rounded-full px-[18px] text-sm outline-none transition-all duration-200 focus:glow-primary " +
         (className || "")
       }
       style={{
@@ -223,6 +221,8 @@ function SectionCard({
   children,
   defaultOpen = true,
   collapsible = false,
+  compact = false,
+  className = "",
 }: {
   title: string;
   subtitle: string;
@@ -230,12 +230,19 @@ function SectionCard({
   children: React.ReactNode;
   defaultOpen?: boolean;
   collapsible?: boolean;
+  /** Nested inside another card — smaller header and padding so it reads as a child. */
+  compact?: boolean;
+  className?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
     <section
-      className="rounded-2xl p-5 sm:p-6"
+      className={
+        "rounded-[14px] " +
+        (compact ? "px-5 py-[18px] " : "p-6 sm:px-7 ") +
+        className
+      }
       style={{
         background: "var(--md-sys-color-surface-container-high)",
         border: "1px solid var(--border-default)",
@@ -243,35 +250,43 @@ function SectionCard({
     >
       <div
         className={
-          "flex items-center justify-between " +
+          "flex items-start justify-between " +
           (collapsible ? "cursor-pointer select-none" : "")
         }
         onClick={collapsible ? () => setOpen((o) => !o) : undefined}
       >
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-start gap-2.5">
           {Icon && (
             <div
-              className="flex h-8 w-8 items-center justify-center rounded-lg"
+              className={
+                "flex shrink-0 items-center justify-center rounded-lg " +
+                (compact ? "h-[30px] w-[30px]" : "h-[34px] w-[34px]")
+              }
               style={{
                 background: "var(--background-elevated)",
                 border: "1px solid var(--border-default)",
               }}
             >
               <Icon
-                className="h-4 w-4"
+                className={compact ? "h-3.5 w-3.5" : "h-4 w-4"}
                 style={{ color: "var(--brand-core)" }}
               />
             </div>
           )}
           <div>
             <h3
-              className="text-sm font-semibold"
+              className={
+                compact ? "text-sm font-bold" : "text-[15px] font-bold"
+              }
               style={{ color: "var(--text-primary)" }}
             >
               {title}
             </h3>
             {subtitle && (
-              <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+              <p
+                className={"mt-0.5 " + (compact ? "text-xs" : "text-[13px]")}
+                style={{ color: "var(--text-secondary)" }}
+              >
                 {subtitle}
               </p>
             )}
@@ -279,7 +294,10 @@ function SectionCard({
         </div>
         {collapsible && (
           <ChevronDown
-            className="h-4 w-4 transition-transform duration-200"
+            className={
+              "h-3.5 w-3.5 shrink-0 transition-transform duration-200 " +
+              (compact ? "mt-1.5" : "mt-2")
+            }
             style={{
               color: "var(--text-secondary)",
               transform: open ? "rotate(180deg)" : "rotate(0deg)",
@@ -289,7 +307,9 @@ function SectionCard({
       </div>
 
       {(!collapsible || open) && (
-        <div className="mt-5 space-y-5">{children}</div>
+        <div className={compact ? "mt-3.5 space-y-3.5" : "mt-5 space-y-5"}>
+          {children}
+        </div>
       )}
     </section>
   );
@@ -489,147 +509,6 @@ function ImageDropzone({
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Variants builder (visual-only placeholder)                               */
-/* -------------------------------------------------------------------------- */
-
-function VariantsBuilder({
-  variants,
-  setVariants,
-}: {
-  variants: { id: string; name: string; values: string[]; draft: string }[];
-  setVariants: React.Dispatch<
-    React.SetStateAction<
-      { id: string; name: string; values: string[]; draft: string }[]
-    >
-  >;
-}) {
-  const addVariant = () => setVariants([...variants, emptyVariant()]);
-
-  const updateVariant = (
-    id: string,
-    patch: Partial<{ name: string; values: string[]; draft: string }>,
-  ) => setVariants(variants.map((v) => (v.id === id ? { ...v, ...patch } : v)));
-
-  const removeVariant = (id: string) =>
-    setVariants(variants.filter((v) => v.id !== id));
-
-  const addValue = (variant: {
-    id: string;
-    name: string;
-    values: string[];
-    draft: string;
-  }) => {
-    const value = variant.draft.trim();
-    if (!value || variant.values.includes(value)) return;
-    updateVariant(variant.id, {
-      values: [...variant.values, value],
-      draft: "",
-    });
-  };
-
-  return (
-    <div className="space-y-3">
-      {variants.map((variant) => (
-        <div
-          key={variant.id}
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--background-secondary)",
-            border: "1px solid var(--border-default)",
-          }}
-        >
-          <div className="mb-3 flex items-center gap-2">
-            <input
-              value={variant.name}
-              onChange={(e) =>
-                updateVariant(variant.id, { name: e.target.value })
-              }
-              placeholder="Option name, e.g. Size or Color"
-              className="flex-1 rounded-lg bg-transparent px-2 py-1.5 text-sm font-medium outline-none"
-              style={{
-                color: "var(--text-primary)",
-                border: "1px solid var(--border-default)",
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => removeVariant(variant.id)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg opacity-70 hover:opacity-100"
-              style={{ border: "1px solid var(--border-default)" }}
-            >
-              <Trash2
-                className="h-3.5 w-3.5"
-                style={{ color: "var(--text-secondary)" }}
-              />
-            </button>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {variant.values.map((val) => (
-              <span
-                key={val}
-                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
-                style={{
-                  background: "var(--background-elevated)",
-                  color: "var(--text-primary)",
-                  border: "1px solid var(--border-default)",
-                }}
-              >
-                {val}
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateVariant(variant.id, {
-                      values: variant.values.filter((v) => v !== val),
-                    })
-                  }
-                  className="opacity-70 hover:opacity-100"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-            <input
-              value={variant.draft}
-              onChange={(e) =>
-                updateVariant(variant.id, { draft: e.target.value })
-              }
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addValue(variant);
-                }
-              }}
-              placeholder="Add value, press Enter"
-              className="min-w-[110px] flex-1 bg-transparent py-1 text-xs outline-none"
-              style={{ color: "var(--text-primary)" }}
-            />
-          </div>
-        </div>
-      ))}
-
-      <button
-        type="button"
-        disabled
-        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed py-2.5 text-sm font-medium cursor-not-allowed"
-        style={{
-          borderColor: "var(--border-default)",
-          color: "var(--text-secondary)",
-          opacity: 0.4,
-        }}
-      >
-        <Plus className="h-4 w-4" />
-        Add option (size, color, material…)
-      </button>
-      <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-        Variants are coming soon — this section will be saved when the feature
-        launches.
-      </p>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
 /*  ProductForm — main component                                             */
 /* -------------------------------------------------------------------------- */
 
@@ -691,9 +570,16 @@ export default function ProductForm({
   const uploadMutation = useS3AssetUpload("products");
 
   const [inventory, setInventory] = useState("");
-  const [variants, setVariants] = useState<
-    { id: string; name: string; values: string[]; draft: string }[]
-  >([]);
+  const [variants, setVariants] = useState<VariantDraft[]>([]);
+
+  // The sub-category once picked, else the store's root. The server merges
+  // ancestors either way, so one request covers both and the root still gives
+  // the seller something useful before a sub-category is chosen.
+  const { data: suggestionData, isLoading: suggestionsLoading } =
+    useCategoryVariantSuggestions(categoryId || mainCategory?.id || null);
+
+  const variantSuggestions =
+    suggestionData?.suggestions.map((s) => s.name) ?? [];
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -757,6 +643,15 @@ export default function ProductForm({
         ? "No sub-category is available for your store's category yet"
         : "Category is required";
 
+    // A named option with no values would be silently dropped by the payload
+    // builder. Say so instead — invisible data loss is worse than a blocked save.
+    const orphanOption = variants.find(
+      (v) => v.name.trim() && v.values.length === 0 && !v.draft.trim(),
+    );
+    if (orphanOption) {
+      newErrors.variants = `Add at least one value to "${orphanOption.name.trim()}", or remove the option.`;
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -795,6 +690,8 @@ export default function ProductForm({
         stock: inventory ? Number(inventory) : 0,
         tags: tags.length > 0 ? tags : undefined,
         imageIds: fileIds.length > 0 ? fileIds : undefined,
+        // undefined when the seller added none, so the key is omitted entirely.
+        options: toOptionsPayload(variants),
       });
 
       setName("");
@@ -848,7 +745,7 @@ export default function ProductForm({
         subtitle="What the product is and how customers will find it"
         icon={AlignLeft}
       >
-        <div className="space-y-5">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
           <div>
             <FieldLabel
               hint={getCounterHint(name.length, MAX_NAME_LENGTH)}
@@ -925,7 +822,7 @@ export default function ProductForm({
               onChange={(e) => handleCategoryChange(e.target.value)}
               disabled={subCategoriesDisabled}
               aria-busy={subCategoriesLoading || storeCategoriesLoading}
-              className="w-full appearance-none rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all duration-200 focus:glow-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-[42px] w-full appearance-none rounded-full px-[18px] pr-11 text-sm outline-none transition-all duration-200 focus:glow-primary disabled:cursor-not-allowed disabled:opacity-60"
               style={{
                 background: "var(--background-secondary)",
                 border: "1px solid var(--border-default)",
@@ -944,7 +841,7 @@ export default function ProductForm({
               ))}
             </select>
             <ChevronDown
-              className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2"
+              className="pointer-events-none absolute right-[18px] top-1/2 h-4 w-4 -translate-y-1/2"
               style={{ color: "var(--text-secondary)" }}
             />
           </div>
@@ -952,6 +849,40 @@ export default function ProductForm({
             <p className="mt-1 text-xs text-rose-500">{errors.category}</p>
           )}
         </div>
+
+        {/*
+         * Variants hang off the category: the suggested option names are fetched
+         * per-category, so before one is picked this block has nothing to offer.
+         *
+         * Deliberately unkeyed. A key tied to categoryId would remount this on
+         * every category switch, replaying the entrance each time; without one
+         * the node mounts once — when a category is first chosen — and later
+         * switches are plain prop updates, which never restart a CSS animation.
+         */}
+        {categoryId && (
+          <SectionCard
+            title="Advanced Options"
+            subtitle="Product variants and options"
+            icon={Layers}
+            collapsible
+            defaultOpen={true}
+            compact
+            className="animate-reveal-slide-in"
+          >
+            <div>
+              <FieldLabel icon={Layers} hint="Optional">
+                Variants & options
+              </FieldLabel>
+              <VariantsBuilder
+                variants={variants}
+                setVariants={setVariants}
+                suggestions={variantSuggestions}
+                suggestionsLoading={suggestionsLoading}
+                error={errors.variants}
+              />
+            </div>
+          </SectionCard>
+        )}
 
         <div>
           <FieldLabel
@@ -966,7 +897,7 @@ export default function ProductForm({
             onChange={(e) => setDescription(e.target.value.slice(0, 600))}
             rows={5}
             placeholder="Describe materials, fit, and what makes this product stand out…"
-            className="w-full resize-none rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all duration-200 focus:glow-primary"
+            className="w-full resize-none rounded-[14px] px-[18px] py-3 text-sm outline-none transition-all duration-200 focus:glow-primary"
             style={{
               background: "var(--background-secondary)",
               border: "1px solid var(--border-default)",
@@ -989,7 +920,7 @@ export default function ProductForm({
         subtitle="Set the price and control storefront visibility"
         icon={DollarSign}
       >
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
           <div>
             <FieldLabel
               icon={DollarSign}
@@ -1000,7 +931,7 @@ export default function ProductForm({
             </FieldLabel>
             <div className="relative">
               <span
-                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm"
+                className="pointer-events-none absolute left-[18px] top-1/2 -translate-y-1/2 text-sm"
                 style={{ color: "var(--text-secondary)" }}
               >
                 ₱
@@ -1015,7 +946,7 @@ export default function ProductForm({
                 value={price}
                 onChange={(e) => handlePriceChange(e.target.value)}
                 placeholder="0.00"
-                className="pl-7"
+                className="pl-9"
                 atLimit={priceAtMax}
               />
             </div>
@@ -1063,22 +994,6 @@ export default function ProductForm({
         icon={ImagePlus}
       >
         <ImageDropzone images={images} setImages={setImages} />
-      </SectionCard>
-
-      {/* Advanced Options */}
-      <SectionCard
-        title="Advanced Options"
-        subtitle="Product variants and options"
-        icon={Layers}
-        collapsible
-        defaultOpen={true}
-      >
-        <div>
-          <FieldLabel icon={Layers} hint="Optional">
-            Variants & options
-          </FieldLabel>
-          <VariantsBuilder variants={variants} setVariants={setVariants} />
-        </div>
       </SectionCard>
 
       {/* Floating save bar */}

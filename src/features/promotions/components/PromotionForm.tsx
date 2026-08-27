@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useEffect, useRef, useState, FormEvent } from "react";
 import { toast } from "sonner";
 import { Tag, Briefcase, Timer, Save, X } from "lucide-react";
 import {
   useCreatePromotion,
   useUpdatePromotion,
 } from "../hooks/usePromotionMutations";
+import { usePromotionBadges } from "../hooks/usePromotionBadges";
 import { ProductPickerField } from "./ProductPickerField";
 import {
   DEFAULT_TIME_ZONE,
@@ -46,6 +47,9 @@ const DISCOUNT_OPTIONS: { value: DiscountType; label: string }[] = [
   { value: "PERCENTAGE", label: "% off" },
   { value: "FIXED_AMOUNT", label: "Fixed amount off" },
 ];
+
+const CUSTOM_BADGE_VALUE = "__custom__";
+const MAX_BADGE_LABEL_LENGTH = 24;
 
 const GOAL_OPTIONS: { value: AdGoal; label: string }[] = [
   { value: "STORE_VISITS", label: "Store visits" },
@@ -127,7 +131,23 @@ export function PromotionForm({
   const [kind, setKind] = useState<PromotionKind>(promotion?.kind ?? "PROMO");
   const [title, setTitle] = useState(promotion?.title ?? "");
   const [description, setDescription] = useState(promotion?.description ?? "");
-  const [badgeLabel, setBadgeLabel] = useState(promotion?.badgeLabel ?? "");
+  const { data: promotionBadges = [] } = usePromotionBadges();
+  // A preset badgeId always wins; a promotion with a free-typed label (or one
+  // from a badge that's since been deactivated/removed) reopens as "Others…"
+  // with that text prefilled, rather than silently losing it.
+  const [badgeChoice, setBadgeChoice] = useState<string>(
+    promotion?.badgeId ?? (promotion?.badgeLabel ? CUSTOM_BADGE_VALUE : ""),
+  );
+  const [customBadge, setCustomBadge] = useState(
+    !promotion?.badgeId ? (promotion?.badgeLabel ?? "") : "",
+  );
+  const customBadgeInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (badgeChoice === CUSTOM_BADGE_VALUE) {
+      customBadgeInputRef.current?.focus();
+    }
+  }, [badgeChoice]);
   const [ctaLabel, setCtaLabel] = useState(promotion?.ctaLabel ?? "");
   const [salaryLabel, setSalaryLabel] = useState(promotion?.salaryLabel ?? "");
   const [discountType, setDiscountType] = useState<DiscountType | "">(
@@ -212,6 +232,14 @@ export function PromotionForm({
     if (!title.trim()) nextErrors.title = "Title is required";
     if (!description.trim()) nextErrors.description = "Description is required";
 
+    if (badgeChoice === CUSTOM_BADGE_VALUE) {
+      if (!customBadge.trim()) {
+        nextErrors.badge = "Enter a badge name, or pick one from the list.";
+      } else if (customBadge.trim().length > MAX_BADGE_LABEL_LENGTH) {
+        nextErrors.badge = `Keep it to ${MAX_BADGE_LABEL_LENGTH} characters or fewer.`;
+      }
+    }
+
     // ── Schedule window ───────────────────────────────────────────────────
     if (startTime && !startDate) {
       nextErrors.startDate = "Pick a start date, or clear the time.";
@@ -274,7 +302,15 @@ export function PromotionForm({
       kind,
       title: title.trim(),
       description: description.trim(),
-      badgeLabel: badgeLabel.trim() || undefined,
+      // Both keys are always sent together so the server can tell "no badge"
+      // (both null) apart from "leave the badge as-is" (both omitted) — see
+      // MerchantAdsService.resolveBadgeFor{Create,Update}. A preset id wins
+      // server-side regardless of what badgeLabel carries here.
+      ...(badgeChoice === ""
+        ? { badgeId: null, badgeLabel: null }
+        : badgeChoice === CUSTOM_BADGE_VALUE
+          ? { badgeId: null, badgeLabel: customBadge.trim() }
+          : { badgeId: badgeChoice, badgeLabel: null }),
       ctaLabel: ctaLabel.trim() || undefined,
       salaryLabel: kind === "JOB" ? salaryLabel.trim() || undefined : undefined,
       discountType: kind === "PROMO" && discountType ? discountType : undefined,
@@ -392,14 +428,45 @@ export function PromotionForm({
       </Field>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <Field label="Badge label">
-          <input
+        <Field label="Badge label" error={errors.badge}>
+          <select
+            aria-label="Badge label"
             className={inputClass()}
             style={inputStyle()}
-            value={badgeLabel}
-            onChange={(e) => setBadgeLabel(e.target.value)}
-            placeholder="e.g. Hot deal"
-          />
+            value={badgeChoice}
+            onChange={(e) => setBadgeChoice(e.target.value)}
+          >
+            <option value="">No badge</option>
+            {promotionBadges.map((badge) => (
+              <option
+                key={badge.id}
+                value={badge.id}
+                title={badge.description ?? undefined}
+              >
+                {badge.label}
+              </option>
+            ))}
+            <option value={CUSTOM_BADGE_VALUE}>Others…</option>
+          </select>
+          <div
+            className="grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none"
+            style={{
+              gridTemplateRows:
+                badgeChoice === CUSTOM_BADGE_VALUE ? "1fr" : "0fr",
+            }}
+          >
+            <div className="overflow-hidden">
+              <input
+                ref={customBadgeInputRef}
+                className={`${inputClass()} mt-2`}
+                style={inputStyle()}
+                value={customBadge}
+                onChange={(e) => setCustomBadge(e.target.value)}
+                placeholder="e.g. Weekend Special"
+                maxLength={MAX_BADGE_LABEL_LENGTH}
+              />
+            </div>
+          </div>
         </Field>
         <Field label="Call-to-action label">
           <input
