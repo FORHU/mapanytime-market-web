@@ -253,10 +253,44 @@ export function ProductDetail({
                   {product.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center rounded-full border border-[var(--border-light)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)]"
+                      className="inline-flex items-center rounded-full border border-[var(--border-default)] bg-[var(--md-sys-color-secondary-container)] px-4 py-1.5 text-sm font-medium text-[var(--brand-core)]"
                     >
                       {TAG_LABELS[tag as ProductTagType] ?? tag}
                     </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {product.options && product.options.length > 0 && (
+              <div>
+                <p
+                  className="mb-3 text-sm font-semibold"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  Variants
+                </p>
+
+                <div className="space-y-3">
+                  {product.options.map((option) => (
+                    <div key={option.name}>
+                      <p
+                        className="mb-1.5 text-xs font-medium"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {option.name}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {option.values.map((value) => (
+                          <span
+                            key={value}
+                            className="inline-flex items-center rounded-full border border-[var(--border-light)] px-3 py-1.5 text-sm text-[var(--text-secondary)]"
+                          >
+                            {value}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

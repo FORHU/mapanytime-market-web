@@ -24,7 +24,7 @@ function TagSelector({
   };
 
   return (
-    <div className="flex flex-wrap gap-2.5">
+    <div className="flex flex-wrap gap-2">
       {ALL_PRODUCT_TAGS.map((tag) => {
         const isSelected = selected.includes(tag);
         return (
@@ -32,22 +32,26 @@ function TagSelector({
             key={tag}
             type="button"
             onClick={() => toggleTag(tag)}
-            className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium outline-none transition-all duration-200 hover:scale-105 focus:outline-2 focus:outline-offset-2 active:scale-95"
+            className="inline-flex h-[34px] items-center gap-1.5 rounded-full px-4 text-[13px] font-medium outline-none transition-all duration-200 hover:scale-105 focus:outline-2 focus:outline-offset-2 active:scale-95"
             style={{
               background: isSelected
                 ? "var(--brand-core)"
-                : "var(--background-secondary)",
+                : "var(--background-elevated)",
               color: isSelected
                 ? "var(--background-primary)"
-                : "var(--text-primary)",
+                : "var(--brand-core)",
+              // Unselected chips read as brand outlines rather than neutral
+              // boxes: the tint is the affordance that they are pickable.
               border: `1px solid ${
-                isSelected ? "var(--brand-core)" : "var(--border-default)"
+                isSelected
+                  ? "var(--brand-core)"
+                  : "color-mix(in srgb, var(--brand-core) 45%, transparent)"
               }`,
               outlineColor: "var(--brand-core)",
             }}
             aria-pressed={isSelected}
           >
-            {isSelected && <Check className="h-4 w-4" />}
+            {isSelected && <Check className="h-3.5 w-3.5" />}
             {TAG_LABELS[tag]}
           </button>
         );
