@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { AgentAuthGate } from "@/features/auth/components/AgentAuthGate";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   LayoutDashboardIcon,
   SunIcon,
@@ -44,7 +45,23 @@ function AgentLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
+  const { logout, isLoggingOut } = useAuth();
   const currentRole = "SUPPORT_AGENT";
+
+  /**
+   * This button used to be `router.push("/login")` and nothing else — no token clear,
+   * no API call, no cache clear. The session stayed fully live on both sides, so
+   * navigating back landed the user in the agent console with real data.
+   *
+   * `logout` clears local state on both outcomes, so the redirect is unconditional.
+   */
+  const handleSignOut = async () => {
+    try {
+      await logout();
+    } finally {
+      router.push("/login");
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -173,11 +190,14 @@ function AgentLayoutContent({ children }: { children: React.ReactNode }) {
             {sidebarOpen && <span>View Marketplace</span>}
           </button>
           <button
-            onClick={() => router.push("/login")}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
+            onClick={handleSignOut}
+            disabled={isLoggingOut}
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-xs text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-60"
           >
             <LogOutIcon className="w-4 h-4 shrink-0" />
-            {sidebarOpen && <span>Sign Out</span>}
+            {sidebarOpen && (
+              <span>{isLoggingOut ? "Signing out…" : "Sign Out"}</span>
+            )}
           </button>
         </div>
       </aside>

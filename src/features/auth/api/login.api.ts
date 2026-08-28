@@ -1,5 +1,6 @@
 // src/features/auth/api/login.api.ts
 import { fetcher } from "@/shared/lib/http";
+import { getRefreshToken } from "@/shared/lib/token";
 import {
   LoginResponseEnvelopeSchema,
   AuthResultSchema,
@@ -67,9 +68,20 @@ export const register = async (
 
 /**
  * Universal Global Logout Handler
+ *
+ * Sends the stored refresh token so the server can delete the matching session row.
+ * Without it the server only clears `activeSessionId` — which does kill the access
+ * token — but the refresh row survives to its own expiry, and the refresh endpoint
+ * does not check `activeSessionId`. A refresh token kept from before logout could
+ * therefore mint a brand-new live session afterwards.
+ *
+ * The endpoint is idempotent, so sending nothing (no token stored) is still a 200.
  */
 export const logout = async () => {
+  const refreshToken = getRefreshToken();
+
   return fetcher("/api/v1/auth/logout", {
     method: "POST",
+    body: JSON.stringify(refreshToken ? { refreshToken } : {}),
   });
 };

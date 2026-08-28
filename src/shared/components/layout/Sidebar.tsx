@@ -231,18 +231,39 @@ export function Sidebar({
     isPropertyContext ? propertyNavLinks : navLinks
   ).filter((item) => isRoleAllowed(item.roles));
 
+  /**
+   * `onSignOut` is the real path — it revokes the session server-side and clears the
+   * React Query cache. The fallback below cannot do either: this component lives in
+   * `shared/`, which may not import from `features/`, and it has no QueryClient.
+   *
+   * So the fallback is a last resort that leaves the server session alive and the
+   * previous user's cached data in memory. Every layout that renders a Sidebar passes
+   * `onSignOut`; warn loudly if a new one forgets rather than silently half-signing
+   * someone out.
+   */
   const handleSignOutClick = () => {
     if (onSignOut) {
       onSignOut();
-    } else {
-      clearToken();
-      // Was `localStorage.clear()`, which also wiped the saved theme and any
-      // in-progress onboarding drafts. Only the seller context belongs to the
-      // session; clearToken() already handles the credentials themselves.
-      localStorage.removeItem("active_store_context_id");
-      localStorage.removeItem("active_property_context_id");
-      router.push("/login");
+      return;
     }
+
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "[Sidebar] Sign Out rendered without `onSignOut`. Local state is cleared, " +
+          "but the server session stays live and the query cache is not cleared. " +
+          "Pass `onSignOut` from the layout.",
+      );
+    }
+
+    clearToken();
+    // Was `localStorage.clear()`, which also wiped the saved theme and any
+    // in-progress onboarding drafts. Only the seller context belongs to the
+    // session; clearToken() already handles the credentials themselves.
+    localStorage.removeItem("active_store_context_id");
+    localStorage.removeItem("active_property_context_id");
+    // Hard navigation, not router.push: without a QueryClient to clear, this is the
+    // only way to guarantee the previous user's cached data is gone from memory.
+    window.location.href = "/login";
   };
 
   const linkBaseClasses =
