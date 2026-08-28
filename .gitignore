@@ -53,3 +53,4 @@ test-results/
 
 # stray tailwind CLI output (the app builds css through next/postcss)
 /output.css
+/docs/commits
