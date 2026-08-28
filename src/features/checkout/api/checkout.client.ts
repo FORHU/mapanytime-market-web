@@ -27,6 +27,8 @@ export interface CreateOrderInput {
   /** ISO datetime. Required for PICKUP, which is the only fulfillment type. */
   pickupAt: string;
   productIds?: string[];
+  /** A claimed MapPoints voucher (`UserVouchers.id`) to redeem on this order. */
+  userVoucherId?: string;
 }
 
 /**

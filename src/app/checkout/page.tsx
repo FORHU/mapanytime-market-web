@@ -12,6 +12,17 @@ import {
 import { PriceBreakdown } from "@/features/checkout/components/PriceBreakdown";
 import { PaymentMethodPicker } from "@/features/checkout/components/PaymentMethodPicker";
 import type { PaymentMethod } from "@/features/checkout/contracts/checkout.contract";
+import { MyVoucherCard } from "@/features/rewards/components/MyVoucherCard";
+import {
+  useMyVouchers,
+  useRewardsConfig,
+} from "@/features/rewards/hooks/useRewards";
+import {
+  estimateVoucherDiscount,
+  estimatePointsEarned,
+  voucherMeetsMinimum,
+} from "@/features/rewards/contracts/rewards.contract";
+import type { UserVoucher } from "@/features/rewards/contracts/rewards.contract";
 
 /** Default pickup slot: an hour from now, rounded up to the next 15 minutes. */
 function defaultPickupAt(): string {
@@ -28,6 +39,9 @@ export default function CheckoutPage() {
     null,
   );
   const [pickupAt, setPickupAt] = useState(defaultPickupAt);
+  const [selectedVoucher, setSelectedVoucher] = useState<UserVoucher | null>(
+    null,
+  );
 
   // One key per mounted checkout. A retried click, or a submit that times out
   // and is tried again, resolves to the same order instead of reserving stock
@@ -51,6 +65,26 @@ export default function CheckoutPage() {
     usePaymentMethods(goodsTotal);
   const createOrder = useCreateOrder();
 
+  const { data: usableVouchers } = useMyVouchers("ACTIVE");
+  const { data: rewardsConfig } = useRewardsConfig();
+
+  // Eligible base for both the voucher discount preview and the points-to-
+  // earn estimate: subtotal net of merchant discounts, matching what the
+  // backend uses for each (a MapPoints voucher deliberately does not shrink
+  // it further — see OPEN-FLAGS.md F39/F40).
+  const eligibleSubtotal = pricing
+    ? pricing.subtotalAmount - pricing.discountAmount
+    : 0;
+  const applicableVouchers = (usableVouchers ?? []).filter((uv) =>
+    voucherMeetsMinimum(uv.voucher, eligibleSubtotal),
+  );
+  const voucherDiscount = selectedVoucher
+    ? estimateVoucherDiscount(selectedVoucher.voucher, eligibleSubtotal)
+    : 0;
+  const pointsToEarn = rewardsConfig
+    ? estimatePointsEarned(rewardsConfig, eligibleSubtotal)
+    : 0;
+
   const isEmpty = !pricingLoading && goodsTotal <= 0;
 
   const handlePlaceOrder = () => {
@@ -61,6 +95,7 @@ export default function CheckoutPage() {
         input: {
           paymentMethodId: selectedMethod.id,
           pickupAt: new Date(pickupAt).toISOString(),
+          userVoucherId: selectedVoucher?.id,
         },
         idempotencyKey,
       },
@@ -124,7 +159,14 @@ export default function CheckoutPage() {
         {pricingLoading || !pricing ? (
           <div className="h-40 rounded-2xl border border-[var(--border-default)] bg-[var(--background-secondary)]/50 animate-pulse" />
         ) : (
-          <PriceBreakdown pricing={pricing} selectedMethod={selectedMethod} />
+          <PriceBreakdown
+            pricing={pricing}
+            selectedMethod={selectedMethod}
+            voucherDiscountAmount={
+              voucherDiscount > 0 ? voucherDiscount : undefined
+            }
+            pointsToEarn={pointsToEarn > 0 ? pointsToEarn : undefined}
+          />
         )}
         {cart?.items?.length ? (
           <p className="text-xs text-[var(--text-tertiary)]">
@@ -148,6 +190,44 @@ export default function CheckoutPage() {
             className="w-full sm:w-72 pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border-default)] bg-[var(--background-primary)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)]"
           />
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-black uppercase tracking-wide text-[var(--text-tertiary)]">
+          MapPoints voucher
+        </h2>
+        {selectedVoucher ? (
+          <div className="space-y-2">
+            <MyVoucherCard
+              userVoucher={selectedVoucher}
+              selected
+              onApply={() => setSelectedVoucher(null)}
+            />
+            <p className="text-xs text-[var(--text-tertiary)]">
+              Tap to remove.
+            </p>
+          </div>
+        ) : applicableVouchers.length > 0 ? (
+          <div className="space-y-2">
+            {applicableVouchers.map((uv) => (
+              <MyVoucherCard
+                key={uv.id}
+                userVoucher={uv}
+                onApply={() => setSelectedVoucher(uv)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--text-secondary)]">
+            No claimed vouchers apply to this order.{" "}
+            <Link
+              href="/buyer/rewards"
+              className="text-[var(--brand-core)] font-semibold hover:underline"
+            >
+              Browse the catalog
+            </Link>
+          </p>
+        )}
       </section>
 
       <section className="space-y-3">
