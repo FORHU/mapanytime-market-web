@@ -6,7 +6,7 @@ import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import Link from "next/link";
-import { Map, ShoppingBag, User, LogOut } from "lucide-react";
+import { Map, ShoppingBag, User, LogOut, Coins } from "lucide-react";
 
 export default function BuyerLayout({
   children,
@@ -67,6 +67,14 @@ export default function BuyerLayout({
           >
             <Map className="w-4 h-4" />
             <span className="hidden md:inline">Live Map</span>
+          </Link>
+
+          <Link
+            href="/buyer/rewards"
+            className="flex items-center gap-2 text-sm font-medium text-on-surface hover:text-primary transition-colors"
+          >
+            <Coins className="w-4 h-4" />
+            <span className="hidden md:inline">MapPoints</span>
           </Link>
 
           {roles.includes("SELLER") && (

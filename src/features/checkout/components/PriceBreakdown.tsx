@@ -1,4 +1,4 @@
-import { Tag } from "lucide-react";
+import { Tag, Coins, PlusCircle } from "lucide-react";
 import { formatPeso } from "@/shared/lib/currency";
 import type {
   CheckoutPricingSummary,
@@ -9,6 +9,20 @@ interface PriceBreakdownProps {
   pricing: CheckoutPricingSummary;
   /** Once a method is chosen, its fee and the real total are shown. */
   selectedMethod?: PaymentMethod | null;
+  /**
+   * A claimed MapPoints voucher's estimated discount, if one is applied.
+   * Kept separate from `pricing.discountAmount` — that's a seller-funded
+   * merchant/ad discount, this is a platform-funded MapPoints redemption,
+   * and the two must not be conflated (OPEN-FLAGS.md F39/F40). An estimate
+   * only; the order response is the source of truth.
+   */
+  voucherDiscountAmount?: number;
+  /**
+   * Estimated MapPoints the buyer will earn if this order completes. Points
+   * are only actually credited on COMPLETED, not at checkout — shown as an
+   * estimate for that reason.
+   */
+  pointsToEarn?: number;
 }
 
 function Row({
@@ -65,11 +79,26 @@ function Row({
 export function PriceBreakdown({
   pricing,
   selectedMethod,
+  voucherDiscountAmount,
+  pointsToEarn,
 }: PriceBreakdownProps) {
   const hasDiscount = pricing.discountAmount > 0;
+  const hasVoucher = (voucherDiscountAmount ?? 0) > 0;
   const fee = selectedMethod?.feeAmount;
   const buyerTotal = selectedMethod?.buyerTotalAmount;
   const showsFee = typeof fee === "number" && typeof buyerTotal === "number";
+
+  // ponytail: `GET /payments/methods` quotes `fee`/`buyerTotal` against the
+  // pre-voucher goods total (this component has no way to re-quote it), so
+  // only the two totals below are adjusted by subtracting the voucher — the
+  // fee itself is a small approximation until the order is actually created.
+  // The order response is the source of truth; upgrade path is threading
+  // voucherAmount into the payment-methods quote if this drifts enough to
+  // matter.
+  const lessVoucher = (amount: number) => {
+    const result = amount - (voucherDiscountAmount ?? 0);
+    return result < 0 ? 0 : result;
+  };
 
   return (
     <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--background-secondary)]/50 backdrop-blur-md p-5 space-y-3">
@@ -89,7 +118,31 @@ export function PriceBreakdown({
         </p>
       </div>
 
+      {hasVoucher && (
+        <div className="flex items-start justify-between gap-4">
+          <p className="text-sm text-[var(--text-secondary)] flex items-center gap-1.5">
+            <Coins className="w-3.5 h-3.5" />
+            MapPoints voucher
+          </p>
+          <p className="text-sm shrink-0 tabular-nums font-bold text-emerald-500">
+            -{formatPeso(voucherDiscountAmount!)}
+          </p>
+        </div>
+      )}
+
       <Row label="Subtotal" value={formatPeso(pricing.subtotalAmount)} />
+
+      {(pointsToEarn ?? 0) > 0 && (
+        <div className="flex items-start justify-between gap-4">
+          <p className="text-sm text-[var(--text-secondary)] flex items-center gap-1.5">
+            <PlusCircle className="w-3.5 h-3.5" />
+            You&apos;ll earn
+          </p>
+          <p className="text-sm shrink-0 tabular-nums font-bold text-[var(--text-primary)]">
+            ~{pointsToEarn} pts
+          </p>
+        </div>
+      )}
 
       <div className="h-px bg-[var(--border-light)]" />
 
@@ -97,7 +150,7 @@ export function PriceBreakdown({
         <>
           <Row
             label="Order total"
-            value={formatPeso(pricing.totalAmount)}
+            value={formatPeso(lessVoucher(pricing.totalAmount))}
             hint="Cost of the goods"
           />
           <Row
@@ -106,12 +159,16 @@ export function PriceBreakdown({
             hint="Charged by the payment provider"
           />
           <div className="h-px bg-[var(--border-light)]" />
-          <Row label="Total to pay" value={formatPeso(buyerTotal)} bold />
+          <Row
+            label="Total to pay"
+            value={formatPeso(lessVoucher(buyerTotal))}
+            bold
+          />
         </>
       ) : (
         <Row
           label="Order total"
-          value={formatPeso(pricing.totalAmount)}
+          value={formatPeso(lessVoucher(pricing.totalAmount))}
           hint="Payment fee added when you choose how to pay"
           bold
         />
