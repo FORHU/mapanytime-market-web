@@ -12,7 +12,7 @@ import { usePagination } from "@/shared/pagination/usePagination";
 import { PaginationControls } from "@/shared/pagination/PaginationControls";
 import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
 import { useStoreCategories } from "@/features/stores/hooks/useStoreCategories";
-import { useSubCategories } from "@/features/stores/hooks/useSubCategories";
+import { getSubCategories } from "@/features/stores/api/categories.client";
 import { useSellerCategoryTree } from "@/features/seller-catalog/hooks/useSellerCategoryTree";
 import { CategoryFilterSelect } from "@/features/seller-catalog/components/CategoryFilterSelect";
 import type { SellerCategoryNode } from "@/shared/contracts/products.contract";
@@ -108,12 +108,6 @@ export default function ProductsPage() {
     isError: storeCategoriesError,
   } = useStoreCategories(activeStoreId);
 
-  const {
-    data: subCategories,
-    isLoading: subCategoriesLoading,
-    isError: subCategoriesError,
-  } = useSubCategories(mainCategory?.id ?? null);
-
   // The filter's own source. Unlike the two hooks above (which are store-scoped
   // and feed ProductForm), this works in All-Stores mode, where it aggregates
   // the categories across every store the seller owns.
@@ -200,9 +194,9 @@ export default function ProductsPage() {
           mainCategory={mainCategory}
           storeCategoriesLoading={storeCategoriesLoading}
           storeCategoriesError={storeCategoriesError}
-          subCategories={subCategories ?? []}
-          subCategoriesLoading={subCategoriesLoading}
-          subCategoriesError={subCategoriesError}
+          // Composed here: the category API belongs to the `stores` feature, which
+          // `seller-catalog` may not import from directly.
+          loadCategoryChildren={getSubCategories}
         />
       )}
 
