@@ -37,6 +37,20 @@ export const getSessionId = (): string => {
   return sessionId;
 };
 
+/**
+ * Dropped on logout so the id does not outlive the credential it was minted
+ * alongside. Without this the next user to sign in on the same tab inherits it,
+ * and both users' events stitch into one analytics session under two userIds.
+ *
+ * Removal rather than re-minting: getSessionId() already mints lazily, so the
+ * next tracked event issues a fresh id and a signed-out visitor who never fires
+ * one costs nothing.
+ */
+export const clearSessionId = (): void => {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(SESSION_KEY);
+};
+
 export const trackEvent = async (
   eventType: AnalyticsEventType,
   payload?: {

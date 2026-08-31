@@ -1,11 +1,7 @@
 import { ApiError } from "@/shared/errors/api-error";
 import { env } from "@/shared/lib/env";
-import {
-  getToken,
-  getRefreshToken,
-  setToken,
-  clearToken,
-} from "@/shared/lib/token";
+import { getToken, getRefreshToken, setToken } from "@/shared/lib/token";
+import { clearClientSession } from "@/shared/lib/session";
 
 function classify(
   status: number,
@@ -154,10 +150,12 @@ export async function fetcher<T>(
           }
         }
 
-        // Refresh failed or no refresh token exists -> clear tokens and redirect
+        // Refresh failed or no refresh token exists -> clear the session and redirect.
+        // Was clearToken() plus a hand-written removeItem for the store context only,
+        // which left active_property_context_id and the analytics session id behind
+        // for whoever signed in next. clearClientSession owns the full list now.
         if (typeof window !== "undefined") {
-          clearToken();
-          localStorage.removeItem("active_store_context_id");
+          clearClientSession();
           if (onTokenClearCallback) {
             onTokenClearCallback();
           }

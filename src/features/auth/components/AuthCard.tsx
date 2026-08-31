@@ -379,7 +379,7 @@ export default function AuthCard({
                       : "/seller/onboarding",
                   )
                 }
-                className="w-full py-3 rounded-lg font-medium bg-primary text-on-primary hover:bg-primary-fixed transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-lg font-medium bg-primary text-on-primary hover:bg-primary-fixed transition-[background-color,transform] duration-150 ease-out active:scale-[0.96] flex items-center justify-center gap-2"
               >
                 Seller Dashboard
               </button>
@@ -387,7 +387,7 @@ export default function AuthCard({
             {isBuyer && (
               <button
                 onClick={() => router.push("/buyer")}
-                className="w-full py-3 rounded-lg font-medium bg-surface-container text-on-surface hover:bg-surface-container-high border border-outline-variant/50 transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-lg font-medium bg-surface-container text-on-surface hover:bg-surface-container-high border border-outline-variant/50 transition-[background-color,transform] duration-150 ease-out active:scale-[0.96] flex items-center justify-center gap-2"
               >
                 Buyer Portal
               </button>
@@ -395,7 +395,7 @@ export default function AuthCard({
             {isAdmin && (
               <button
                 onClick={() => router.push("/admin")}
-                className="w-full py-3 rounded-lg font-medium bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-lg font-medium bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition-[background-color,transform] duration-150 ease-out active:scale-[0.96] flex items-center justify-center gap-2"
               >
                 Admin Console
               </button>
@@ -403,7 +403,7 @@ export default function AuthCard({
             {isAgent && (
               <button
                 onClick={() => router.push("/agent")}
-                className="w-full py-3 rounded-lg font-medium bg-sky-50 text-sky-600 hover:bg-sky-100 border border-sky-200 transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-lg font-medium bg-sky-50 text-sky-600 hover:bg-sky-100 border border-sky-200 transition-[background-color,transform] duration-150 ease-out active:scale-[0.96] flex items-center justify-center gap-2"
               >
                 Support Agent Portal
               </button>
@@ -427,7 +427,7 @@ export default function AuthCard({
       <div className="w-full max-w-md rounded-2xl shadow-2xl border border-[var(--border-default)] bg-[var(--background-elevated)]/90 backdrop-blur-xl relative overflow-hidden">
         {/* Accent bar */}
         <div
-          className="absolute top-0 left-0 right-0 h-1"
+          className="absolute top-0 inset-x-0 h-1 rounded-t-2xl"
           style={{
             background: `linear-gradient(to right, ${config.accent}, #22d3ee, #6366f1)`,
           }}
@@ -487,7 +487,7 @@ export default function AuthCard({
                   reserveError
                 >
                   <div className="relative" ref={emailFieldRef}>
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                    <Mail className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                     <input
                       type="email"
                       name="email"
@@ -505,7 +505,7 @@ export default function AuthCard({
                       placeholder="name@domain.com"
                       value={credentials.email}
                       onChange={handleCredentialChange}
-                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none transition-colors disabled:opacity-60 ${fieldStateClasses(emailHasError)}`}
+                      className={`w-full ps-10 pe-4 py-2.5 rounded-xl border text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none transition-colors disabled:opacity-60 ${fieldStateClasses(emailHasError)}`}
                     />
                   </div>
                 </Field>
@@ -525,7 +525,7 @@ export default function AuthCard({
                   }
                 >
                   <div className="relative" ref={passwordFieldRef}>
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                    <Lock className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                     <input
                       type={showPassword ? "text" : "password"}
                       name="password"
@@ -537,18 +537,35 @@ export default function AuthCard({
                       placeholder="••••••••"
                       value={credentials.password}
                       onChange={handleCredentialChange}
-                      className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none transition-colors disabled:opacity-60 ${fieldStateClasses(passwordHasError)}`}
+                      className={`w-full ps-10 pe-10 py-2.5 rounded-xl border text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none transition-colors disabled:opacity-60 ${fieldStateClasses(passwordHasError)}`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                      className="absolute end-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                     >
-                      {showPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
+                      {/* Both icons stay mounted and stacked so they can cross-fade
+                          instead of popping. The wrapper is explicitly sized —
+                          absolutely positioning both children would otherwise
+                          collapse it and shift the input's padding. */}
+                      <span className="relative block w-4 h-4">
+                        <Eye
+                          aria-hidden
+                          className={`icon-swap absolute inset-0 w-4 h-4 ${
+                            showPassword
+                              ? "opacity-0 scale-[0.25] blur-[4px]"
+                              : "opacity-100 scale-100 blur-0"
+                          }`}
+                        />
+                        <EyeOff
+                          aria-hidden
+                          className={`icon-swap absolute inset-0 w-4 h-4 ${
+                            showPassword
+                              ? "opacity-100 scale-100 blur-0"
+                              : "opacity-0 scale-[0.25] blur-[4px]"
+                          }`}
+                        />
+                      </span>
                     </button>
                   </div>
                 </Field>
@@ -857,7 +874,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all duration-200 ${active ? "bg-[var(--brand-core)] text-white shadow-md" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}
+      className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-[background-color,color,box-shadow,transform] duration-200 ease-out active:scale-[0.96] ${active ? "bg-[var(--brand-core)] text-white shadow-md" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}
     >
       {icon}
       {label}
@@ -959,7 +976,7 @@ function SubmitButton({
     <button
       type="submit"
       disabled={loading}
-      className="w-full py-3 mt-2 font-extrabold text-xs rounded-xl text-white disabled:opacity-75 transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed hover:opacity-90"
+      className="w-full py-3 mt-2 font-extrabold text-xs rounded-xl text-white disabled:opacity-75 transition-[opacity,transform] duration-150 ease-out active:scale-[0.96] disabled:active:scale-100 shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed hover:opacity-90"
       style={{ backgroundColor: accent }}
     >
       {loading ? (
@@ -995,7 +1012,7 @@ function RoleCard({
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-4 p-4 border rounded-xl hover:bg-[var(--background-secondary)] transition-colors text-left w-full"
+      className="flex items-center gap-4 p-4 border rounded-xl hover:bg-[var(--background-secondary)] transition-[background-color,transform] duration-150 ease-out active:scale-[0.96] text-left w-full"
       style={{ borderColor: "var(--border-light)" }}
     >
       <div className={`p-2.5 rounded-lg shrink-0 ${iconBg}`} style={iconStyle}>

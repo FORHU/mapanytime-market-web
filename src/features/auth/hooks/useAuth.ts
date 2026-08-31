@@ -2,28 +2,17 @@ import { useQueryClient, QueryClient } from "@tanstack/react-query";
 import { useSafeMutation } from "@/shared/query/useSafeMutation";
 import { login, logout, register, type UserRole } from "../api/login.api";
 import { useAuthStore } from "../stores/auth.store";
-
-/**
- * Per-user state that must not survive a session change, keyed by storage.
- * Kept in one place because login and logout previously cleared different subsets —
- * logout dropped only the store context, so the property context leaked across users.
- */
-const SCOPED_STORAGE_KEYS = [
-  "active_store_context_id",
-  "active_property_context_id",
-] as const;
-
-function clearScopedStorage() {
-  if (typeof window === "undefined") return;
-  SCOPED_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
-}
+import { clearClientSession } from "@/shared/lib/session";
 
 export function clearAuthSession(
   setToken: (token: string | null) => void,
   queryClient: QueryClient,
 ) {
+  // setToken(null) first so the zustand store updates and subscribed components
+  // re-render; clearClientSession then covers everything storage-side, including
+  // the analytics session id that used to outlive the credential.
   setToken(null);
-  clearScopedStorage();
+  clearClientSession();
   queryClient.clear();
 }
 
@@ -47,8 +36,13 @@ export function useAuth() {
    * cached data for the moment before each refetch lands.
    */
   const adoptSession = (accessToken: string, refreshToken?: string) => {
+    // Before setToken, not after — clearClientSession() clears the credential too,
+    // so the reverse order would wipe the token just written. Signing in has to
+    // tear down first because a tab whose session expired without an explicit
+    // logout arrives at /login still holding the previous user's analytics id and
+    // seller context.
+    clearClientSession();
     setToken(accessToken, refreshToken);
-    clearScopedStorage();
     queryClient.clear();
   };
 

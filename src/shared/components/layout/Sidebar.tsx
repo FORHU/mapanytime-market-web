@@ -21,7 +21,7 @@ import {
   ChevronRight,
   House,
 } from "lucide-react";
-import { clearToken } from "@/shared/lib/token";
+import { clearClientSession } from "@/shared/lib/session";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 
 /**
@@ -255,12 +255,11 @@ export function Sidebar({
       );
     }
 
-    clearToken();
     // Was `localStorage.clear()`, which also wiped the saved theme and any
-    // in-progress onboarding drafts. Only the seller context belongs to the
-    // session; clearToken() already handles the credentials themselves.
-    localStorage.removeItem("active_store_context_id");
-    localStorage.removeItem("active_property_context_id");
+    // in-progress onboarding drafts. clearClientSession removes exactly what
+    // belongs to the session — credentials, seller context, analytics session id
+    // — and nothing else; the list lives in shared/lib/session.ts.
+    clearClientSession();
     // Hard navigation, not router.push: without a QueryClient to clear, this is the
     // only way to guarantee the previous user's cached data is gone from memory.
     window.location.href = "/login";

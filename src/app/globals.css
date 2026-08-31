@@ -358,6 +358,21 @@
   .auth-error-enter {
     animation: auth-error-enter 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
   }
+
+  /* Cross-fade between two stacked icons that mean opposite states (the password
+     reveal toggle). Both icons stay mounted, so a transition works here — unlike
+     the error text above, which mounts on demand and needs an animation.
+
+     ease-in-out, not the sharp ease-out used for entrances: this is a morph
+     between two glyphs, not an element arriving. Measured, the entrance curve was
+     98% complete by 90ms of its 200ms, which reads as a pop rather than a blend —
+     the two icons were never meaningfully on screen together. */
+  .icon-swap {
+    transition:
+      opacity 200ms cubic-bezier(0.2, 0, 0, 1),
+      transform 200ms cubic-bezier(0.2, 0, 0, 1),
+      filter 200ms cubic-bezier(0.2, 0, 0, 1);
+  }
   @media (prefers-reduced-motion: reduce) {
     .animate-reveal-slide-in,
     .auth-error-enter,
@@ -371,6 +386,14 @@
     .step-dot,
     .step-dot-fill {
       transition: none;
+    }
+
+    /* Keep the opacity fade — it carries the meaning — and drop only the movement. */
+    .icon-swap {
+      transition:
+        opacity 200ms ease,
+        filter 200ms ease;
+      transform: none !important;
     }
 
     .step-connector-fill-on {
