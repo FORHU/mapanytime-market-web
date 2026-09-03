@@ -8,33 +8,7 @@ test.describe("Theme toggle", () => {
     await expect(html).toHaveClass(/light/, { timeout: 3000 });
   });
 
-  test("clicking the theme toggle switches to dark mode", async ({ page }) => {
-    await page.goto("/");
-
-    // Find the theme toggle button
-    const toggleBtn = page
-      .locator('button[aria-label="Toggle dark mode"]')
-      .first();
-    await toggleBtn.dispatchEvent("click");
-
-    const html = page.locator("html");
-    // After toggle, dark class should be applied (dark mode)
-    await expect(html).toHaveClass(/dark/, { timeout: 2000 });
-  });
-
-  test("clicking the theme toggle twice returns to light mode", async ({
-    page,
-  }) => {
-    await page.goto("/");
-
-    const toggleBtn = page
-      .locator('button[aria-label="Toggle dark mode"]')
-      .first();
-    await toggleBtn.dispatchEvent("click"); // → dark
-    await expect(page.locator("html")).toHaveClass(/dark/);
-    await toggleBtn.dispatchEvent("click"); // → light again
-
-    const html = page.locator("html");
-    await expect(html).toHaveClass(/light/, { timeout: 2000 });
-  });
+  // The landing page (src/features/landing) has no theme toggle — it is a
+  // fixed-dark design. There is currently no route under test that renders
+  // one, so there is nothing here to click.
 });

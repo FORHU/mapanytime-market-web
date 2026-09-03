@@ -1,3 +1,6 @@
+// built, not mounted - /v1/shipments/* exists and the contracts match, but no
+// UI file imports useShipments. Same for the sibling returns.client.ts.
+// See docs/connection-audit.md §6.
 import { fetcher } from "@/shared/lib/http";
 import {
   ShipmentSchema,

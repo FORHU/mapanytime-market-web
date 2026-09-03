@@ -7,7 +7,6 @@ on:
 
   push:
     branches:
-      - staging
       - main
 
 concurrency:
@@ -21,17 +20,16 @@ jobs:
   e2e:
     name: Playwright E2E
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
-    # Uses the staging environment's secrets to run against a staging-like
-    # backend, regardless of which branch triggered the run. This job only
-    # runs tests — deployment lives in deploy-staging.yml / deploy-production.yml.
+    # Run Playwright tests directly against main/production
     environment:
-      name: staging
+      name: production
 
     env:
       NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
       NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
-      NEXT_PUBLIC_APP_ENV: staging
+      NEXT_PUBLIC_APP_ENV: production
 
     steps:
       - name: Checkout
@@ -49,8 +47,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(pnpm list --depth=0 @playwright/test --json | jq -r '.[0].devDependencies["@playwright/test"].version')" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install chromium
 
       - name: Run Playwright tests
         run: pnpm test:e2e

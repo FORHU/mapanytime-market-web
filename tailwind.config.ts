@@ -5,6 +5,57 @@ const config: Config = {
   darkMode: "class",
   theme: {
     extend: {
+      screens: {
+        "landing-xs": "430px",
+        "landing-sm": "600px",
+        "landing-md": "800px",
+        "landing-lg": "1050px",
+      },
+      keyframes: {
+        "hero-in": {
+          from: {
+            opacity: "0",
+            transform: "translateY(25px)",
+            filter: "blur(7px)",
+          },
+          to: { opacity: "1", transform: "none", filter: "none" },
+        },
+        gradient: {
+          to: { backgroundPosition: "200% center" },
+        },
+        "pulse-dot": {
+          "70%": { boxShadow: "0 0 0 7px rgba(34, 211, 238, 0)" },
+        },
+        "card-float": {
+          "50%": { transform: "translateY(-5px)" },
+        },
+        "ai-float": {
+          "50%": { transform: "translateY(-8px) rotate(1deg)" },
+        },
+        scan: {
+          "0%, 100%": { top: "5%", opacity: "0" },
+          "10%, 85%": { opacity: "1" },
+          "95%": { top: "95%", opacity: "0" },
+        },
+        "location-pulse": {
+          from: { opacity: "0.8", transform: "scale(0.6)" },
+          to: { opacity: "0", transform: "scale(2.6)" },
+        },
+        "fade-in-up": {
+          from: { opacity: "0", transform: "translateY(15px)" },
+          to: { opacity: "1", transform: "none" },
+        },
+      },
+      animation: {
+        "hero-in": "hero-in 0.9s cubic-bezier(0.16, 1, 0.3, 1)",
+        gradient: "gradient 4s linear infinite",
+        "pulse-dot": "pulse-dot 2s infinite",
+        "card-float": "card-float 4s ease-in-out infinite",
+        "ai-float": "ai-float 5s ease-in-out infinite",
+        scan: "scan 2.5s ease-in-out infinite",
+        "location-pulse": "location-pulse 2s ease-out infinite",
+        "fade-in-up": "fade-in-up 0.4s ease-out both",
+      },
       colors: {
         "surface-tint": "var(--md-sys-color-surface-tint)",
         "primary-fixed-dim": "var(--md-sys-color-primary-fixed-dim)",

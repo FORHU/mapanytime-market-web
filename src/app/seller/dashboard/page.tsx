@@ -7,7 +7,6 @@ import { Card } from "@/shared/components/ui/Card";
 import { Button } from "@/shared/components/ui/Button";
 import { SellerOrdersBoard } from "@/features/orders/components/SellerOrdersBoard";
 import { useStoreOverviewStats } from "@/shared/hooks/useOrdersPipeline";
-import { useProductsPipeline } from "@/shared/hooks/useProductsPipeline";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { useActiveStore } from "@/features/stores/hooks/useActiveStore";
 import { usePropertyDashboard } from "@/features/properties/hooks/usePropertyDashboard";
@@ -18,7 +17,6 @@ import {
   Package,
   AlertTriangle,
   CheckCircle2,
-  Sparkles,
   Home,
   LandPlot,
   MapPin,
@@ -44,49 +42,26 @@ export default function SellerDashboard() {
 
   const propertyId = queryPropertyId ?? storedPropertyId;
   const isPropertyContext =
-    queryContext === "property" || (!queryContext && !activeStoreId);
+    queryContext === "property" || Boolean(propertyId && !activeStoreId);
   const effectivePropertyId = isPropertyContext ? propertyId : null;
   const effectiveStoreId = isPropertyContext
     ? null
     : (queryStoreId ?? activeStoreId);
-  const isStoreContext = Boolean(effectiveStoreId) && !isPropertyContext;
+  const isStoreContext = !isPropertyContext; // Treats global as store context
   const isContextReady = isHydrated && propertyContextHydrated;
-
-  useEffect(() => {
-    if (!isContextReady) return;
-
-    const hasValidContext =
-      (isPropertyContext && Boolean(effectivePropertyId)) ||
-      (isStoreContext && Boolean(effectiveStoreId));
-
-    if (!hasValidContext) {
-      router.replace("/seller/manage-stores");
-    }
-  }, [
-    effectivePropertyId,
-    effectiveStoreId,
-    isContextReady,
-    isPropertyContext,
-    isStoreContext,
-    router,
-  ]);
 
   const propertyQuery = usePropertyDashboard(effectivePropertyId ?? "");
 
-  const { totalRevenue, pendingCount, fulfilledCount, isLoading } =
-    useStoreOverviewStats({ userId });
+  // All tile numbers come pre-aggregated from the backend stats endpoint.
+  const {
+    totalRevenue,
+    pendingCount,
+    fulfilledCount,
+    lowStockCount,
+    isLoading,
+  } = useStoreOverviewStats({ userId });
 
-  // Stock lives on products, not on orders — the orders API never reports it.
-  const { products, isLoading: productsLoading } =
-    useProductsPipeline(effectiveStoreId);
-  const lowStockCount = products.filter((p) => p.stock <= 10).length;
-
-  const ordersReady = isHydrated && isStoreContext && !isLoading;
-  const stockReady =
-    isHydrated &&
-    isStoreContext &&
-    Boolean(effectiveStoreId) &&
-    !productsLoading;
+  const statsReady = isHydrated && isStoreContext && !isLoading;
 
   if (!isContextReady || (!isPropertyContext && !isStoreContext)) {
     return null;
@@ -104,7 +79,7 @@ export default function SellerDashboard() {
       icon: TrendingUp,
       accent: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
       valueClass: "text-[var(--text-primary)]",
-      ready: ordersReady,
+      ready: statsReady,
     },
     {
       label: "Orders to handle",
@@ -113,7 +88,7 @@ export default function SellerDashboard() {
       icon: ShoppingBag,
       accent: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
       valueClass: "text-amber-600 dark:text-amber-400",
-      ready: ordersReady,
+      ready: statsReady,
     },
     {
       label: "Completed orders",
@@ -122,7 +97,7 @@ export default function SellerDashboard() {
       icon: CheckCircle2,
       accent: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
       valueClass: "text-emerald-600 dark:text-emerald-400",
-      ready: ordersReady,
+      ready: statsReady,
     },
     {
       label: "Low stock",
@@ -131,7 +106,7 @@ export default function SellerDashboard() {
       icon: AlertTriangle,
       accent: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
       valueClass: "text-rose-600 dark:text-rose-400",
-      ready: stockReady,
+      ready: statsReady,
     },
   ];
 
@@ -151,11 +126,6 @@ export default function SellerDashboard() {
           <Link href="/seller/products">
             <Button variant="secondary" className="!text-sm border">
               <Package className="w-4 h-4" /> Manage products
-            </Button>
-          </Link>
-          <Link href="/seller/ai-upload">
-            <Button className="!text-sm bg-gradient-to-r from-sky-500 to-cyan-400 text-white shadow-md">
-              <Sparkles className="w-4 h-4" /> AI import
             </Button>
           </Link>
         </div>

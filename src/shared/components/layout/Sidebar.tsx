@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
-  Sparkles,
   ShoppingBag,
   BarChart3,
   Store,
@@ -14,8 +13,10 @@ import {
   LogOut,
   X,
   Lock,
-  Boxes,
+  Megaphone,
   MessageSquare,
+  Wallet,
+  RotateCcw,
   ChevronDown,
   ChevronRight,
   House,
@@ -23,13 +24,50 @@ import {
 import { clearToken } from "@/shared/lib/token";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 
+/**
+ * The shape this component needs from a store — declared structurally rather
+ * than imported from `features/stores`, because `shared/` is infrastructure and
+ * must not depend on a feature. The caller supplies something matching it.
+ */
+export interface ActiveStoreSummary {
+  id: string;
+  storeName: string;
+}
+
+/** Logo + wordmark. Shared so the linked and locked branding stay identical. */
+function BrandMark() {
+  return (
+    <>
+      <div className="w-8 h-8 rounded-xl bg-[var(--brand-core)] flex items-center justify-center text-white font-black text-sm shadow-md">
+        MA
+      </div>
+      <div className="flex flex-col text-left">
+        <span className="text-base font-semibold tracking-tight leading-none text-[var(--text-primary)]">
+          Map<span style={{ color: "var(--brand-core)" }}>Anytime</span>
+        </span>
+        <span className="text-xs text-[var(--text-secondary)] mt-0.5">
+          Seller tools
+        </span>
+      </div>
+    </>
+  );
+}
+
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   isLocked?: boolean;
   isPropertyContext?: boolean;
   propertyId?: string | null;
+  activeStoreId?: string | null;
+  /**
+   * Resolved store for `activeStoreId`, passed in by the layout. Undefined
+   * means "no store selected, or the id no longer resolves" — the same
+   * distinction the previous in-component lookup made.
+   */
+  activeStore?: ActiveStoreSummary | null;
   onSignOut?: () => void;
+  onClearContext?: () => void;
 }
 
 interface NavItem {
@@ -39,6 +77,7 @@ interface NavItem {
   roles?: string[];
   badge?: string;
   children?: NavItem[];
+  requiresStore?: boolean;
 }
 
 export function Sidebar({
@@ -47,7 +86,10 @@ export function Sidebar({
   isLocked = false,
   isPropertyContext = false,
   propertyId,
+  activeStoreId,
+  activeStore,
   onSignOut,
+  onClearContext,
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -60,7 +102,6 @@ export function Sidebar({
   );
 
   const { roles } = useCurrentUser();
-  const userRole = roles[0] || "SELLER";
 
   const toggleGroup = (groupLabel: string) => {
     if (isLocked) return;
@@ -88,20 +129,6 @@ export function Sidebar({
           icon: Package,
           roles: ["SELLER", "ADMIN"],
         },
-        {
-          label: "Import products",
-          href: "/seller/ai-upload",
-          icon: Sparkles,
-          roles: ["SELLER", "ADMIN"],
-          badge: "AI",
-        },
-        {
-          label: "Stock levels",
-          href: "/seller/inventory",
-          icon: Boxes,
-          roles: ["SELLER", "ADMIN"],
-          badge: "Soon",
-        },
       ],
     },
     {
@@ -113,6 +140,12 @@ export function Sidebar({
           label: "Orders",
           href: "/seller/orders",
           icon: ShoppingBag,
+          roles: ["SELLER", "ADMIN"],
+        },
+        {
+          label: "Promotions & ads",
+          href: "/seller/promotions",
+          icon: Megaphone,
           roles: ["SELLER", "ADMIN"],
         },
         {
@@ -132,13 +165,33 @@ export function Sidebar({
       ],
     },
     {
-      label: "Store settings",
-      icon: Settings,
+      label: "Payouts & returns",
+      icon: Wallet,
       roles: ["SELLER", "ADMIN"],
       children: [
         {
-          label: "Store details",
-          href: "/seller/store-profile",
+          label: "Earnings & payouts",
+          href: "/seller/finance",
+          icon: Wallet,
+          roles: ["SELLER", "ADMIN"],
+        },
+        {
+          label: "Returns",
+          href: "/seller/fulfillment",
+          icon: RotateCcw,
+          roles: ["SELLER", "ADMIN"],
+        },
+      ],
+    },
+    {
+      label: "Store settings",
+      icon: Settings,
+      roles: ["SELLER", "ADMIN"],
+      requiresStore: true,
+      children: [
+        {
+          label: "Store profile",
+          href: "/seller/store-profile/view",
           icon: Store,
           roles: ["SELLER", "ADMIN"],
         },
@@ -149,12 +202,6 @@ export function Sidebar({
           roles: ["SELLER", "ADMIN"],
         },
       ],
-    },
-    {
-      label: "Switch store",
-      href: "/seller/manage-stores",
-      icon: Store,
-      roles: ["SELLER", "ADMIN"],
     },
   ];
 
@@ -175,9 +222,9 @@ export function Sidebar({
     },
   ];
 
-  const isRoleAllowed = (roles?: string[]) => {
-    if (!roles) return true;
-    return roles.includes(userRole);
+  const isRoleAllowed = (allowedRoles?: string[]) => {
+    if (!allowedRoles) return true;
+    return roles.some((r) => allowedRoles.includes(r));
   };
 
   const filteredLinks = (
@@ -189,7 +236,11 @@ export function Sidebar({
       onSignOut();
     } else {
       clearToken();
-      localStorage.clear();
+      // Was `localStorage.clear()`, which also wiped the saved theme and any
+      // in-progress onboarding drafts. Only the seller context belongs to the
+      // session; clearToken() already handles the credentials themselves.
+      localStorage.removeItem("active_store_context_id");
+      localStorage.removeItem("active_property_context_id");
       router.push("/login");
     }
   };
@@ -223,22 +274,29 @@ export function Sidebar({
         <div className="flex flex-col flex-1 min-h-0 space-y-6">
           {/* Header Branding */}
           <div className="flex items-center justify-between shrink-0">
-            <div
-              className="flex items-center gap-2.5 cursor-pointer"
-              onClick={() => !isLocked && router.push("/")}
-            >
-              <div className="w-8 h-8 rounded-xl bg-[var(--brand-core)] flex items-center justify-center text-white font-black text-sm shadow-md">
-                MA
+            {/* Points into the seller area, NOT "/". Sending a signed-in seller
+                to the public landing page read as being logged out — it has no
+                route back in. manage-stores is the seller hub that renders with
+                or without an active store, and is already where
+                handleClearContext lands.
+
+                A real <Link>, not a div+onClick: that gave no keyboard access,
+                no Enter activation and no ctrl/middle-click. When locked there
+                is nowhere to go, so it degrades to a plain div rather than a
+                dead anchor. */}
+            {isLocked ? (
+              <div className="flex items-center gap-2.5">
+                <BrandMark />
               </div>
-              <div className="flex flex-col text-left">
-                <span className="text-base font-semibold tracking-tight leading-none text-[var(--text-primary)]">
-                  Map<span style={{ color: "var(--brand-core)" }}>Anytime</span>
-                </span>
-                <span className="text-xs text-[var(--text-secondary)] mt-0.5">
-                  Seller tools
-                </span>
-              </div>
-            </div>
+            ) : (
+              <Link
+                href="/seller/manage-stores"
+                onClick={onClose}
+                className="flex items-center gap-2.5 cursor-pointer"
+              >
+                <BrandMark />
+              </Link>
+            )}
             <button
               onClick={onClose}
               className="p-1 rounded-lg md:hidden hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -246,6 +304,44 @@ export function Sidebar({
               <X className="w-4 h-4 text-[var(--text-tertiary)]" />
             </button>
           </div>
+
+          <div className="px-1 shrink-0">
+            <Link
+              href="/seller/manage-stores"
+              onClick={onClose}
+              className="flex items-center justify-between w-full p-3 rounded-xl bg-[var(--background-tertiary)] hover:bg-[var(--background-hover)] border border-[var(--border-light)] transition-colors group"
+            >
+              <div className="flex items-center gap-3 truncate">
+                <div className="w-8 h-8 shrink-0 rounded-lg bg-[var(--background-elevated)] border border-[var(--border-light)] flex items-center justify-center text-[var(--text-secondary)] group-hover:text-[var(--brand-core)] transition-colors shadow-sm">
+                  <Store className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col text-left truncate">
+                  <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
+                    {activeStore?.storeName || "All Stores"}
+                  </span>
+                  <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider font-semibold">
+                    {activeStore ? "Switch Store" : "Manage store"}
+                  </span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 shrink-0 text-[var(--text-tertiary)] group-hover:text-[var(--brand-core)] transition-colors" />
+            </Link>
+
+            {activeStore && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onClearContext) onClearContext();
+                }}
+                className="w-full mt-2 flex items-center justify-center gap-2 p-2 rounded-xl text-xs font-medium text-rose-600 bg-rose-50 hover:bg-rose-100 dark:text-rose-400 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 border border-rose-100 dark:border-rose-900/50 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+                Deselect Store
+              </button>
+            )}
+          </div>
+
+          <div className="h-px w-full bg-[var(--border-light)] shrink-0" />
 
           {/* Navigation Items Scroll Container */}
           <nav className="flex-1 min-h-0 overflow-y-auto space-y-1.5 text-left pr-1 scrollbar-thin">
@@ -256,7 +352,8 @@ export function Sidebar({
                 ? false
                 : (expandedGroups[item.label] ?? true);
               const isItemLocked =
-                isLocked && item.href !== "/seller/manage-stores";
+                (isLocked && item.href !== "/seller/manage-stores") ||
+                (item.requiresStore && !activeStore);
 
               const isChildActive =
                 hasChildren &&
@@ -268,7 +365,7 @@ export function Sidebar({
                 );
                 if (visibleChildren.length === 0) return null;
 
-                if (isLocked) {
+                if (isItemLocked) {
                   return (
                     <div key={item.label} className="space-y-1">
                       <div
@@ -312,6 +409,25 @@ export function Sidebar({
                         {visibleChildren.map((child) => {
                           const ChildIcon = child.icon || Icon;
                           const isChildSelected = pathname === child.href;
+                          const isChildLocked =
+                            (isLocked &&
+                              child.href !== "/seller/manage-stores") ||
+                            (child.requiresStore && !activeStore);
+
+                          if (isChildLocked) {
+                            return (
+                              <div
+                                key={child.label}
+                                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-all text-zinc-400 opacity-40 cursor-not-allowed`}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <ChildIcon className="w-4 h-4" />
+                                  <span>{child.label}</span>
+                                </div>
+                                <Lock className="w-3.5 h-3.5" />
+                              </div>
+                            );
+                          }
 
                           return (
                             <Link

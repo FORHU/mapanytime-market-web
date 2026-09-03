@@ -1,6 +1,3 @@
-"use client";
-
-import React from "react";
 import { Card, CardContent } from "@/shared/components/ui/Card";
 import { QrCode } from "lucide-react";
 

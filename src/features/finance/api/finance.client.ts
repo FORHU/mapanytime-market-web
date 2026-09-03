@@ -1,3 +1,6 @@
+// getMySettlements/getMyPayouts back the seller-facing /seller/finance page.
+// getOrderSettlement/createPayout/updatePayoutStatus hit admin-only routes
+// and have no UI caller yet — for a future admin payouts panel.
 import { fetcher } from "@/shared/lib/http";
 import {
   PayoutSchema,
@@ -10,13 +13,9 @@ import {
   type UpdatePayoutStatusInput,
 } from "../contracts/finance.contract";
 
-/** Per-order earnings ledger: subtotal → commission → fees → seller net. */
-export const getSellerSettlements = async (
-  sellerId: string,
-): Promise<Settlement[]> => {
-  const raw = await fetcher<{ data: unknown }>(
-    `/api/v1/settlements/seller/${sellerId}`,
-  );
+/** The authenticated seller's own settlement ledger. */
+export const getMySettlements = async (): Promise<Settlement[]> => {
+  const raw = await fetcher<{ data: unknown }>("/api/v1/settlements/me");
   return SettlementsSchema.parse(raw.data ?? []);
 };
 
@@ -29,11 +28,9 @@ export const getOrderSettlement = async (
   return SettlementSchema.parse(raw.data);
 };
 
-/** Payout batches grouping released settlements into a single disbursement. */
-export const getSellerPayouts = async (sellerId: string): Promise<Payout[]> => {
-  const raw = await fetcher<{ data: unknown }>(
-    `/api/v1/payouts/seller/${sellerId}`,
-  );
+/** The authenticated seller's own payout history. */
+export const getMyPayouts = async (): Promise<Payout[]> => {
+  const raw = await fetcher<{ data: unknown }>("/api/v1/payouts/me");
   return PayoutsSchema.parse(raw.data ?? []);
 };
 

@@ -307,64 +307,6 @@ export default function ExploreMapSection({
           </div>
         </div>
       </div>
-
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        {/* Bottom Features Strip */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-10 mt-10 border-t border-outline-variant/10 w-full pb-16">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-blue-50 text-primary flex items-center justify-center shrink-0">
-              <MapPin className="w-7 h-7" />
-            </div>
-            <div>
-              <h4 className="font-bold text-[15px] text-on-surface mb-0.5">
-                Find Nearby Stores
-              </h4>
-              <p className="text-[13px] text-on-surface-variant leading-tight">
-                Explore stores and products near your location.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center shrink-0">
-              <Tag className="w-7 h-7" />
-            </div>
-            <div>
-              <h4 className="font-bold text-[15px] text-on-surface mb-0.5">
-                Real-time Updates
-              </h4>
-              <p className="text-[13px] text-on-surface-variant leading-tight">
-                Live store status and product availability.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-              <Heart className="w-7 h-7" />
-            </div>
-            <div>
-              <h4 className="font-bold text-[15px] text-on-surface mb-0.5">
-                Trusted & Rated
-              </h4>
-              <p className="text-[13px] text-on-surface-variant leading-tight">
-                Top-rated stores you can trust and rely on.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-              <ShoppingBag className="w-7 h-7" />
-            </div>
-            <div>
-              <h4 className="font-bold text-[15px] text-on-surface mb-0.5">
-                Pick Up & Save
-              </h4>
-              <p className="text-[13px] text-on-surface-variant leading-tight">
-                Order online and pick up at your convenience.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
     </section>
   );
 }

@@ -9,9 +9,13 @@ import {
   type OrderStatusResponse,
 } from "../contracts/orders.contract";
 
-export const getOrders = async (storeId: string): Promise<OrdersResponse> => {
-  const raw = await fetcher<any>(`/api/v1/orders/store?storeId=${storeId}`);
-  const ordersList = raw?.data || [];
+export const getOrders = async (
+  storeId?: string | null,
+): Promise<OrdersResponse> => {
+  // limit=100 (the API max) preserves this client's previous "fetch all" intent.
+  const query = storeId ? `?storeId=${storeId}&limit=100` : `?limit=100`;
+  const raw = await fetcher<any>(`/api/v1/orders/store${query}`);
+  const ordersList = raw?.data?.items || [];
   const mapped = ordersList.map((order: any) => ({
     id: order.id,
     storeId: order.storeId,
@@ -54,6 +58,7 @@ export const createOrder = async (input: CreateOrderInput): Promise<Order> => {
     totalAmount: order.totalAmount,
     customerName: "You",
     createdAt: order.createdAt,
+    checkoutUrl: order.checkoutUrl,
   });
 };
 

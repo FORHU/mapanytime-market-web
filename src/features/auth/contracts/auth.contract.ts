@@ -6,6 +6,7 @@ export const AuthUserSchema = z
     email: z.string(),
     firstName: z.string(),
     lastName: z.string(),
+    roles: z.array(z.string()).optional(),
     isOnBoarding: z.boolean().optional(),
   })
   .passthrough();

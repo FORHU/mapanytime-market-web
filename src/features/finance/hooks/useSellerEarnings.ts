@@ -4,8 +4,8 @@ import { useSafeQuery } from "@/shared/query/useSafeQuery";
 import { useSafeMutation } from "@/shared/query/useSafeMutation";
 import {
   createPayout,
-  getSellerPayouts,
-  getSellerSettlements,
+  getMyPayouts,
+  getMySettlements,
   updatePayoutStatus,
 } from "../api/finance.client";
 import { financeKeys } from "../api/finance.keys";
@@ -14,7 +14,7 @@ import type { Payout, Settlement } from "../contracts/finance.contract";
 export function useSellerSettlements(sellerId: string | null) {
   return useSafeQuery<Settlement[]>({
     queryKey: financeKeys.sellerSettlements(sellerId ?? ""),
-    queryFn: () => getSellerSettlements(sellerId as string),
+    queryFn: getMySettlements,
     enabled: Boolean(sellerId),
     staleTime: 5 * 60 * 1000,
   });
@@ -23,7 +23,7 @@ export function useSellerSettlements(sellerId: string | null) {
 export function useSellerPayouts(sellerId: string | null) {
   return useSafeQuery<Payout[]>({
     queryKey: financeKeys.sellerPayouts(sellerId ?? ""),
-    queryFn: () => getSellerPayouts(sellerId as string),
+    queryFn: getMyPayouts,
     enabled: Boolean(sellerId),
     staleTime: 5 * 60 * 1000,
   });
@@ -61,6 +61,7 @@ export function useSellerEarnings(sellerId: string | null) {
     payouts,
     summary,
     isLoading: settlements.isLoading || payouts.isLoading,
+    isError: settlements.isError || payouts.isError,
   };
 }
 

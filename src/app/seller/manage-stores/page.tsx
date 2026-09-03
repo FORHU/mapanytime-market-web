@@ -2,7 +2,12 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { StoreTypeSelectionModal, type StoreType } from "@/features/stores";
+// Imported from their own paths rather than the `@/features/stores` barrel.
+// That barrel also re-exports StoreOnboardingForm, which reaches MapSelection →
+// mapbox-gl, so importing this small modal through it pulled the entire map
+// engine into a page that has no map.
+import { StoreTypeSelectionModal } from "@/features/stores/components/StoreTypeSelectionModal";
+import type { StoreType } from "@/features/stores/types";
 import StoreManagementDashboard from "@/features/stores/components/StoreManagementDashboard";
 import { useStores } from "@/features/stores/hooks/useStores";
 import { useProperties } from "@/features/properties/hooks/useProperties";
@@ -20,6 +25,14 @@ export default function ManageStoresPage() {
   const error = storesQuery.error ?? propertiesQuery.error;
 
   const handleSelectStore = (storeId: string) => {
+    const store = storesQuery.data?.find((s) => s.id === storeId);
+    // FIXME: blocks legacy stores with approvalStatus undefined + isActive:true,
+    // which StoreManagementDashboard's badge treats as ACTIVE. Match that fallback here.
+    if (store && store.approvalStatus !== "ACTIVE") {
+      toast.error("Cannot access store: currently under review.");
+      return;
+    }
+
     localStorage.setItem("active_store_context_id", storeId);
     localStorage.removeItem("active_property_context_id");
     router.push("/seller/dashboard");

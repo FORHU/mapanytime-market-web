@@ -10,8 +10,10 @@ import {
   type OrderRecord,
 } from "@/shared/hooks/useOrdersPipeline";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
+import { CashPickupCodeModal } from "./CashPickupCodeModal";
 import {
   PackageCheck,
+  QrCode,
   Search,
   ArrowUpDown,
   AlertCircle,
@@ -90,6 +92,7 @@ export function SellerOrdersBoard({
   const { userId, isHydrated } = useCurrentUser();
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sortAsc, setSortAsc] = useState(false);
   const [page, setPage] = useState(1);
@@ -98,11 +101,19 @@ export function SellerOrdersBoard({
     targetStatus: string;
     label: string;
   } | null>(null);
+  const [cashPickupOrder, setCashPickupOrder] = useState<{
+    orderId: string;
+    storeId: string;
+  } | null>(null);
 
-  // A narrower result set can leave you stranded past the last page.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, sortAsc]);
+  }, [debouncedSearch, statusFilter, sortAsc]);
 
   const {
     orders,
@@ -114,10 +125,11 @@ export function SellerOrdersBoard({
     fulfillOrder,
     isMutationPending,
     mutationVariables,
+    generateCashPickupCode,
     forceManualRefresh,
   } = useOrdersPipeline({
     userId,
-    search: isFull ? search : "",
+    search: isFull ? debouncedSearch : "",
     status: isFull ? statusFilter : "ALL",
     sortAsc: isFull ? sortAsc : false,
     page: isFull ? page : 1,
@@ -188,7 +200,7 @@ export function SellerOrdersBoard({
               {
                 id: "PROCESSING",
                 label: "Preparing",
-                count: statusCounts?.PREPARING ?? 0,
+                count: statusCounts?.PROCESSING ?? 0,
               },
               {
                 id: "READY_FOR_PICKUP",
@@ -198,7 +210,7 @@ export function SellerOrdersBoard({
               {
                 id: "COMPLETED",
                 label: "Completed",
-                count: statusCounts?.FULFILLED ?? 0,
+                count: statusCounts?.COMPLETED ?? 0,
               },
               {
                 id: "CANCELLED",
@@ -292,6 +304,13 @@ export function SellerOrdersBoard({
                     isMutationPending &&
                     mutationVariables?.orderId === order.id;
                   const nextStep = NEXT_STEP[order.status];
+                  // Cash on Pickup at READY_FOR_PICKUP shows a code for the
+                  // buyer to scan instead of the seller marking it complete
+                  // unilaterally — every other status/payment combo keeps
+                  // the existing seller-driven flow.
+                  const isCashPickupStep =
+                    order.status === "READY_FOR_PICKUP" &&
+                    order.paymentMethodType === "CASH";
 
                   return (
                     <tr
@@ -327,7 +346,20 @@ export function SellerOrdersBoard({
                         </div>
                       </td>
                       <td className="py-4 px-4 text-right">
-                        {nextStep ? (
+                        {isCashPickupStep ? (
+                          <Button
+                            onClick={() =>
+                              setCashPickupOrder({
+                                orderId: order.id,
+                                storeId: order.storeId,
+                              })
+                            }
+                            className="!h-9 !text-xs !px-3 !rounded-lg text-white shadow-sm inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                            <span>Show pickup code</span>
+                          </Button>
+                        ) : nextStep ? (
                           <Button
                             disabled={isMutationPending}
                             onClick={() =>
@@ -452,6 +484,15 @@ export function SellerOrdersBoard({
             </div>
           </Card>
         </div>
+      )}
+
+      {cashPickupOrder && (
+        <CashPickupCodeModal
+          orderId={cashPickupOrder.orderId}
+          storeId={cashPickupOrder.storeId}
+          onClose={() => setCashPickupOrder(null)}
+          onGenerate={generateCashPickupCode}
+        />
       )}
     </div>
   );

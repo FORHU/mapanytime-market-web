@@ -1,6 +1,11 @@
 "use client";
 
-import { motion } from "framer-motion";
+// Live data, as of 2026-08-18 — this closes docs/connection-audit.md §7 for this
+// page. Every number below comes from GET /api/v1/admin/approvals/dashboard.
+// The mock "+18.4%" style deltas were removed rather than reimplemented: the API
+// has no period-over-period comparison to base them on, and a fabricated delta
+// beside a real figure is worse than no delta.
+// See mapanytime-api/docs/payments-rework-review.md §13.
 import { useRouter } from "next/navigation";
 import {
   Store,
@@ -28,14 +33,100 @@ import {
   Tooltip,
 } from "recharts";
 
+import { useState, useEffect } from "react";
+import { API_BASE_URL } from "@/shared/config/api";
+import { getToken } from "@/shared/lib/token";
+
+type DashboardData = {
+  kpis: {
+    totalRevenue: number;
+    verifiedStores: number;
+    activeUsers: number;
+    pendingStoreApprovals: number;
+    completedOrders: number;
+  };
+  chartData: { month: string; revenue: number; orders: number }[];
+  pendingStores: {
+    id: string;
+    name: string;
+    owner: string;
+    email: string;
+    category: string;
+    date: string;
+    avatar: string;
+  }[];
+  recentOrders: {
+    id: string;
+    store: string;
+    buyer: string;
+    amount: number;
+    type: string;
+    status: string;
+    time: string;
+  }[];
+};
+
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // getToken(), not localStorage — tokens moved to sessionStorage on
+        // 2026-08-17 and getToken() purges the legacy localStorage key on every
+        // read, so reading it directly always yielded null.
+        // See mapanytime-api/docs/payments-rework-review.md §10.
+        const token = getToken();
+        const res = await fetch(
+          `${API_BASE_URL}/api/v1/admin/approvals/dashboard`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        const result = await res.json();
+        if (result.success) {
+          setData(result.data);
+        } else {
+          setError(
+            result.message ?? "The dashboard metrics request was rejected.",
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard data:", err);
+        setError(
+          "Could not reach the API. Check that it is running and you are signed in.",
+        );
+      }
+    };
+    fetchData();
+  }, []);
+
+  // A silent console.error behind an indefinite spinner is indistinguishable
+  // from a hang, which is exactly how §10 stayed invisible.
+  if (error) {
+    return (
+      <div className="p-8 text-center space-y-2">
+        <p className="font-semibold text-[var(--text-primary)]">
+          Could not load dashboard metrics
+        </p>
+        <p className="text-sm text-[var(--text-secondary)]">{error}</p>
+      </div>
+    );
+  }
+
+  if (!data)
+    return <div className="p-8 text-center">Loading dashboard metrics...</div>;
 
   const kpiCards = [
     {
       title: "Total Marketplace Revenue",
-      value: "$128,450.00",
-      change: "+18.4%",
+      value: data.kpis.totalRevenue.toLocaleString("en-US", {
+        style: "currency",
+        currency: "PHP",
+      }),
+      change: `${data.kpis.completedOrders.toLocaleString()} completed orders`,
       trend: "up",
       icon: DollarSign,
       color: "text-emerald-400",
@@ -44,8 +135,8 @@ export default function AdminDashboardPage() {
     },
     {
       title: "Verified Stores",
-      value: "142",
-      change: "+12 this week",
+      value: data.kpis.verifiedStores.toString(),
+      change: "Approved and live",
       trend: "up",
       icon: Store,
       color: "text-sky-400",
@@ -54,8 +145,8 @@ export default function AdminDashboardPage() {
     },
     {
       title: "Active Buyers & Sellers",
-      value: "8,920",
-      change: "+24.5%",
+      value: data.kpis.activeUsers.toLocaleString(),
+      change: "Buyers and sellers",
       trend: "up",
       icon: Users,
       color: "text-indigo-400",
@@ -64,7 +155,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: "Pending Store Approvals",
-      value: "3 Stores",
+      value: `${data.kpis.pendingStoreApprovals} Stores`,
       change: "Action Required",
       trend: "warn",
       icon: AlertCircle,
@@ -74,74 +165,9 @@ export default function AdminDashboardPage() {
     },
   ];
 
-  const chartData = [
-    { month: "Jan", revenue: 42000, orders: 1200 },
-    { month: "Feb", revenue: 58000, orders: 1650 },
-    { month: "Mar", revenue: 74000, orders: 2100 },
-    { month: "Apr", revenue: 91000, orders: 2800 },
-    { month: "May", revenue: 108000, orders: 3400 },
-    { month: "Jun", revenue: 128450, orders: 4120 },
-  ];
-
-  const pendingStores = [
-    {
-      id: "st_01",
-      name: "Organic Harvest Market",
-      owner: "Elena Rostova",
-      email: "elena@organicharvest.com",
-      category: "Grocery & Fresh Produce",
-      date: "2 hours ago",
-      avatar: "OH",
-    },
-    {
-      id: "st_02",
-      name: "Metro Artisan Bakery",
-      owner: "Marco Silva",
-      email: "marco@metrobakery.io",
-      category: "Bakery & Desserts",
-      date: "5 hours ago",
-      avatar: "MB",
-    },
-    {
-      id: "st_03",
-      name: "CyberGadget Hub",
-      owner: "Kenji Sato",
-      email: "kenji@cybergadgets.jp",
-      category: "Electronics",
-      date: "1 day ago",
-      avatar: "CG",
-    },
-  ];
-
-  const recentOrders = [
-    {
-      id: "ORD-9482",
-      store: "Downtown Coffee Roasters",
-      buyer: "Sarah Jenkins",
-      amount: "$42.50",
-      type: "PICKUP",
-      status: "COMPLETED",
-      time: "10 mins ago",
-    },
-    {
-      id: "ORD-9481",
-      store: "Organic Harvest Market",
-      buyer: "Alex Chen",
-      amount: "$118.00",
-      type: "DELIVERY",
-      status: "PROCESSING",
-      time: "25 mins ago",
-    },
-    {
-      id: "ORD-9480",
-      store: "Urban Craft Apparel",
-      buyer: "David Miller",
-      amount: "$85.90",
-      type: "PICKUP",
-      status: "PENDING",
-      time: "40 mins ago",
-    },
-  ];
+  const chartData = data.chartData;
+  const pendingStores = data.pendingStores;
+  const recentOrders = data.recentOrders;
 
   return (
     <div className="space-y-8">
@@ -176,12 +202,10 @@ export default function AdminDashboardPage() {
         {kpiCards.map((kpi, idx) => {
           const Icon = kpi.icon;
           return (
-            <motion.div
+            <div
               key={kpi.title}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.08 }}
-              className={`p-6 rounded-2xl border ${kpi.border} bg-[var(--background-secondary)]/60 backdrop-blur-md space-y-4 hover:border-sky-500/40 transition-all`}
+              style={{ animationDelay: `${idx * 0.08}s` }}
+              className={`animate-fade-in-up p-6 rounded-2xl border ${kpi.border} bg-[var(--background-secondary)]/60 backdrop-blur-md space-y-4 hover:border-sky-500/40 transition-all`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
@@ -199,7 +223,7 @@ export default function AdminDashboardPage() {
                   <span className={kpi.color}>{kpi.change}</span>
                 </div>
               </div>
-            </motion.div>
+            </div>
           );
         })}
       </div>
