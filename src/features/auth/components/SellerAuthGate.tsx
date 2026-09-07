@@ -9,9 +9,11 @@ import { useAuth } from "../hooks/useAuth";
 export function SellerAuthGate({
   children,
   stores,
+  access,
 }: {
   children: React.ReactNode;
   stores?: any[];
+  access?: { permissions?: string[]; isOrgAdmin?: boolean };
 }) {
   const token = useAuthStore((state) => state.token);
   const { logout } = useAuth();
@@ -59,6 +61,7 @@ export function SellerAuthGate({
       isAuthenticated={!!token}
       onSignOut={handleSignOut}
       stores={stores}
+      access={access}
     >
       {children}
     </SellerLayout>

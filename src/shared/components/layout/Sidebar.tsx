@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronRight,
   House,
+  Users,
 } from "lucide-react";
 import { clearClientSession } from "@/shared/lib/session";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
@@ -32,6 +33,26 @@ import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 export interface ActiveStoreSummary {
   id: string;
   storeName: string;
+}
+
+/**
+ * Seller-organization access, supplied by the layout for the same reason
+ * `activeStore` is: resolving it needs `features/team`, and `shared/` may not
+ * import a feature. Declared structurally here.
+ *
+ * `permissions` being `undefined` means "not resolved yet", which is distinct
+ * from an empty array — a member really can hold no features, and that must not
+ * be confused with a pending fetch.
+ *
+ * `status` says which of those it is. Inferring it from `undefined` alone could
+ * not distinguish "still loading" from "the request failed", and the component
+ * treated both as "show everything" — so a failed context fetch rendered the
+ * full nav to a member holding none of it.
+ */
+export interface SellerAccessSummary {
+  permissions?: string[];
+  isOrgAdmin?: boolean;
+  status?: "pending" | "error" | "ready";
 }
 
 /** Logo + wordmark. Shared so the linked and locked branding stay identical. */
@@ -66,6 +87,8 @@ interface SidebarProps {
    * distinction the previous in-component lookup made.
    */
   activeStore?: ActiveStoreSummary | null;
+  /** Org feature access. Omitted entirely on surfaces that do not gate nav. */
+  access?: SellerAccessSummary;
   onSignOut?: () => void;
   onClearContext?: () => void;
 }
@@ -78,6 +101,10 @@ interface NavItem {
   badge?: string;
   children?: NavItem[];
   requiresStore?: boolean;
+  /** Org feature code required to see this item. */
+  permission?: string;
+  /** Only organization admins see this item, whatever their feature list. */
+  adminOnly?: boolean;
 }
 
 export function Sidebar({
@@ -88,6 +115,7 @@ export function Sidebar({
   propertyId,
   activeStoreId,
   activeStore,
+  access,
   onSignOut,
   onClearContext,
 }: SidebarProps) {
@@ -128,6 +156,7 @@ export function Sidebar({
           href: "/seller/products",
           icon: Package,
           roles: ["SELLER", "ADMIN"],
+          permission: "products.view",
         },
       ],
     },
@@ -141,14 +170,19 @@ export function Sidebar({
           href: "/seller/orders",
           icon: ShoppingBag,
           roles: ["SELLER", "ADMIN"],
+          permission: "orders.process",
         },
         {
           label: "Promotions & ads",
           href: "/seller/promotions",
           icon: Megaphone,
           roles: ["SELLER", "ADMIN"],
+          permission: "promotions.add",
         },
         {
+          // No `permission`: the `sales_review` code this carried does not exist
+          // on the API, so no member could ever hold it and the item was hidden
+          // from every non-admin. Nothing refuses the page, so it is shown.
           label: "Sales reports",
           href: "/seller/analytics",
           icon: BarChart3,
@@ -156,50 +190,71 @@ export function Sidebar({
           badge: "Soon",
         },
         {
+          // Likewise for the former `customer_review` code.
           label: "Customer reviews",
           href: "/seller/reviews",
           icon: MessageSquare,
           roles: ["SELLER", "ADMIN"],
+          // NOTE: this badge is stale — /seller/reviews renders live data via
+          // useStoreReviews. Left as-is to keep this change to permissions.
           badge: "Soon",
         },
       ],
     },
     {
+      // Both pages resolve the caller's own Sellers row and 403 for every org
+      // member, so they are admin-only until those endpoints are org-scoped.
       label: "Payouts & returns",
       icon: Wallet,
       roles: ["SELLER", "ADMIN"],
+      adminOnly: true,
       children: [
         {
           label: "Earnings & payouts",
           href: "/seller/finance",
           icon: Wallet,
           roles: ["SELLER", "ADMIN"],
+          adminOnly: true,
         },
         {
           label: "Returns",
           href: "/seller/fulfillment",
           icon: RotateCcw,
           roles: ["SELLER", "ADMIN"],
+          adminOnly: true,
         },
       ],
     },
     {
+      // requireSellerOrgAdmin already refuses non-admins server-side; this stops
+      // the nav offering a page that only renders a refusal.
+      label: "Team & permissions",
+      href: "/seller/team",
+      icon: Users,
+      roles: ["SELLER", "ADMIN"],
+      adminOnly: true,
+    },
+    {
+      // Store create/update are requireSellerOrgAdmin on the API.
       label: "Store settings",
       icon: Settings,
       roles: ["SELLER", "ADMIN"],
       requiresStore: true,
+      adminOnly: true,
       children: [
         {
           label: "Store profile",
           href: "/seller/store-profile/view",
           icon: Store,
           roles: ["SELLER", "ADMIN"],
+          adminOnly: true,
         },
         {
           label: "Preferences",
           href: "/seller/settings",
           icon: Settings,
           roles: ["SELLER", "ADMIN"],
+          adminOnly: true,
         },
       ],
     },
@@ -219,6 +274,7 @@ export function Sidebar({
         : "/seller/manage-stores",
       icon: House,
       roles: ["SELLER", "ADMIN"],
+      permission: "products.view",
     },
   ];
 
@@ -227,9 +283,32 @@ export function Sidebar({
     return roles.some((r) => allowedRoles.includes(r));
   };
 
+  /**
+   * Org-level gating, layered on top of the platform-role filter.
+   *
+   * Ungated items always render — they are reachable by any member, so waiting
+   * on the org context would blank the nav for no reason. Gated items render
+   * only once the context has resolved: while it is pending or failed we do not
+   * know whether the caller holds the code, and showing a link that will 403 is
+   * worse than showing nothing. Once resolved, an empty list genuinely means
+   * "no features" and everything gated drops out.
+   */
+  const isAccessAllowed = (item: NavItem) => {
+    const isGated = item.adminOnly || !!item.permission;
+    if (!isGated) return true;
+    if (!access || access.status !== "ready") return false;
+    if (access.isOrgAdmin) return true;
+    if (item.adminOnly) return false;
+    if (!item.permission) return true;
+    return (access.permissions ?? []).includes(item.permission);
+  };
+
+  const isItemVisible = (item: NavItem) =>
+    isRoleAllowed(item.roles) && isAccessAllowed(item);
+
   const filteredLinks = (
     isPropertyContext ? propertyNavLinks : navLinks
-  ).filter((item) => isRoleAllowed(item.roles));
+  ).filter(isItemVisible);
 
   /**
    * `onSignOut` is the real path — it revokes the session server-side and clears the
