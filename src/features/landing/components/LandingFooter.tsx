@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Instagram, Linkedin, Youtube } from "lucide-react";
 import { LogoIcon } from "./ui/LogoIcon";
+import { CookieSettingsDialog } from "@/shared/components/CookieSettingsDialog";
 
 const PRODUCT_LINKS = [
   { label: "Features", href: "#story" },
@@ -37,10 +39,6 @@ const SOCIAL_LINKS = [
   { label: "YouTube", href: "https://youtube.com/@mapanytime", icon: Youtube },
 ];
 
-function handleCookieSettings() {
-  console.log("TODO: open cookie preferences");
-}
-
 function FooterHeading({ children }: { children: React.ReactNode }) {
   return (
     <h3 className="mb-3 text-[10px] font-bold uppercase tracking-[0.08em] text-[#55717f]">
@@ -67,6 +65,8 @@ function FooterLinks({ links }: { links: { label: string; href: string }[] }) {
 }
 
 export function LandingFooter() {
+  const [cookieSettingsOpen, setCookieSettingsOpen] = useState(false);
+
   return (
     <footer className="border-t border-white/[0.06] bg-[#01111c] px-6 pt-20 pb-10 max-landing-sm:px-4">
       <div className="mx-auto w-full max-w-[1200px]">
@@ -134,7 +134,7 @@ export function LandingFooter() {
             </a>
             <button
               type="button"
-              onClick={handleCookieSettings}
+              onClick={() => setCookieSettingsOpen(true)}
               className="transition hover:text-[#8acddd]"
             >
               Cookie Settings
@@ -142,6 +142,10 @@ export function LandingFooter() {
           </div>
         </div>
       </div>
+      <CookieSettingsDialog
+        open={cookieSettingsOpen}
+        onClose={() => setCookieSettingsOpen(false)}
+      />
     </footer>
   );
 }

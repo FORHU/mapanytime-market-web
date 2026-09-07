@@ -66,3 +66,14 @@ export function clearToken(): void {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   document.cookie = `${SESSION_COOKIE}=; path=/; SameSite=Lax; Max-Age=0`;
 }
+
+/**
+ * Marker cookie for the seller account-setup link. The admin's link lands on
+ * /set-password?email=...&code=...; setting `has_session` here keeps middleware
+ * from bouncing the user out of /seller after they set a password. Same
+ * session-scoped pattern as setToken (no Max-Age).
+ */
+export function setSetupSessionCookie(): void {
+  if (typeof window === "undefined") return;
+  document.cookie = `${SESSION_COOKIE}=1; path=/; SameSite=Lax`;
+}

@@ -26,6 +26,7 @@ import {
   isBuyerRole,
   isAdminRole,
   isAgentRole,
+  resolveSellerLandingRoute,
 } from "../utils/resolveHomeRoute";
 import type { UserRole as ApiUserRole } from "../api/login.api";
 import type { LoginRole } from "../types";
@@ -51,10 +52,9 @@ const PORTAL_CONFIG: Record<
     description: string;
     apiRole: ApiUserRole;
     showRegister: boolean;
-    redirectAfterLogin: (result: {
-      hasStores: boolean;
-      seller?: { isOnboarded: boolean; onboardingStep: number } | null;
-    }) => string;
+    // Post-LOGIN routing is not configured here: it depends on the login
+    // response, and lived as a second, never-invoked copy of the rule in
+    // `resolveSellerLandingRoute`. Registration always goes to a fixed route.
     redirectAfterRegister: string;
   }
 > = {
@@ -65,10 +65,6 @@ const PORTAL_CONFIG: Record<
       "Access your merchant portal to manage stores, products & orders.",
     apiRole: "SELLER",
     showRegister: true,
-    redirectAfterLogin: (r) =>
-      r.hasStores && r.seller?.isOnboarded
-        ? "/seller/manage-stores"
-        : "/seller/onboarding",
     redirectAfterRegister: "/seller/onboarding",
   },
   buyer: {
@@ -78,7 +74,6 @@ const PORTAL_CONFIG: Record<
       "Find nearby stores, browse products, and place local pickups.",
     apiRole: "BUYER",
     showRegister: true,
-    redirectAfterLogin: () => "/buyer",
     redirectAfterRegister: "/buyer",
   },
   universal: {
@@ -87,8 +82,7 @@ const PORTAL_CONFIG: Record<
     description: "Sign in to access the Buyer Live Map or Merchant Dashboard.",
     apiRole: "BUYER", // Default for unified login request, doesn't matter since backend ignores it
     showRegister: true,
-    redirectAfterLogin: () => "/", // Default, dynamic routing overrides this
-    redirectAfterRegister: "/", // Dynamic routing overrides this too
+    redirectAfterRegister: "/", // Dynamic routing overrides this
   },
 };
 
@@ -228,11 +222,7 @@ export default function AuthCard({
       } else if (isSeller) {
         toast.success("Redirecting to Seller Dashboard...");
         setTimeout(() => {
-          router.push(
-            result.hasStores && result.seller?.isOnboarded
-              ? "/seller/manage-stores"
-              : "/seller/onboarding",
-          );
+          router.push(resolveSellerLandingRoute(result));
         }, 500);
       } else if (isBuyer) {
         toast.success("Redirecting to Buyer Dashboard...");
@@ -372,12 +362,7 @@ export default function AuthCard({
             {isSeller && (
               <button
                 onClick={() =>
-                  router.push(
-                    pendingAuthResult.hasStores &&
-                      pendingAuthResult.seller?.isOnboarded
-                      ? "/seller/manage-stores"
-                      : "/seller/onboarding",
-                  )
+                  router.push(resolveSellerLandingRoute(pendingAuthResult))
                 }
                 className="w-full py-3 rounded-lg font-medium bg-primary text-on-primary hover:bg-primary-fixed transition-[background-color,transform] duration-150 ease-out active:scale-[0.96] flex items-center justify-center gap-2"
               >

@@ -35,9 +35,12 @@ export const login = async (
   return AuthResultSchema.parse({
     accessToken: envelope.data.accessToken,
     refreshToken: envelope.data.refreshToken,
+    // Stores owned outright. Org staff own none — `orgContext` is what tells
+    // us whether they nonetheless have stores to work in.
     hasStores: Array.isArray(envelope.data.stores)
       ? envelope.data.stores.length > 0
       : false,
+    orgContext: envelope.data.orgContext,
     user: envelope.data.user,
     seller: envelope.data.seller,
   });
@@ -64,6 +67,24 @@ export const register = async (
     accessToken: res?.data?.accessToken,
     hasStoreBranches: res?.data?.hasStoreBranches,
   };
+};
+
+/**
+ * Exchange a one-time code for a password.
+ *
+ * Serves both shapes the API accepts: the 4-digit forgot-password OTP, and the
+ * longer set-up code an admin hands a new staff member. The account already
+ * exists in both cases — this only sets the credential.
+ */
+export const setPassword = async (input: {
+  email: string;
+  code: string;
+  newPassword: string;
+}): Promise<void> => {
+  await fetcher<unknown>("/api/v1/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 };
 
 /**

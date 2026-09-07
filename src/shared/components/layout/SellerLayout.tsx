@@ -22,7 +22,7 @@ import { acquireSocket, releaseSocket } from "@/shared/lib/socket";
 import { toast } from "sonner";
 import { getToken } from "@/shared/lib/token";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
-import type { ActiveStoreSummary } from "./Sidebar";
+import type { ActiveStoreSummary, SellerAccessSummary } from "./Sidebar";
 
 interface SellerLayoutProps {
   children: React.ReactNode;
@@ -35,6 +35,12 @@ interface SellerLayoutProps {
    * declared here; where the data comes from is the caller's business.
    */
   stores?: ActiveStoreSummary[];
+  /**
+   * The caller's organization feature access, supplied for the same reason
+   * `stores` is — resolving it needs `features/team`. Undefined `permissions`
+   * means "not resolved yet", not "no access".
+   */
+  access?: SellerAccessSummary;
 }
 
 interface NotificationItem {
@@ -50,6 +56,7 @@ export function SellerLayout({
   isAuthenticated,
   onSignOut,
   stores,
+  access,
 }: SellerLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -176,6 +183,7 @@ export function SellerLayout({
         propertyId={activePropertyId}
         activeStoreId={activeStoreId}
         activeStore={activeStore}
+        access={access}
         onSignOut={onSignOut}
         onClearContext={handleClearContext}
       />
