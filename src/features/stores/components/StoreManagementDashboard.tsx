@@ -28,7 +28,12 @@ interface StoreManagementDashboardProps {
   properties: StoreProperty[];
   onSelectStore: (storeId: string) => void;
   onSelectProperty: (property: StoreProperty) => void;
-  onCreateNewStore: () => void;
+  /**
+   * Omitted when the caller may not create a store — an unverified seller whose
+   * application is still with an administrator. Both affordances disappear
+   * rather than rendering a button that leads to a refusal.
+   */
+  onCreateNewStore?: () => void;
 }
 
 export default function StoreManagementDashboard({
@@ -53,12 +58,14 @@ export default function StoreManagementDashboard({
             tracking pins, and S3 upload parameters.
           </p>
         </div>
-        <button
-          onClick={onCreateNewStore}
-          className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 transition-opacity whitespace-nowrap"
-        >
-          <PlusIcon className="w-4 h-4" /> Add New Business
-        </button>
+        {onCreateNewStore && (
+          <button
+            onClick={onCreateNewStore}
+            className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 transition-opacity whitespace-nowrap"
+          >
+            <PlusIcon className="w-4 h-4" /> Add New Business
+          </button>
+        )}
       </div>
 
       {stores.length === 0 && properties.length === 0 ? (
@@ -73,13 +80,15 @@ export default function StoreManagementDashboard({
             Initialize a business or property profile to start building your
             marketplace presence.
           </p>
-          <button
-            onClick={onCreateNewStore}
-            className="px-4 py-2 text-xs font-bold rounded-xl border hover:bg-zinc-50 dark:hover:bg-zinc-900"
-            style={{ borderColor: "var(--border-light)" }}
-          >
-            Launch First Onboarding Manifest
-          </button>
+          {onCreateNewStore && (
+            <button
+              onClick={onCreateNewStore}
+              className="px-4 py-2 text-xs font-bold rounded-xl border hover:bg-zinc-50 dark:hover:bg-zinc-900"
+              style={{ borderColor: "var(--border-light)" }}
+            >
+              Launch First Onboarding Manifest
+            </button>
+          )}
         </Card>
       ) : (
         <div className="space-y-8">

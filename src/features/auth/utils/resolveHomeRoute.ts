@@ -1,3 +1,8 @@
+import {
+  SELLER_PENDING_ROUTE,
+  isSellerRestricted,
+} from "@/shared/lib/sellerVerification";
+
 /**
  * Maps a user's role claims to the route that is "home" for them.
  *
@@ -75,7 +80,7 @@ export function resolveHomeRoute(roles: string[]): string | null {
  */
 export function resolveSellerLandingRoute(result: {
   hasStores: boolean;
-  seller?: { isOnboarded: boolean } | null;
+  seller?: { isOnboarded: boolean; applicationStatus?: string } | null;
   orgContext?: {
     isAdmin: boolean;
     isOwner: boolean;
@@ -89,6 +94,10 @@ export function resolveSellerLandingRoute(result: {
   const isOrgStaff = !!result.orgContext && !result.orgContext.isOwner;
 
   if (isOrgStaff) return "/seller/manage-stores";
+
+  if (isSellerRestricted(result.seller?.applicationStatus)) {
+    return SELLER_PENDING_ROUTE;
+  }
 
   return result.hasStores && result.seller?.isOnboarded
     ? "/seller/manage-stores"

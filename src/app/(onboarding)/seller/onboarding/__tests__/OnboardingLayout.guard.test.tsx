@@ -30,7 +30,9 @@ const refetch = vi.fn();
 
 /** Only the fields the layout reads, plus the query state it now respects. */
 function mockOrgContext(
-  data: { isAdmin: boolean; isOwner: boolean } | undefined,
+  data:
+    | { isAdmin: boolean; isOwner: boolean; sellerStatus?: string | null }
+    | undefined,
   state: { isPending?: boolean; isError?: boolean } = {},
 ) {
   vi.mocked(useOrgContext).mockReturnValue({
@@ -156,5 +158,37 @@ describe("OnboardingLayout access", () => {
     );
 
     expect(replace).not.toHaveBeenCalledWith("/seller/manage-stores");
+  });
+
+  it("bounces an unverified owner to the review page", async () => {
+    // This wizard *is* store creation, and `requireApprovedSeller` refuses an
+    // unapproved seller — so without this they would fill the entire form and
+    // collect a 403 on submit. Note they pass the ownership test cleanly, which
+    // is why the status has to be checked separately.
+    mockOrgContext({ isAdmin: true, isOwner: true, sellerStatus: "PENDING" });
+
+    render(
+      <OnboardingLayout>
+        <p>onboarding wizard</p>
+      </OnboardingLayout>,
+    );
+
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith("/seller/pending"),
+    );
+    expect(screen.queryByText("onboarding wizard")).toBeNull();
+  });
+
+  it("lets an approved owner through", () => {
+    mockOrgContext({ isAdmin: true, isOwner: true, sellerStatus: "APPROVED" });
+
+    render(
+      <OnboardingLayout>
+        <p>onboarding wizard</p>
+      </OnboardingLayout>,
+    );
+
+    expect(screen.getByText("onboarding wizard")).toBeTruthy();
+    expect(replace).not.toHaveBeenCalled();
   });
 });

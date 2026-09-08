@@ -6,6 +6,10 @@ import { Button } from "@/shared/components/ui/Button";
 import { useStoreProfiles } from "@/features/store-profile/hooks/useStoreProfile";
 import { useOrgContext } from "@/features/team";
 import { SellerAuthGate } from "@/features/auth/components/SellerAuthGate";
+import {
+  SELLER_PENDING_ROUTE,
+  isSellerRestricted,
+} from "@/shared/lib/sellerVerification";
 
 const ROUTE_PERMISSIONS: ReadonlyArray<[prefix: string, permission: string]> = [
   ["/seller/products", "products.view"],
@@ -47,6 +51,18 @@ export function SellerAppLayout({ children }: { children: React.ReactNode }) {
   );
 
   /**
+   * An unverified seller reaches nothing but the review page.
+   *
+   * Read from the org context rather than the login response so an approval
+   * takes effect on this query's next refetch — the seller does not have to sign
+   * out and back in to be let through.
+   */
+  const isRestricted =
+    access.status === "ready" &&
+    isSellerRestricted(orgQuery.data?.sellerStatus);
+  const onPendingRoute = pathname === SELLER_PENDING_ROUTE;
+
+  /**
    * What the current path demands, if anything.
    *
    * Only paths that actually require something wait on the org context. Gating
@@ -66,6 +82,19 @@ export function SellerAppLayout({ children }: { children: React.ReactNode }) {
       gated: adminOnly || permission !== undefined,
     };
   }, [pathname]);
+
+  useEffect(() => {
+    if (access.status !== "ready") return;
+
+    if (isRestricted && !onPendingRoute) {
+      router.replace(SELLER_PENDING_ROUTE);
+      return;
+    }
+
+    if (!isRestricted && onPendingRoute) {
+      router.replace("/seller/manage-stores");
+    }
+  }, [access.status, isRestricted, onPendingRoute, router]);
 
   useEffect(() => {
     // Nav hiding is a convenience; this is what stops a typed URL rendering a
@@ -89,10 +118,16 @@ export function SellerAppLayout({ children }: { children: React.ReactNode }) {
    * unknown answer is not a yes.
    */
   const gatedAndUnresolved = required.gated && access.status !== "ready";
+  const leavingForPendingRoute = isRestricted && !onPendingRoute;
 
   return (
-    <SellerAuthGate stores={stores} access={access}>
-      {gatedAndUnresolved ? (
+    <SellerAuthGate
+      stores={stores}
+      access={access}
+      // Sidebar-only: the nav greys out, but the review page still renders.
+      navLocked={isRestricted}
+    >
+      {leavingForPendingRoute ? null : gatedAndUnresolved ? (
         <div className="space-y-3 p-6">
           {access.status === "error" ? (
             <div className="space-y-3 rounded-2xl border border-[var(--border-light)] bg-[var(--background-elevated)] p-8 text-center">

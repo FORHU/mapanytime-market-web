@@ -78,6 +78,15 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   isLocked?: boolean;
+  /**
+   * The one route that stays reachable while locked.
+   *
+   * Defaults to the store list, which is where a signed-out user is being sent
+   * anyway. Pass `null` when the lock means the caller may not go anywhere —
+   * an unverified seller belongs on the review page and nowhere else, and an
+   * exempt link would just bounce them straight back.
+   */
+  unlockedHref?: string | null;
   isPropertyContext?: boolean;
   propertyId?: string | null;
   activeStoreId?: string | null;
@@ -111,6 +120,7 @@ export function Sidebar({
   isOpen,
   onClose,
   isLocked = false,
+  unlockedHref = "/seller/manage-stores",
   isPropertyContext = false,
   propertyId,
   activeStoreId,
@@ -352,6 +362,36 @@ export function Sidebar({
       ? "px-1.5 py-0.5 rounded-full text-xs font-medium bg-[var(--background-tertiary)] text-[var(--text-tertiary)] border border-[var(--border-light)]"
       : "px-1.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-400/20 text-cyan-600 dark:text-cyan-400 border border-cyan-400/30";
 
+  /**
+   * The store switcher's contents, shared by its linked and locked forms.
+   *
+   * It used to be an unconditional `<Link>`, which made it the one live way out
+   * of an otherwise locked sidebar — every nav item greyed out, and this still
+   * pointing at the store list. Locked now means locked.
+   */
+  const storeSwitcherSummary = (
+    <>
+      <div className="flex items-center gap-3 truncate">
+        <div className="w-8 h-8 shrink-0 rounded-lg bg-[var(--background-elevated)] border border-[var(--border-light)] flex items-center justify-center text-[var(--text-secondary)] group-hover:text-[var(--brand-core)] transition-colors shadow-sm">
+          <Store className="w-4 h-4" />
+        </div>
+        <div className="flex flex-col text-left truncate">
+          <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
+            {activeStore?.storeName || "All Stores"}
+          </span>
+          <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider font-semibold">
+            {activeStore ? "Switch Store" : "Manage store"}
+          </span>
+        </div>
+      </div>
+      {isLocked ? (
+        <Lock className="w-4 h-4 shrink-0 text-zinc-400" />
+      ) : (
+        <ChevronRight className="w-4 h-4 shrink-0 text-[var(--text-tertiary)] group-hover:text-[var(--brand-core)] transition-colors" />
+      )}
+    </>
+  );
+
   return (
     <>
       {isOpen && (
@@ -405,28 +445,21 @@ export function Sidebar({
           </div>
 
           <div className="px-1 shrink-0">
-            <Link
-              href="/seller/manage-stores"
-              onClick={onClose}
-              className="flex items-center justify-between w-full p-3 rounded-xl bg-[var(--background-tertiary)] hover:bg-[var(--background-hover)] border border-[var(--border-light)] transition-colors group"
-            >
-              <div className="flex items-center gap-3 truncate">
-                <div className="w-8 h-8 shrink-0 rounded-lg bg-[var(--background-elevated)] border border-[var(--border-light)] flex items-center justify-center text-[var(--text-secondary)] group-hover:text-[var(--brand-core)] transition-colors shadow-sm">
-                  <Store className="w-4 h-4" />
-                </div>
-                <div className="flex flex-col text-left truncate">
-                  <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
-                    {activeStore?.storeName || "All Stores"}
-                  </span>
-                  <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider font-semibold">
-                    {activeStore ? "Switch Store" : "Manage store"}
-                  </span>
-                </div>
+            {isLocked ? (
+              <div className="flex items-center justify-between w-full p-3 rounded-xl bg-[var(--background-tertiary)] border border-[var(--border-light)] opacity-40 cursor-not-allowed">
+                {storeSwitcherSummary}
               </div>
-              <ChevronRight className="w-4 h-4 shrink-0 text-[var(--text-tertiary)] group-hover:text-[var(--brand-core)] transition-colors" />
-            </Link>
+            ) : (
+              <Link
+                href="/seller/manage-stores"
+                onClick={onClose}
+                className="flex items-center justify-between w-full p-3 rounded-xl bg-[var(--background-tertiary)] hover:bg-[var(--background-hover)] border border-[var(--border-light)] transition-colors group"
+              >
+                {storeSwitcherSummary}
+              </Link>
+            )}
 
-            {activeStore && (
+            {activeStore && !isLocked && (
               <button
                 onClick={(e) => {
                   e.preventDefault();
@@ -451,7 +484,7 @@ export function Sidebar({
                 ? false
                 : (expandedGroups[item.label] ?? true);
               const isItemLocked =
-                (isLocked && item.href !== "/seller/manage-stores") ||
+                (isLocked && item.href !== unlockedHref) ||
                 (item.requiresStore && !activeStore);
 
               const isChildActive =
@@ -509,8 +542,7 @@ export function Sidebar({
                           const ChildIcon = child.icon || Icon;
                           const isChildSelected = pathname === child.href;
                           const isChildLocked =
-                            (isLocked &&
-                              child.href !== "/seller/manage-stores") ||
+                            (isLocked && child.href !== unlockedHref) ||
                             (child.requiresStore && !activeStore);
 
                           if (isChildLocked) {

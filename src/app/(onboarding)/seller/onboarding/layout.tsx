@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useOrgContext } from "@/features/team";
+import {
+  SELLER_PENDING_ROUTE,
+  isSellerRestricted,
+} from "@/shared/lib/sellerVerification";
 
 export default function OnboardingLayout({
   children,
@@ -23,6 +27,7 @@ export default function OnboardingLayout({
   const isOwner = orgQuery.data?.isOwner === true;
   const isResolving = orgQuery.isPending;
   const failed = orgQuery.isError;
+  const isRestricted = isSellerRestricted(orgQuery.data?.sellerStatus);
 
   useEffect(() => {
     setMounted(true);
@@ -38,10 +43,17 @@ export default function OnboardingLayout({
     // Only redirect on a resolved non-owner. A failed request is reported, not
     // acted on — bouncing an owner out of onboarding over a network blip would
     // be its own bug.
-    if (orgQuery.data && !isOwner) {
+    if (!orgQuery.data) return;
+
+    if (isRestricted) {
+      router.replace(SELLER_PENDING_ROUTE);
+      return;
+    }
+
+    if (!isOwner) {
       router.replace("/seller/manage-stores");
     }
-  }, [orgQuery.data, isOwner, router]);
+  }, [orgQuery.data, isOwner, isRestricted, router]);
 
   if (!mounted || !token) return null;
 
@@ -69,11 +81,10 @@ export default function OnboardingLayout({
     );
   }
 
-  // Resolving, or resolved to staff and mid-redirect: render nothing rather
-  // than flashing the wizard at someone who may not be allowed to see it.
-  // Resolving, or resolved to staff and mid-redirect: render nothing rather
-  // than flashing the wizard at someone who may not be allowed to see it.
-  if (isResolving || !isOwner) return null;
+  // Resolving, or resolved to staff or an unverified seller and mid-redirect:
+  // render nothing rather than flashing the wizard at someone who may not be
+  // allowed to see it.
+  if (isResolving || !isOwner || isRestricted) return null;
 
   return shell(children);
 }

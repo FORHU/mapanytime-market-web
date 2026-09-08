@@ -94,6 +94,56 @@ describe("resolveSellerLandingRoute", () => {
     ).toBe("/seller/manage-stores");
   });
 
+  it("sends an unverified owner to the review page, not onboarding", () => {
+    // Onboarding *is* the create-your-first-store wizard, and `POST /stores`
+    // refuses an unapproved seller — so the old destination walked them through
+    // a whole form to a 403 at the last step.
+    expect(
+      resolveSellerLandingRoute({
+        hasStores: false,
+        seller: { isOnboarded: false, applicationStatus: "PENDING" },
+        orgContext: { isAdmin: true, isOwner: true, assignedStoreIds: null },
+      }),
+    ).toBe("/seller/pending");
+  });
+
+  it("keeps a rejected seller out of onboarding as well", () => {
+    expect(
+      resolveSellerLandingRoute({
+        hasStores: false,
+        seller: { isOnboarded: false, applicationStatus: "REJECTED" },
+        orgContext: { isAdmin: true, isOwner: true, assignedStoreIds: null },
+      }),
+    ).toBe("/seller/pending");
+  });
+
+  it("does not divert staff, who have no application of their own", () => {
+    // The regression this guards: staff carry no `applicationStatus`, and
+    // treating that absence as "unverified" would show the review screen to
+    // every hired member of an approved organization.
+    expect(
+      resolveSellerLandingRoute({
+        hasStores: false,
+        seller: null,
+        orgContext: {
+          isAdmin: false,
+          isOwner: false,
+          assignedStoreIds: ["store-a"],
+        },
+      }),
+    ).toBe("/seller/manage-stores");
+  });
+
+  it("leaves an approved owner's routing untouched", () => {
+    expect(
+      resolveSellerLandingRoute({
+        hasStores: false,
+        seller: { isOnboarded: false, applicationStatus: "APPROVED" },
+        orgContext: { isAdmin: true, isOwner: true, assignedStoreIds: null },
+      }),
+    ).toBe("/seller/onboarding");
+  });
+
   it("falls back to ownership when there is no org context at all", () => {
     // Pre-organization sellers, and anyone whose backfill never ran.
     expect(

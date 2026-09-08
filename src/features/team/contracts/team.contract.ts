@@ -54,6 +54,18 @@ export const OrgContextSchema = z
     // Already resolved by the server: admins come back holding every feature,
     // so the client never re-implements the implicit-admin rule.
     permissions: z.array(z.string()).default([]),
+    // The caller's own seller application status, or `null` when they hold no
+    // seller registration — which is the normal state for org staff, not a
+    // failure. Anything reading this must treat `null` as "not applicable"
+    // rather than "unverified", or every hired member of an approved
+    // organization gets shown the under-review screen.
+    //
+    // A plain string, not an enum, for the same reason the feature vocabulary
+    // above is: the server decides what these values are, and a second opinion
+    // here could only ever be wrong in a new way. Defaulted to `null` so a
+    // response from an API predating the field parses and fails open — the
+    // server's `requireApprovedSeller` is the real gate, not this.
+    sellerStatus: z.string().nullable().default(null),
     // Defaulted rather than required so a response from an API that predates the
     // field still parses — the team UI degrades to an empty grid instead of the
     // whole seller shell failing to load.
