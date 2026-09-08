@@ -38,12 +38,23 @@ function mockContext(
   state:
     | { status: "pending" }
     | { status: "error" }
-    | { status: "ready"; permissions: string[]; isAdmin?: boolean },
+    | {
+        status: "ready";
+        permissions: string[];
+        isAdmin?: boolean;
+        // Omitted means "no seller row", i.e. org staff — which is what every
+        // pre-existing test in this file describes.
+        sellerStatus?: string | null;
+      },
 ) {
   vi.mocked(useOrgContext).mockReturnValue({
     data:
       state.status === "ready"
-        ? { permissions: state.permissions, isAdmin: state.isAdmin ?? false }
+        ? {
+            permissions: state.permissions,
+            isAdmin: state.isAdmin ?? false,
+            sellerStatus: state.sellerStatus ?? null,
+          }
         : undefined,
     isPending: state.status === "pending",
     isError: state.status === "error",
@@ -157,5 +168,100 @@ describe("admin-only routes", () => {
     renderAt("/seller/team");
 
     expect(screen.getByText("page content")).toBeTruthy();
+  });
+});
+
+/**
+ * Seller verification, layered under the permission gating above.
+ *
+ * A seller owns their organization outright — `resolveOrgContext` hands them
+ * `isAdmin: true` and every feature the moment their `Sellers` row exists — so
+ * none of the permission checks above can hold back an unverified one. This is
+ * what does.
+ */
+describe("unverified sellers", () => {
+  // An unverified seller is an org admin holding every feature, which is
+  // precisely why the permission gating cannot see them.
+  const mockPendingOwner = () =>
+    mockContext({
+      status: "ready",
+      permissions: ["products.view", "orders.process"],
+      isAdmin: true,
+      sellerStatus: "PENDING",
+    });
+
+  it("redirects a pending seller off a seller page", async () => {
+    mockPendingOwner();
+    renderAt("/seller/products");
+
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith("/seller/pending"),
+    );
+  });
+
+  it("redirects a pending seller off the dashboard, which needs no permission", async () => {
+    mockPendingOwner();
+    renderAt("/seller/dashboard");
+
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith("/seller/pending"),
+    );
+  });
+
+  it("does not render the requested page while redirecting", () => {
+    // Rendering for a frame would flash the very section being withheld.
+    mockPendingOwner();
+    renderAt("/seller/products");
+
+    expect(screen.queryByText("page content")).toBeNull();
+  });
+
+  it("renders the review page itself rather than looping", () => {
+    mockPendingOwner();
+    renderAt("/seller/pending");
+
+    expect(screen.getByText("page content")).toBeTruthy();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("sends an approved seller off the review page", async () => {
+    // The other direction: once approved, the seller is holding a page that no
+    // longer describes their account.
+    mockContext({
+      status: "ready",
+      permissions: [],
+      isAdmin: true,
+      sellerStatus: "APPROVED",
+    });
+    renderAt("/seller/pending");
+
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith("/seller/manage-stores"),
+    );
+  });
+
+  it("leaves org staff alone, who carry no seller status at all", async () => {
+    // The regression guard. Staff hold no `Sellers` row, so `sellerStatus` is
+    // null forever — reading that as "unverified" would lock every hired member
+    // of an approved organization onto the review page.
+    mockContext({
+      status: "ready",
+      permissions: ["products.view"],
+      sellerStatus: null,
+    });
+    renderAt("/seller/products");
+
+    expect(screen.getByText("page content")).toBeTruthy();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("does not act on an unresolved context", () => {
+    // An unknown answer is not a yes, but it is not a no either — bouncing an
+    // approved seller to the review screen over a network blip would be a bug
+    // of its own.
+    mockContext({ status: "error" });
+    renderAt("/seller/dashboard");
+
+    expect(replace).not.toHaveBeenCalled();
   });
 });

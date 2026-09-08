@@ -12,6 +12,8 @@ import StoreManagementDashboard from "@/features/stores/components/StoreManageme
 import { useStores } from "@/features/stores/hooks/useStores";
 import { useProperties } from "@/features/properties/hooks/useProperties";
 import type { StoreProperty } from "@/features/stores/contracts/manage-stores.contract";
+import { useOrgContext } from "@/features/team";
+import { isSellerRestricted } from "@/shared/lib/sellerVerification";
 import { toast } from "sonner";
 
 export default function ManageStoresPage() {
@@ -19,6 +21,13 @@ export default function ManageStoresPage() {
   const storesQuery = useStores();
   const propertiesQuery = useProperties();
   const router = useRouter();
+
+  // Belt and braces: `SellerAppLayout` already redirects an unverified seller
+  // away from this page, and `POST /stores` refuses them regardless. This just
+  // means the affordance is never offered if that redirect ever regresses.
+  // Shares the layout's query key, so it costs no extra request.
+  const orgQuery = useOrgContext();
+  const canCreateStore = !isSellerRestricted(orgQuery.data?.sellerStatus);
 
   const isLoading = storesQuery.isLoading || propertiesQuery.isLoading;
   const isError = storesQuery.isError || propertiesQuery.isError;
@@ -90,7 +99,9 @@ export default function ManageStoresPage() {
           }))}
           onSelectStore={handleSelectStore}
           onSelectProperty={handleSelectProperty}
-          onCreateNewStore={() => setShowTypeModal(true)}
+          onCreateNewStore={
+            canCreateStore ? () => setShowTypeModal(true) : undefined
+          }
         />
       )}
       <StoreTypeSelectionModal

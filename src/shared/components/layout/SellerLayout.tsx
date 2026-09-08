@@ -41,6 +41,7 @@ interface SellerLayoutProps {
    * means "not resolved yet", not "no access".
    */
   access?: SellerAccessSummary;
+  navLocked?: boolean;
 }
 
 interface NotificationItem {
@@ -57,6 +58,7 @@ export function SellerLayout({
   onSignOut,
   stores,
   access,
+  navLocked = false,
 }: SellerLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -178,7 +180,12 @@ export function SellerLayout({
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        isLocked={isLocked}
+        // Either reason greys the nav; only the signed-out one blanks the page.
+        isLocked={isLocked || navLocked}
+        // A signed-out user is on their way to the store list, so that link
+        // stays live. An unverified seller has nowhere to be but the review
+        // page, so nothing is exempt.
+        unlockedHref={navLocked ? null : "/seller/manage-stores"}
         isPropertyContext={isPropertyContext}
         propertyId={activePropertyId}
         activeStoreId={activeStoreId}
