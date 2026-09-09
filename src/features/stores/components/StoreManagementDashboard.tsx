@@ -2,23 +2,41 @@
 
 import React from "react";
 import { Card } from "@/shared/components/ui/Card";
+import { ClampedNote } from "@/shared/components/ui/ClampedNote";
 import {
   StoreIcon,
   PlusIcon,
   ArrowRightIcon,
-  ShieldCheckIcon,
   MapPinIcon,
   HomeIcon,
   LandPlotIcon,
+  Trash2Icon,
 } from "lucide-react";
 import type { StoreProperty } from "../contracts/manage-stores.contract";
+import {
+  STORE_STATUS_PRESENTATION,
+  canOpenStore,
+  normalizeStoreStatus,
+} from "@/shared/lib/storeApproval";
+import { deletionWarning } from "../lib/deletionCountdown";
 
-interface StoreItem {
+export interface StoreItem {
   id: string;
   storeName: string;
   isActive: boolean;
-  approvalStatus?: "PENDING" | "ACTIVE" | "REJECTED";
+  /**
+   * Open string, narrowed by `normalizeStoreStatus`. Undefined on rows that
+   * predate the column, which is why the fallback to `isActive` still matters.
+   */
+  approvalStatus?: string;
   rejectionReason?: string | null;
+  revisionNotes?: string | null;
+  /**
+   * Server-computed deadline for a rejected store. Only ever displayed here —
+   * the backend sweep is what actually deletes, so a card showing a stale
+   * countdown is cosmetic, and one computing its own would be a second answer.
+   */
+  scheduledDeletionAt?: string | null;
   city?: string;
   province?: string;
 }
@@ -34,6 +52,17 @@ interface StoreManagementDashboardProps {
    * rather than rendering a button that leads to a refusal.
    */
   onCreateNewStore?: () => void;
+  /**
+   * Omitted where deletion is not wired up. Only ever offered on a REJECTED
+   * store; every other status has no delete affordance, and the endpoint refuses
+   * them regardless of what this component renders.
+   */
+  onDeleteStore?: (store: StoreItem) => void;
+  /**
+   * Injected so the countdown can re-render on the parent's tick, and so tests
+   * can pin it. Defaults to render time.
+   */
+  now?: Date;
 }
 
 export default function StoreManagementDashboard({
@@ -42,6 +71,8 @@ export default function StoreManagementDashboard({
   onSelectStore,
   onSelectProperty,
   onCreateNewStore,
+  onDeleteStore,
+  now,
 }: StoreManagementDashboardProps) {
   return (
     <div className="max-w-4xl mx-auto space-y-6 text-left">
@@ -102,67 +133,120 @@ export default function StoreManagementDashboard({
                   Manage inventory, orders, and store operations.
                 </p>
               </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {stores.map((store) => (
-                  <Card
-                    key={store.id}
-                    className="group flex cursor-pointer flex-col justify-between p-5 transition-all hover:border-zinc-400 dark:hover:border-zinc-600"
-                    style={{ borderColor: "var(--border-light)" }}
-                    onClick={() => onSelectStore(store.id)}
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                            <StoreIcon className="h-4 w-4" />
+              {/* items-start: grid items stretch to the row's tallest card by
+                  default, so expanding one store's rejection reason handed its
+                  neighbour the same height — and the card's `justify-between`
+                  turned that into a void above the neighbour's footer. Each
+                  card sizes to its own content instead. */}
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+                {stores.map((store) => {
+                  // One resolution for the badge, the note and the footer, so
+                  // the card cannot say "changes requested" while the footer
+                  // invites the seller into a dashboard they cannot open.
+                  const status = normalizeStoreStatus(
+                    store.approvalStatus,
+                    store.isActive,
+                  );
+                  const presentation = STORE_STATUS_PRESENTATION[status];
+                  const StatusIcon = presentation.Icon;
+                  const warning = deletionWarning(
+                    store.scheduledDeletionAt,
+                    now,
+                  );
+
+                  return (
+                    <Card
+                      key={store.id}
+                      // min-w-0: a grid item defaults to `min-width: auto`, so an
+                      // unbreakable name or note would otherwise widen the column
+                      // and push the card out of the grid.
+                      className="group flex min-w-0 cursor-pointer flex-col justify-between p-5 transition-all hover:border-zinc-400 dark:hover:border-zinc-600"
+                      style={{ borderColor: "var(--border-light)" }}
+                      onClick={() => onSelectStore(store.id)}
+                    >
+                      <div className="min-w-0 space-y-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                              <StoreIcon className="h-4 w-4" />
+                            </div>
+                            <h3 className="min-w-0 break-words text-sm font-black tracking-tight text-text-primary transition-colors group-hover:text-brand-core">
+                              {store.storeName}
+                            </h3>
                           </div>
-                          <h3 className="text-sm font-black tracking-tight text-text-primary transition-colors group-hover:text-brand-core">
-                            {store.storeName}
-                          </h3>
+                          <span
+                            className={`flex shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold ${presentation.className}`}
+                          >
+                            <StatusIcon className="h-3 w-3 shrink-0" />
+                            {presentation.label}
+                          </span>
                         </div>
-                        {(store.approvalStatus ??
-                          (store.isActive ? "ACTIVE" : "PENDING")) ===
-                        "ACTIVE" ? (
-                          <span className="flex items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
-                            <ShieldCheckIcon className="h-3 w-3" /> Active
-                          </span>
-                        ) : (store.approvalStatus ?? "PENDING") ===
-                          "REJECTED" ? (
-                          <span className="rounded-md border border-rose-500/20 bg-rose-500/5 px-2 py-0.5 text-[10px] font-bold text-rose-500">
-                            Rejected
-                          </span>
-                        ) : (
-                          <span className="rounded-md border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 text-[10px] font-bold text-amber-500">
-                            Pending
-                          </span>
+                        {(store.city || store.province) && (
+                          <div className="flex items-center gap-1 text-[10px] text-zinc-400">
+                            <MapPinIcon className="h-3 w-3 shrink-0" />
+                            <span className="truncate">
+                              {[store.city, store.province]
+                                .filter(Boolean)
+                                .join(", ")}
+                            </span>
+                          </div>
                         )}
-                      </div>
-                      {(store.city || store.province) && (
-                        <div className="flex items-center gap-1 text-[10px] text-zinc-400">
-                          <MapPinIcon className="h-3 w-3 shrink-0" />
-                          <span className="truncate">
-                            {[store.city, store.province]
-                              .filter(Boolean)
-                              .join(", ")}
-                          </span>
-                        </div>
-                      )}
-                      {store.approvalStatus === "REJECTED" &&
-                        store.rejectionReason && (
-                          <p className="text-xs text-rose-400">
-                            Reason: {store.rejectionReason}
+                        {status === "REJECTED" && store.rejectionReason && (
+                          <ClampedNote
+                            label="Reason"
+                            text={store.rejectionReason}
+                            tone="danger"
+                          />
+                        )}
+                        {status === "REJECTED" && warning && (
+                          <p className="text-[11px] leading-4 text-rose-500">
+                            {warning}
                           </p>
                         )}
-                    </div>
-                    <div
-                      className="mt-4 flex items-center justify-between border-t pt-4 text-[11px] font-bold text-zinc-500"
-                      style={{ borderColor: "var(--border-light)" }}
-                    >
-                      <span>Initialize Management Node</span>
-                      <ArrowRightIcon className="h-3.5 w-3.5 transform transition-transform group-hover:translate-x-1" />
-                    </div>
-                  </Card>
-                ))}
+                        {status === "NEEDS_REVISION" && store.revisionNotes && (
+                          <ClampedNote
+                            label="Changes requested"
+                            text={store.revisionNotes}
+                            tone="warning"
+                          />
+                        )}
+                      </div>
+                      <div
+                        className="mt-4 flex items-center justify-between border-t pt-4 text-[11px] font-bold text-zinc-500"
+                        style={{ borderColor: "var(--border-light)" }}
+                      >
+                        <span className="min-w-0">{presentation.nextStep}</span>
+                        {/* The arrow promises the card goes somewhere, so it only
+                          appears when it does — the other statuses answer a
+                          click with an explanation, not a destination. */}
+                        {canOpenStore(status) && (
+                          <ArrowRightIcon className="h-3.5 w-3.5 transform transition-transform group-hover:translate-x-1" />
+                        )}
+                        {/* Sits in the footer beside "Contact support to appeal":
+                          the two are the seller's only options on a rejected
+                          store, so they belong on the same row. Nothing else can
+                          occupy this slot — `canOpenStore` is false for REJECTED,
+                          so the arrow above never competes for it. */}
+                        {status === "REJECTED" && onDeleteStore && (
+                          <button
+                            type="button"
+                            // The whole card is clickable, so without this the
+                            // delete would also open the store behind the dialog.
+                            // Same trap ClampedNote documents.
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onDeleteStore(store);
+                            }}
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/5 px-2.5 py-1.5 text-[11px] font-bold text-rose-500 transition-colors hover:bg-rose-500/10"
+                          >
+                            <Trash2Icon className="h-3 w-3 shrink-0" />
+                            Delete Store
+                          </button>
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
             </section>
           )}
@@ -178,7 +262,10 @@ export default function StoreManagementDashboard({
                   status.
                 </p>
               </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Same reason as the stores grid above: these cards also carry a
+                  rejection reason, so they have the identical defect waiting
+                  for a long enough note. */}
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
                 {properties.map((property) => {
                   const isHouseLot = property.propertyType === "HOUSE_LOT";
 
