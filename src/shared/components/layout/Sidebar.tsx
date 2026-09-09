@@ -20,8 +20,9 @@ import {
   ChevronDown,
   ChevronRight,
   House,
+  Users,
 } from "lucide-react";
-import { clearToken } from "@/shared/lib/token";
+import { clearClientSession } from "@/shared/lib/session";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 
 /**
@@ -32,6 +33,26 @@ import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 export interface ActiveStoreSummary {
   id: string;
   storeName: string;
+}
+
+/**
+ * Seller-organization access, supplied by the layout for the same reason
+ * `activeStore` is: resolving it needs `features/team`, and `shared/` may not
+ * import a feature. Declared structurally here.
+ *
+ * `permissions` being `undefined` means "not resolved yet", which is distinct
+ * from an empty array — a member really can hold no features, and that must not
+ * be confused with a pending fetch.
+ *
+ * `status` says which of those it is. Inferring it from `undefined` alone could
+ * not distinguish "still loading" from "the request failed", and the component
+ * treated both as "show everything" — so a failed context fetch rendered the
+ * full nav to a member holding none of it.
+ */
+export interface SellerAccessSummary {
+  permissions?: string[];
+  isOrgAdmin?: boolean;
+  status?: "pending" | "error" | "ready";
 }
 
 /** Logo + wordmark. Shared so the linked and locked branding stay identical. */
@@ -57,6 +78,15 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   isLocked?: boolean;
+  /**
+   * The one route that stays reachable while locked.
+   *
+   * Defaults to the store list, which is where a signed-out user is being sent
+   * anyway. Pass `null` when the lock means the caller may not go anywhere —
+   * an unverified seller belongs on the review page and nowhere else, and an
+   * exempt link would just bounce them straight back.
+   */
+  unlockedHref?: string | null;
   isPropertyContext?: boolean;
   propertyId?: string | null;
   activeStoreId?: string | null;
@@ -66,6 +96,8 @@ interface SidebarProps {
    * distinction the previous in-component lookup made.
    */
   activeStore?: ActiveStoreSummary | null;
+  /** Org feature access. Omitted entirely on surfaces that do not gate nav. */
+  access?: SellerAccessSummary;
   onSignOut?: () => void;
   onClearContext?: () => void;
 }
@@ -78,16 +110,22 @@ interface NavItem {
   badge?: string;
   children?: NavItem[];
   requiresStore?: boolean;
+  /** Org feature code required to see this item. */
+  permission?: string;
+  /** Only organization admins see this item, whatever their feature list. */
+  adminOnly?: boolean;
 }
 
 export function Sidebar({
   isOpen,
   onClose,
   isLocked = false,
+  unlockedHref = "/seller/manage-stores",
   isPropertyContext = false,
   propertyId,
   activeStoreId,
   activeStore,
+  access,
   onSignOut,
   onClearContext,
 }: SidebarProps) {
@@ -128,6 +166,7 @@ export function Sidebar({
           href: "/seller/products",
           icon: Package,
           roles: ["SELLER", "ADMIN"],
+          permission: "products.view",
         },
       ],
     },
@@ -141,14 +180,19 @@ export function Sidebar({
           href: "/seller/orders",
           icon: ShoppingBag,
           roles: ["SELLER", "ADMIN"],
+          permission: "orders.process",
         },
         {
           label: "Promotions & ads",
           href: "/seller/promotions",
           icon: Megaphone,
           roles: ["SELLER", "ADMIN"],
+          permission: "promotions.add",
         },
         {
+          // No `permission`: the `sales_review` code this carried does not exist
+          // on the API, so no member could ever hold it and the item was hidden
+          // from every non-admin. Nothing refuses the page, so it is shown.
           label: "Sales reports",
           href: "/seller/analytics",
           icon: BarChart3,
@@ -156,50 +200,71 @@ export function Sidebar({
           badge: "Soon",
         },
         {
+          // Likewise for the former `customer_review` code.
           label: "Customer reviews",
           href: "/seller/reviews",
           icon: MessageSquare,
           roles: ["SELLER", "ADMIN"],
+          // NOTE: this badge is stale — /seller/reviews renders live data via
+          // useStoreReviews. Left as-is to keep this change to permissions.
           badge: "Soon",
         },
       ],
     },
     {
+      // Both pages resolve the caller's own Sellers row and 403 for every org
+      // member, so they are admin-only until those endpoints are org-scoped.
       label: "Payouts & returns",
       icon: Wallet,
       roles: ["SELLER", "ADMIN"],
+      adminOnly: true,
       children: [
         {
           label: "Earnings & payouts",
           href: "/seller/finance",
           icon: Wallet,
           roles: ["SELLER", "ADMIN"],
+          adminOnly: true,
         },
         {
           label: "Returns",
           href: "/seller/fulfillment",
           icon: RotateCcw,
           roles: ["SELLER", "ADMIN"],
+          adminOnly: true,
         },
       ],
     },
     {
+      // requireSellerOrgAdmin already refuses non-admins server-side; this stops
+      // the nav offering a page that only renders a refusal.
+      label: "Team & permissions",
+      href: "/seller/team",
+      icon: Users,
+      roles: ["SELLER", "ADMIN"],
+      adminOnly: true,
+    },
+    {
+      // Store create/update are requireSellerOrgAdmin on the API.
       label: "Store settings",
       icon: Settings,
       roles: ["SELLER", "ADMIN"],
       requiresStore: true,
+      adminOnly: true,
       children: [
         {
           label: "Store profile",
           href: "/seller/store-profile/view",
           icon: Store,
           roles: ["SELLER", "ADMIN"],
+          adminOnly: true,
         },
         {
           label: "Preferences",
           href: "/seller/settings",
           icon: Settings,
           roles: ["SELLER", "ADMIN"],
+          adminOnly: true,
         },
       ],
     },
@@ -219,6 +284,7 @@ export function Sidebar({
         : "/seller/manage-stores",
       icon: House,
       roles: ["SELLER", "ADMIN"],
+      permission: "products.view",
     },
   ];
 
@@ -227,22 +293,65 @@ export function Sidebar({
     return roles.some((r) => allowedRoles.includes(r));
   };
 
+  /**
+   * Org-level gating, layered on top of the platform-role filter.
+   *
+   * Ungated items always render — they are reachable by any member, so waiting
+   * on the org context would blank the nav for no reason. Gated items render
+   * only once the context has resolved: while it is pending or failed we do not
+   * know whether the caller holds the code, and showing a link that will 403 is
+   * worse than showing nothing. Once resolved, an empty list genuinely means
+   * "no features" and everything gated drops out.
+   */
+  const isAccessAllowed = (item: NavItem) => {
+    const isGated = item.adminOnly || !!item.permission;
+    if (!isGated) return true;
+    if (!access || access.status !== "ready") return false;
+    if (access.isOrgAdmin) return true;
+    if (item.adminOnly) return false;
+    if (!item.permission) return true;
+    return (access.permissions ?? []).includes(item.permission);
+  };
+
+  const isItemVisible = (item: NavItem) =>
+    isRoleAllowed(item.roles) && isAccessAllowed(item);
+
   const filteredLinks = (
     isPropertyContext ? propertyNavLinks : navLinks
-  ).filter((item) => isRoleAllowed(item.roles));
+  ).filter(isItemVisible);
 
+  /**
+   * `onSignOut` is the real path — it revokes the session server-side and clears the
+   * React Query cache. The fallback below cannot do either: this component lives in
+   * `shared/`, which may not import from `features/`, and it has no QueryClient.
+   *
+   * So the fallback is a last resort that leaves the server session alive and the
+   * previous user's cached data in memory. Every layout that renders a Sidebar passes
+   * `onSignOut`; warn loudly if a new one forgets rather than silently half-signing
+   * someone out.
+   */
   const handleSignOutClick = () => {
     if (onSignOut) {
       onSignOut();
-    } else {
-      clearToken();
-      // Was `localStorage.clear()`, which also wiped the saved theme and any
-      // in-progress onboarding drafts. Only the seller context belongs to the
-      // session; clearToken() already handles the credentials themselves.
-      localStorage.removeItem("active_store_context_id");
-      localStorage.removeItem("active_property_context_id");
-      router.push("/login");
+      return;
     }
+
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "[Sidebar] Sign Out rendered without `onSignOut`. Local state is cleared, " +
+          "but the server session stays live and the query cache is not cleared. " +
+          "Pass `onSignOut` from the layout.",
+      );
+    }
+
+    // Was `localStorage.clear()`, which also wiped the saved theme and any
+    // in-progress onboarding drafts. clearClientSession removes exactly what
+    // belongs to the session — credentials, seller context, analytics session id
+    // — and nothing else; the list lives in shared/lib/session.ts.
+    clearClientSession();
+    // Hard navigation, not router.push: without a QueryClient to clear, this is the
+    // only way to guarantee the previous user's cached data is gone from memory.
+    window.location.href = "/login";
   };
 
   const linkBaseClasses =
@@ -252,6 +361,36 @@ export function Sidebar({
     badge === "Soon"
       ? "px-1.5 py-0.5 rounded-full text-xs font-medium bg-[var(--background-tertiary)] text-[var(--text-tertiary)] border border-[var(--border-light)]"
       : "px-1.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-400/20 text-cyan-600 dark:text-cyan-400 border border-cyan-400/30";
+
+  /**
+   * The store switcher's contents, shared by its linked and locked forms.
+   *
+   * It used to be an unconditional `<Link>`, which made it the one live way out
+   * of an otherwise locked sidebar — every nav item greyed out, and this still
+   * pointing at the store list. Locked now means locked.
+   */
+  const storeSwitcherSummary = (
+    <>
+      <div className="flex items-center gap-3 truncate">
+        <div className="w-8 h-8 shrink-0 rounded-lg bg-[var(--background-elevated)] border border-[var(--border-light)] flex items-center justify-center text-[var(--text-secondary)] group-hover:text-[var(--brand-core)] transition-colors shadow-sm">
+          <Store className="w-4 h-4" />
+        </div>
+        <div className="flex flex-col text-left truncate">
+          <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
+            {activeStore?.storeName || "All Stores"}
+          </span>
+          <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider font-semibold">
+            {activeStore ? "Switch Store" : "Manage store"}
+          </span>
+        </div>
+      </div>
+      {isLocked ? (
+        <Lock className="w-4 h-4 shrink-0 text-zinc-400" />
+      ) : (
+        <ChevronRight className="w-4 h-4 shrink-0 text-[var(--text-tertiary)] group-hover:text-[var(--brand-core)] transition-colors" />
+      )}
+    </>
+  );
 
   return (
     <>
@@ -306,28 +445,21 @@ export function Sidebar({
           </div>
 
           <div className="px-1 shrink-0">
-            <Link
-              href="/seller/manage-stores"
-              onClick={onClose}
-              className="flex items-center justify-between w-full p-3 rounded-xl bg-[var(--background-tertiary)] hover:bg-[var(--background-hover)] border border-[var(--border-light)] transition-colors group"
-            >
-              <div className="flex items-center gap-3 truncate">
-                <div className="w-8 h-8 shrink-0 rounded-lg bg-[var(--background-elevated)] border border-[var(--border-light)] flex items-center justify-center text-[var(--text-secondary)] group-hover:text-[var(--brand-core)] transition-colors shadow-sm">
-                  <Store className="w-4 h-4" />
-                </div>
-                <div className="flex flex-col text-left truncate">
-                  <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
-                    {activeStore?.storeName || "All Stores"}
-                  </span>
-                  <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider font-semibold">
-                    {activeStore ? "Switch Store" : "Manage store"}
-                  </span>
-                </div>
+            {isLocked ? (
+              <div className="flex items-center justify-between w-full p-3 rounded-xl bg-[var(--background-tertiary)] border border-[var(--border-light)] opacity-40 cursor-not-allowed">
+                {storeSwitcherSummary}
               </div>
-              <ChevronRight className="w-4 h-4 shrink-0 text-[var(--text-tertiary)] group-hover:text-[var(--brand-core)] transition-colors" />
-            </Link>
+            ) : (
+              <Link
+                href="/seller/manage-stores"
+                onClick={onClose}
+                className="flex items-center justify-between w-full p-3 rounded-xl bg-[var(--background-tertiary)] hover:bg-[var(--background-hover)] border border-[var(--border-light)] transition-colors group"
+              >
+                {storeSwitcherSummary}
+              </Link>
+            )}
 
-            {activeStore && (
+            {activeStore && !isLocked && (
               <button
                 onClick={(e) => {
                   e.preventDefault();
@@ -352,7 +484,7 @@ export function Sidebar({
                 ? false
                 : (expandedGroups[item.label] ?? true);
               const isItemLocked =
-                (isLocked && item.href !== "/seller/manage-stores") ||
+                (isLocked && item.href !== unlockedHref) ||
                 (item.requiresStore && !activeStore);
 
               const isChildActive =
@@ -410,8 +542,7 @@ export function Sidebar({
                           const ChildIcon = child.icon || Icon;
                           const isChildSelected = pathname === child.href;
                           const isChildLocked =
-                            (isLocked &&
-                              child.href !== "/seller/manage-stores") ||
+                            (isLocked && child.href !== unlockedHref) ||
                             (child.requiresStore && !activeStore);
 
                           if (isChildLocked) {

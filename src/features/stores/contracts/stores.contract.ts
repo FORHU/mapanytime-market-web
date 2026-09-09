@@ -3,6 +3,8 @@ import { z } from "zod";
 export const CategorySchema = z.object({
   id: z.string(),
   name: z.string(),
+  parentId: z.string().nullable().optional(),
+  subCategories: z.array(z.object({ id: z.string() })).optional(),
 });
 
 export const CategoriesResponseSchema = z.array(CategorySchema);

@@ -10,6 +10,7 @@ import { Toaster } from "sonner";
 import { AuthListener } from "@/features/auth/components/AuthListener";
 import { ThemeProvider } from "next-themes";
 import { AnalyticsListener } from "@/shared/components/AnalyticsListener";
+import { CookieConsentBanner } from "@/shared/components/CookieConsentBanner";
 
 // Three families at 11 weights was a lot to load on a public landing page. Plus Jakarta is the
 // display family — every `font-display` site in src/ pairs it with a type style of 600, 700 or
@@ -97,6 +98,7 @@ export default function RootLayout({
             <Toaster position="top-right" theme="system" richColors />
             <AuthListener />
             <AnalyticsListener />
+            <CookieConsentBanner />
           </QueryProvider>
         </ThemeProvider>
       </body>

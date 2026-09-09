@@ -9,9 +9,14 @@ import { useAuth } from "../hooks/useAuth";
 export function SellerAuthGate({
   children,
   stores,
+  access,
+  navLocked,
 }: {
   children: React.ReactNode;
   stores?: any[];
+  access?: { permissions?: string[]; isOrgAdmin?: boolean };
+  /** Grey out the nav while still rendering the page — see `SellerLayout`. */
+  navLocked?: boolean;
 }) {
   const token = useAuthStore((state) => state.token);
   const { logout } = useAuth();
@@ -59,6 +64,8 @@ export function SellerAuthGate({
       isAuthenticated={!!token}
       onSignOut={handleSignOut}
       stores={stores}
+      access={access}
+      navLocked={navLocked}
     >
       {children}
     </SellerLayout>

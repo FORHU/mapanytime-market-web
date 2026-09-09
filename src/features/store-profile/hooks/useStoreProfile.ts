@@ -6,6 +6,7 @@ import {
   getStoreProfile,
   getStoreCategories,
   updateStoreProfile,
+  resubmitStoreForReview,
 } from "../api/store-profile.client";
 import { storeProfileKeys } from "../api/store-profile.keys";
 import type {
@@ -49,6 +50,27 @@ export function useStoreCategories() {
     queryKey: storeProfileKeys.categories(),
     queryFn: getStoreCategories,
     staleTime: 10 * 60 * 1000,
+  });
+}
+
+/**
+ * Send a store with requested changes back for review.
+ *
+ * Invalidates the same keys as an edit, because the store's status and its
+ * editability both change — leaving the cached copy would keep the form
+ * unlocked after the seller has handed it back.
+ */
+export function useResubmitStore(options?: { onSuccess?: () => void }) {
+  const queryClient = useQueryClient();
+
+  return useSafeMutation({
+    mutationFn: ({ storeId }: { storeId: string }) =>
+      resubmitStoreForReview(storeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: storeProfileKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["stores"] });
+      options?.onSuccess?.();
+    },
   });
 }
 

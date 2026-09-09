@@ -22,7 +22,7 @@ import { acquireSocket, releaseSocket } from "@/shared/lib/socket";
 import { toast } from "sonner";
 import { getToken } from "@/shared/lib/token";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
-import type { ActiveStoreSummary } from "./Sidebar";
+import type { ActiveStoreSummary, SellerAccessSummary } from "./Sidebar";
 
 interface SellerLayoutProps {
   children: React.ReactNode;
@@ -35,6 +35,13 @@ interface SellerLayoutProps {
    * declared here; where the data comes from is the caller's business.
    */
   stores?: ActiveStoreSummary[];
+  /**
+   * The caller's organization feature access, supplied for the same reason
+   * `stores` is — resolving it needs `features/team`. Undefined `permissions`
+   * means "not resolved yet", not "no access".
+   */
+  access?: SellerAccessSummary;
+  navLocked?: boolean;
 }
 
 interface NotificationItem {
@@ -50,6 +57,8 @@ export function SellerLayout({
   isAuthenticated,
   onSignOut,
   stores,
+  access,
+  navLocked = false,
 }: SellerLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -171,11 +180,17 @@ export function SellerLayout({
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        isLocked={isLocked}
+        // Either reason greys the nav; only the signed-out one blanks the page.
+        isLocked={isLocked || navLocked}
+        // A signed-out user is on their way to the store list, so that link
+        // stays live. An unverified seller has nowhere to be but the review
+        // page, so nothing is exempt.
+        unlockedHref={navLocked ? null : "/seller/manage-stores"}
         isPropertyContext={isPropertyContext}
         propertyId={activePropertyId}
         activeStoreId={activeStoreId}
         activeStore={activeStore}
+        access={access}
         onSignOut={onSignOut}
         onClearContext={handleClearContext}
       />
