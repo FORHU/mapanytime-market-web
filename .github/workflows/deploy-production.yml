@@ -1,14 +1,29 @@
+# Deploy mapanytime-web (the Next.js client) to production.
+#
+# Flow: build -> push to ECR -> SSM RunCommand on the instance pulls the image,
+# health-checks it on a side port, then swaps it onto the live port.
+#
+# Authenticates with GitHub OIDC and reaches the box over SSM — no static AWS
+# keys and no SSH. The instance pulls from ECR as its own role,
+# production-mapanytime-instance, so no AWS credentials travel to it at all.
+#
+# This replaces an earlier version that used static keys over SSH, whose
+# comments said `mapanytime-role` was the EC2 instance profile and could only
+# pull. That stopped being true on 2026-09-10: the instance now runs as
+# production-mapanytime-instance, and mapanytime-role is the OIDC deploy role
+# with ECR push and ssm:SendCommand. Don't restore the old arrangement on the
+# strength of that comment.
+
 name: Deploy Production
 
 on:
   workflow_dispatch:
-
   push:
     branches:
       - main
 
 concurrency:
-  group: deploy-production
+  group: mapanytime-web-deploy-production
   cancel-in-progress: false
 
 permissions:
@@ -19,19 +34,23 @@ jobs:
   deploy:
     name: Deploy Production Environment
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     environment:
       name: production
 
     env:
       NEXT_PUBLIC_APP_ENV: production
-      NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-      NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
-      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }}
-      NEXT_PUBLIC_SOCKET_SERVER_URL: ${{ secrets.NEXT_PUBLIC_SOCKET_SERVER_URL }}
-      AWS_REGION: ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
-      ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+      # Variables first. Everything NEXT_PUBLIC_* is compiled into the client
+      # bundle and readable by anyone who opens the site, so storing it as a
+      # secret only hides it from our own logs. The secrets fallback keeps the
+      # current configuration working until the values are moved.
+      NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || secrets.NEXT_PUBLIC_API_URL }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || secrets.NEXT_PUBLIC_SITE_URL }}
+      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ vars.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }}
+      NEXT_PUBLIC_SOCKET_SERVER_URL: ${{ vars.NEXT_PUBLIC_SOCKET_SERVER_URL || secrets.NEXT_PUBLIC_SOCKET_SERVER_URL }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'mapanytime-web' }}
       IMAGE_TAG: production-${{ github.sha }}
 
     steps:
@@ -53,30 +72,19 @@ jobs:
       - name: Build application
         run: pnpm build
 
-      # Static access keys, the same way mapanytime-api authenticates.
-      #
-      # Do NOT swap this for `role-to-assume: ${{ secrets.AWS_ROLE_ARN }}`:
-      # that ARN is `mapanytime-role`, the EC2 *instance* profile, whose policy
-      # is pull-only — assuming it makes `docker push` fail with
-      # "not authorized to perform ecr:InitiateLayerUpload".
-      #
-      # The key pair here must be the one the API repo deploys with (it can
-      # push to ECR and call iam:PutRolePolicy). The pair in mapanytime-api/.env
-      # is a different, S3-only user (`style-mirror-s3-dev`) and will fail.
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY || secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY || secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # Prefer the registry returned by login over secrets.ECR_REGISTRY —
-      # a typo / https:// prefix / wrong account ID in that secret causes
-      # `docker push` to fail with "lookup … no such host".
+      # Prefer the registry returned by login over a configured value — a typo,
+      # an https:// prefix or the wrong account ID makes `docker push` fail with
+      # "lookup … no such host".
       - name: Export ECR registry
         run: echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> "$GITHUB_ENV"
 
@@ -97,105 +105,197 @@ jobs:
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:production-latest"
 
-      # Pull / stop / remove / run / cleanup all happen inside one SSH session
-      # so the deploy script can share shell state (the health-check result)
-      # across those sub-steps — splitting them into separate ssh-action
-      # steps would reconnect SSH each time and lose that shared state.
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.2.0
+      # Pull / health-check / swap / cleanup all run as one SSM command so the
+      # script shares shell state (the health-check result) across its steps.
+      - name: Send deploy command via SSM
+        id: send-command
+        env:
+          TAG_KEY: ${{ vars.EC2_TARGET_TAG_KEY }}
+          TAG_VALUE: ${{ vars.EC2_TARGET_TAG_VALUE }}
+        run: |
+          set -euo pipefail
 
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          MISSING=""
+          [[ -n "$TAG_KEY" ]]   || MISSING="$MISSING EC2_TARGET_TAG_KEY"
+          [[ -n "$TAG_VALUE" ]] || MISSING="$MISSING EC2_TARGET_TAG_VALUE"
+          if [[ -n "$MISSING" ]]; then
+            echo "Missing required GitHub variables:${MISSING}" >&2
+            exit 1
+          fi
 
-          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,NEXT_PUBLIC_API_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_APP_ENV,NEXT_PUBLIC_SOCKET_SERVER_URL,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY
+          # Single-quote a value for the remote shell. Every value below lands in
+          # an assignment on the box, and a URL with `&` or a space in it would
+          # otherwise be parsed as shell rather than stored.
+          q() { local s=${1//\'/\'\\\'\'}; printf "'%s'" "$s"; }
 
-          script: |
-            set -euo pipefail
+          # Only non-secret values travel in the command: SSM keeps command text
+          # in Run Command history for 30 days. Nothing here is sensitive —
+          # NEXT_PUBLIC_* ships in the client bundle anyway.
+          {
+            echo "set -eu"
+            echo "AWS_REGION=$(q "$AWS_REGION")"
+            echo "ECR_REGISTRY=$(q "$ECR_REGISTRY")"
+            echo "IMAGE=$(q "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG")"
+            echo "NEXT_PUBLIC_API_URL=$(q "$NEXT_PUBLIC_API_URL")"
+            echo "NEXT_PUBLIC_SITE_URL=$(q "$NEXT_PUBLIC_SITE_URL")"
+            echo "NEXT_PUBLIC_APP_ENV=$(q "$NEXT_PUBLIC_APP_ENV")"
+            echo "NEXT_PUBLIC_SOCKET_SERVER_URL=$(q "$NEXT_PUBLIC_SOCKET_SERVER_URL")"
+            cat <<'REMOTE'
 
-            IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          # The instance authenticates as production-mapanytime-instance. Any AWS
+          # credential in the environment would take precedence over that role in
+          # the CLI's credential chain — exactly how the API deploy failed on
+          # 2026-09-10, with a deactivated key arriving through its env file.
+          unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
 
-            CONTAINER="mapanytime-client"
-            NEW_CONTAINER="mapanytime-client-new"
+          CONTAINER=mapanytime-client
+          NEW_CONTAINER=mapanytime-client-new
 
-            # Host ports: the app is published on 4000 (the API owns 4002 on this
-            # same instance). 4001 is the temporary port used to health-check the
-            # new container before it takes over 4000. The container itself always
-            # listens on 3000 — see PORT in the Dockerfile.
-            APP_PORT=4000
-            HEALTH_PORT=4001
+          # Host ports: the app is published on 4000 (the API owns 4002 on this
+          # same instance). 4001 is the temporary port used to health-check the
+          # new container before it takes over 4000. The container itself always
+          # listens on 3000 — see PORT in the Dockerfile.
+          APP_PORT=4000
+          HEALTH_PORT=4001
 
-            # Amazon ECR Login on the EC2 host.
-            # Uses secrets.AWS_ACCESS_KEY_ID already exported by
-            # configure-aws-credentials and forwarded over SSH. No second key.
-            # Prefer an instance role long-term.
-            AWS_DEFAULT_REGION="$AWS_REGION" \
-            aws ecr get-login-password \
-              --region "$AWS_REGION" \
-              | docker login \
-              --username AWS \
-              --password-stdin "$ECR_REGISTRY"
+          # Password first, then login. Piping get-login-password straight into
+          # docker login turns an AWS failure into "Cannot perform an interactive
+          # login from a non TTY device", which names the wrong thing entirely.
+          # Captured this way, `set -e` stops on the real AWS error.
+          ECR_PASSWORD=$(aws ecr get-login-password --region "$AWS_REGION")
+          printf '%s' "$ECR_PASSWORD" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+          unset ECR_PASSWORD
 
-            # Docker Pull
-            docker pull "$IMAGE"
+          docker pull "$IMAGE"
 
-            docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
+          docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
 
-            # Docker Run — new container on a temporary port for health-checking
-            docker run -d \
-              --name "$NEW_CONTAINER" \
-              -p "$HEALTH_PORT:3000" \
-              -e NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
-              -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
-              -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
-              -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
-              "$IMAGE"
+          # New container on a temporary port, for health-checking
+          docker run -d \
+            --name "$NEW_CONTAINER" \
+            -p "$HEALTH_PORT:3000" \
+            -e NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
+            -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
+            -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
+            -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
+            "$IMAGE"
 
-            healthy=false
-
-            for i in $(seq 1 10)
-            do
-              if curl -fs "http://localhost:$HEALTH_PORT/" > /dev/null
-              then
-                healthy=true
-                break
-              fi
-
-              sleep 3
-            done
-
-            if [ "$healthy" != "true" ]
-            then
-              echo "Deployment failed — health check never passed"
-
-              docker logs "$NEW_CONTAINER" || true
-
-              docker rm -f "$NEW_CONTAINER" || true
-
-              exit 1
+          healthy=false
+          for i in $(seq 1 10); do
+            if curl -fs "http://localhost:$HEALTH_PORT/" >/dev/null; then
+              healthy=true
+              break
             fi
+            sleep 3
+          done
 
-            # Docker Stop + Docker Remove — old container comes down only
-            # after the new image has proven healthy
-            docker rm -f "$CONTAINER" 2>/dev/null || true
+          if [ "$healthy" != "true" ]; then
+            echo "Deployment failed — health check never passed"
+            docker logs "$NEW_CONTAINER" || true
+            docker rm -f "$NEW_CONTAINER" || true
+            exit 1
+          fi
 
-            docker rm -f "$NEW_CONTAINER"
+          # Old container comes down only after the new image has proven healthy
+          docker rm -f "$CONTAINER" 2>/dev/null || true
+          docker rm -f "$NEW_CONTAINER"
 
-            # Docker Run — promote the image to the real port
-            docker run -d \
-              --name "$CONTAINER" \
-              -p "$APP_PORT:3000" \
-              --restart unless-stopped \
-              -e NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
-              -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
-              -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
-              -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
-              "$IMAGE"
+          # Promote the image to the real port
+          docker run -d \
+            --name "$CONTAINER" \
+            -p "$APP_PORT:3000" \
+            --restart unless-stopped \
+            -e NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
+            -e NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
+            -e NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
+            -e NEXT_PUBLIC_SOCKET_SERVER_URL="$NEXT_PUBLIC_SOCKET_SERVER_URL" \
+            "$IMAGE"
 
-            sleep 2
+          sleep 2
+          curl -fs "http://localhost:$APP_PORT/" >/dev/null
 
-            curl -fs "http://localhost:$APP_PORT/" > /dev/null
+          # Drop dangling layers from the old image
+          docker image prune -f
 
-            # Docker Image Cleanup — drop dangling layers from the old image
-            docker image prune -f
+          echo "Deployed $IMAGE"
+          REMOTE
+          } > deploy.sh
+
+          PARAMS=$(jq -n --rawfile script deploy.sh \
+            '{commands: [$script], executionTimeout: ["900"]}')
+
+          COMMAND_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --comment "deploy mapanytime-client $IMAGE_TAG" \
+            --targets "Key=tag:${TAG_KEY},Values=${TAG_VALUE}" \
+            --parameters "$PARAMS" \
+            --timeout-seconds 600 \
+            --region "$AWS_REGION" \
+            --output text --query "Command.CommandId")
+
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+          echo "Sent SSM command $COMMAND_ID targeting tag:${TAG_KEY}=${TAG_VALUE}"
+
+      - name: Wait for deploy to finish
+        env:
+          COMMAND_ID: ${{ steps.send-command.outputs.command_id }}
+          TAG_KEY: ${{ vars.EC2_TARGET_TAG_KEY }}
+          TAG_VALUE: ${{ vars.EC2_TARGET_TAG_VALUE }}
+        run: |
+          set -euo pipefail
+
+          sleep 8
+
+          # 60 x 10s = 10 minutes: a cold pull on a t3.micro plus the 30-second
+          # health-check window, with room to spare.
+          STATUS=Pending
+          for i in $(seq 1 60); do
+            STATUS=$(aws ssm list-commands --command-id "$COMMAND_ID" \
+              --region "$AWS_REGION" \
+              --query "Commands[0].Status" --output text 2>/dev/null || echo "Pending")
+            if [[ "$STATUS" != "Pending" && "$STATUS" != "InProgress" ]]; then
+              break
+            fi
+            echo "Deploy status: $STATUS (attempt $i/60)"
+            sleep 10
+          done
+
+          echo "Final command status: $STATUS"
+
+          INSTANCE_IDS=$(aws ssm list-command-invocations --command-id "$COMMAND_ID" \
+            --region "$AWS_REGION" \
+            --query "CommandInvocations[].InstanceId" --output text)
+
+          # send-command returns a CommandId even when the tag matches nothing,
+          # so an empty invocation list is the only sign the deploy went nowhere.
+          if [[ -z "$INSTANCE_IDS" ]]; then
+            echo "No instances matched tag:${TAG_KEY}=${TAG_VALUE}."
+            echo "Check the tag, and that the instance is a managed node."
+            exit 1
+          fi
+
+          FAILED=0
+          for INSTANCE_ID in $INSTANCE_IDS; do
+            echo "::group::Instance $INSTANCE_ID"
+            aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --region "$AWS_REGION" \
+              --query "{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent}" \
+              --output json > invocation.json
+            cat invocation.json
+            [[ "$(jq -r '.Status' invocation.json)" == "Success" ]] || FAILED=1
+            echo "::endgroup::"
+          done
+
+          if [[ "$STATUS" == "InProgress" || "$STATUS" == "Pending" ]]; then
+            echo "Timed out with the command still running — check SSM Run Command."
+            exit 1
+          fi
+
+          if [[ "$FAILED" -ne 0 ]]; then
+            echo "One or more instances failed to deploy."
+            exit 1
+          fi
+
+          echo "Deploy succeeded on: $INSTANCE_IDS"
