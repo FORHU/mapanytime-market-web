@@ -16,8 +16,12 @@ import { useState, useEffect } from "react";
 
 export default function MapAnytimeLanding() {
   const landing = useLandingPage();
-  const { roles, isHydrated } = useCurrentUser();
-  const homeRoute = isHydrated ? resolveHomeRoute(roles) : undefined;
+  const { roles, rolesStatus } = useCurrentUser();
+  // Gated on `rolesStatus`, not `isHydrated`: roles now arrive from /users/me, so
+  // a hydrated-but-unresolved render would resolve this against an empty array
+  // and point a signed-in seller's nav at the wrong place until the fetch landed.
+  const homeRoute =
+    rolesStatus === "ready" ? resolveHomeRoute(roles) : undefined;
   const [mounted, setMounted] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
 
