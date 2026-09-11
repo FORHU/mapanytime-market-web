@@ -139,7 +139,7 @@ export function Sidebar({
     },
   );
 
-  const { roles, rolesStatus } = useCurrentUser();
+  const { roles } = useCurrentUser();
 
   const toggleGroup = (groupLabel: string) => {
     if (isLocked) return;
@@ -321,21 +321,6 @@ export function Sidebar({
   ).filter(isItemVisible);
 
   /**
-   * Roles arrive from `/users/me`, not from the token, so there is a window
-   * where every item would fail `isRoleAllowed` for no better reason than the
-   * request not having landed. Rendering the filtered list then produces a
-   * sidebar with a header, a store switcher and nothing between them — the exact
-   * symptom of the roles claim being dropped server-side (F105). A skeleton says
-   * "loading"; an empty nav says "you have no access", and only one of those is
-   * true here.
-   *
-   * `error` holds the skeleton too. An unknown answer is not "no roles", the
-   * same reasoning `isAccessAllowed` applies to the org context, and the retry
-   * policy is still working the request underneath.
-   */
-  const isResolvingRoles = rolesStatus !== "ready";
-
-  /**
    * `onSignOut` is the real path — it revokes the session server-side and clears the
    * React Query cache. The fallback below cannot do either: this component lives in
    * `shared/`, which may not import from `features/`, and it has no QueryClient.
@@ -492,183 +477,160 @@ export function Sidebar({
 
           {/* Navigation Items Scroll Container */}
           <nav className="flex-1 min-h-0 overflow-y-auto space-y-1.5 text-left pr-1 scrollbar-thin">
-            {isResolvingRoles &&
-              [0, 1, 2, 3, 4].map((row) => (
-                <div
-                  key={row}
-                  aria-hidden="true"
-                  className="flex items-center gap-3 px-3.5 py-2.5"
-                >
-                  <div className="w-4 h-4 rounded animate-pulse bg-[var(--background-tertiary)]" />
-                  <div
-                    className="h-3 rounded animate-pulse bg-[var(--background-tertiary)]"
-                    style={{ width: `${[60, 80, 45, 70, 55][row]}%` }}
-                  />
-                </div>
-              ))}
+            {filteredLinks.map((item) => {
+              const Icon = item.icon;
+              const hasChildren = item.children && item.children.length > 0;
+              const isGroupExpanded = isLocked
+                ? false
+                : (expandedGroups[item.label] ?? true);
+              const isItemLocked =
+                (isLocked && item.href !== unlockedHref) ||
+                (item.requiresStore && !activeStore);
 
-            {!isResolvingRoles &&
-              filteredLinks.map((item) => {
-                const Icon = item.icon;
-                const hasChildren = item.children && item.children.length > 0;
-                const isGroupExpanded = isLocked
-                  ? false
-                  : (expandedGroups[item.label] ?? true);
-                const isItemLocked =
-                  (isLocked && item.href !== unlockedHref) ||
-                  (item.requiresStore && !activeStore);
+              const isChildActive =
+                hasChildren &&
+                item.children?.some((child) => pathname === child.href);
 
-                const isChildActive =
-                  hasChildren &&
-                  item.children?.some((child) => pathname === child.href);
-
-                if (hasChildren) {
-                  // `isItemVisible`, not `isRoleAllowed`: this filter used to skip
-                  // the org-access half entirely, so a child carrying a permission
-                  // code — "My products" and its `products.view` — rendered for
-                  // members who do not hold it, which is precisely what
-                  // `isAccessAllowed` is documented above to prevent. The parent
-                  // group drops out with its last visible child via the guard
-                  // below.
-                  const visibleChildren = (item.children || []).filter(
-                    isItemVisible,
-                  );
-                  if (visibleChildren.length === 0) return null;
-
-                  if (isItemLocked) {
-                    return (
-                      <div key={item.label} className="space-y-1">
-                        <div
-                          className={`${linkBaseClasses} text-zinc-400 opacity-40 cursor-not-allowed justify-between`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Icon className="w-4 h-4 text-zinc-400" />
-                            <span>{item.label}</span>
-                          </div>
-                          <Lock className="w-3.5 h-3.5 text-zinc-400" />
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div key={item.label} className="space-y-1">
-                      {/* Parent Directory Header */}
-                      <div
-                        onClick={() => toggleGroup(item.label)}
-                        className={`${linkBaseClasses} justify-between text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--background-tertiary)]/60 ${
-                          isChildActive
-                            ? "text-[var(--brand-core)] bg-[var(--brand-core)]/10"
-                            : ""
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Icon className="w-4 h-4 text-[var(--brand-core)]" />
-                          <span>{item.label}</span>
-                        </div>
-                        {isGroupExpanded ? (
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        ) : (
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        )}
-                      </div>
-
-                      {/* Child Route Links */}
-                      {isGroupExpanded && (
-                        <div className="pl-6 space-y-1 border-l-2 border-[var(--border-light)] ml-4">
-                          {visibleChildren.map((child) => {
-                            const ChildIcon = child.icon || Icon;
-                            const isChildSelected = pathname === child.href;
-                            const isChildLocked =
-                              (isLocked && child.href !== unlockedHref) ||
-                              (child.requiresStore && !activeStore);
-
-                            if (isChildLocked) {
-                              return (
-                                <div
-                                  key={child.label}
-                                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-all text-zinc-400 opacity-40 cursor-not-allowed`}
-                                >
-                                  <div className="flex items-center gap-2.5">
-                                    <ChildIcon className="w-4 h-4" />
-                                    <span>{child.label}</span>
-                                  </div>
-                                  <Lock className="w-3.5 h-3.5" />
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <Link
-                                key={child.href}
-                                href={child.href || "#"}
-                                prefetch={true}
-                                onClick={onClose}
-                                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                                  isChildSelected
-                                    ? "bg-[var(--brand-core)] text-white shadow-sm"
-                                    : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2.5">
-                                  <ChildIcon className="w-4 h-4" />
-                                  <span>{child.label}</span>
-                                </div>
-                                {child.badge && (
-                                  <span className={badgeClasses(child.badge)}>
-                                    {child.badge}
-                                  </span>
-                                )}
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-
-                const isActive = pathname === item.href;
+              if (hasChildren) {
+                const visibleChildren = (item.children || []).filter((child) =>
+                  isRoleAllowed(child.roles),
+                );
+                if (visibleChildren.length === 0) return null;
 
                 if (isItemLocked) {
                   return (
-                    <div
-                      key={item.label}
-                      className={`${linkBaseClasses} text-zinc-400 opacity-40 cursor-not-allowed justify-between`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon className="w-4 h-4" />
-                        <span>{item.label}</span>
+                    <div key={item.label} className="space-y-1">
+                      <div
+                        className={`${linkBaseClasses} text-zinc-400 opacity-40 cursor-not-allowed justify-between`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className="w-4 h-4 text-zinc-400" />
+                          <span>{item.label}</span>
+                        </div>
+                        <Lock className="w-3.5 h-3.5 text-zinc-400" />
                       </div>
-                      <Lock className="w-3.5 h-3.5" />
                     </div>
                   );
                 }
 
                 return (
-                  <Link
-                    key={item.href || item.label}
-                    href={item.href || "#"}
-                    prefetch={true}
-                    onClick={onClose}
-                    className={`${linkBaseClasses} justify-between ${
-                      isActive
-                        ? "bg-[var(--brand-core)] text-white shadow-sm"
-                        : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
-                    }`}
+                  <div key={item.label} className="space-y-1">
+                    {/* Parent Directory Header */}
+                    <div
+                      onClick={() => toggleGroup(item.label)}
+                      className={`${linkBaseClasses} justify-between text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--background-tertiary)]/60 ${
+                        isChildActive
+                          ? "text-[var(--brand-core)] bg-[var(--brand-core)]/10"
+                          : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4 h-4 text-[var(--brand-core)]" />
+                        <span>{item.label}</span>
+                      </div>
+                      {isGroupExpanded ? (
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      )}
+                    </div>
+
+                    {/* Child Route Links */}
+                    {isGroupExpanded && (
+                      <div className="pl-6 space-y-1 border-l-2 border-[var(--border-light)] ml-4">
+                        {visibleChildren.map((child) => {
+                          const ChildIcon = child.icon || Icon;
+                          const isChildSelected = pathname === child.href;
+                          const isChildLocked =
+                            (isLocked && child.href !== unlockedHref) ||
+                            (child.requiresStore && !activeStore);
+
+                          if (isChildLocked) {
+                            return (
+                              <div
+                                key={child.label}
+                                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-all text-zinc-400 opacity-40 cursor-not-allowed`}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <ChildIcon className="w-4 h-4" />
+                                  <span>{child.label}</span>
+                                </div>
+                                <Lock className="w-3.5 h-3.5" />
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href || "#"}
+                              prefetch={true}
+                              onClick={onClose}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                                isChildSelected
+                                  ? "bg-[var(--brand-core)] text-white shadow-sm"
+                                  : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <ChildIcon className="w-4 h-4" />
+                                <span>{child.label}</span>
+                              </div>
+                              {child.badge && (
+                                <span className={badgeClasses(child.badge)}>
+                                  {child.badge}
+                                </span>
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              const isActive = pathname === item.href;
+
+              if (isItemLocked) {
+                return (
+                  <div
+                    key={item.label}
+                    className={`${linkBaseClasses} text-zinc-400 opacity-40 cursor-not-allowed justify-between`}
                   >
                     <div className="flex items-center gap-3">
                       <Icon className="w-4 h-4" />
                       <span>{item.label}</span>
                     </div>
-                    {item.badge && (
-                      <span className={badgeClasses(item.badge)}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
+                    <Lock className="w-3.5 h-3.5" />
+                  </div>
                 );
-              })}
+              }
+
+              return (
+                <Link
+                  key={item.href || item.label}
+                  href={item.href || "#"}
+                  prefetch={true}
+                  onClick={onClose}
+                  className={`${linkBaseClasses} justify-between ${
+                    isActive
+                      ? "bg-[var(--brand-core)] text-white shadow-sm"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge && (
+                    <span className={badgeClasses(item.badge)}>
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
