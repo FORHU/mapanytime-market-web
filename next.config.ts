@@ -29,6 +29,16 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        // Local MinIO standing in for S3 in docker-compose. Objects are served
+        // path-style off the host port, so without this next/image refuses the
+        // URL outright and every product image renders broken locally even
+        // though the upload itself succeeded.
+        protocol: "http",
+        hostname: "localhost",
+        port: "9000",
+        pathname: "/**",
+      },
     ],
   },
 };
