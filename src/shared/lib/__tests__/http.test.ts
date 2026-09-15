@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fetcher } from "@/shared/lib/http";
 import { ApiError } from "@/shared/errors/api-error";
+import { endSignOut } from "@/shared/lib/session-state";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function mockFetch(status: number, body?: object) {
@@ -22,6 +23,10 @@ describe("fetcher", () => {
     vi.clearAllMocks();
     localStorage.clear();
     sessionStorage.clear();
+    // The sign-out latch is module state. Without this reset the first 401 test
+    // to run would latch it and every later one would see its dispatch silently
+    // suppressed.
+    endSignOut();
   });
 
   afterEach(() => {
@@ -121,5 +126,69 @@ describe("fetcher", () => {
     mockFetch(400, { message: "Bad request: missing field" });
     const error: any = await fetcher("/api/users").catch((e) => e);
     expect(error.message).toBe("Bad request: missing field");
+  });
+
+  // ── Forced sign-out on an unrecoverable 401 ───────────────────────────────
+  //
+  // This layer used to navigate (`window.location.href = "/login"`) while
+  // AuthListener also navigated via the router. A document navigation racing an
+  // RSC navigation cancelled each other every turn, which is what left the
+  // login?_rsc requests pending forever. It reports now; it does not route.
+  describe("401 with no refresh token", () => {
+    function listenForUnauthorized() {
+      const handler = vi.fn();
+      window.addEventListener("auth:unauthorized", handler);
+      return {
+        handler,
+        stop: () => window.removeEventListener("auth:unauthorized", handler),
+      };
+    }
+
+    it("dispatches auth:unauthorized exactly once", async () => {
+      const { handler, stop } = listenForUnauthorized();
+      mockFetch(401, { message: "No token provided" });
+
+      await fetcher("/api/protected").catch(() => {});
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      stop();
+    });
+
+    it("does not navigate — routing belongs to AuthListener", async () => {
+      const { stop } = listenForUnauthorized();
+      const hrefBefore = window.location.href;
+      mockFetch(401, { message: "No token provided" });
+
+      await fetcher("/api/protected").catch(() => {});
+
+      expect(window.location.href).toBe(hrefBefore);
+      stop();
+    });
+
+    it("dispatches once for a fan-out of concurrent 401s", async () => {
+      const { handler, stop } = listenForUnauthorized();
+      mockFetch(401, { message: "No token provided" });
+
+      await Promise.allSettled([
+        fetcher("/api/v1/users/me"),
+        fetcher("/api/v1/stores/my-stores"),
+        fetcher("/api/v1/seller/org/context"),
+      ]);
+
+      // Three dead requests are one dead session.
+      expect(handler).toHaveBeenCalledTimes(1);
+      stop();
+    });
+
+    it("clears the stored credential", async () => {
+      const { stop } = listenForUnauthorized();
+      sessionStorage.setItem("token", "stale-token");
+      mockFetch(401, { message: "No token provided" });
+
+      await fetcher("/api/protected").catch(() => {});
+
+      expect(sessionStorage.getItem("token")).toBeNull();
+      stop();
+    });
   });
 });

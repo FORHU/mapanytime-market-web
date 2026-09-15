@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getToken } from "@/shared/lib/token";
+import { subscribeSessionChange } from "@/shared/lib/session-state";
 import { useSafeQuery } from "@/shared/query/useSafeQuery";
 import { fetcher } from "@/shared/lib/http";
 
@@ -58,10 +59,19 @@ export function useCurrentUser() {
   const [claims, setClaims] = useState<TokenClaims | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
 
+  // Subscribed, not read-once. This used to seed `claims` a single time on
+  // mount, which made the hook structurally incapable of noticing a logout:
+  // `userId` stayed truthy after the token was gone, `enabled` below stayed
+  // true, and clearing the query cache on sign-out therefore refetched
+  // /users/me with no credential — forever.
   useEffect(() => {
-    const token = getToken();
-    setClaims(token ? decodeToken(token) : null);
+    const sync = () => {
+      const token = getToken();
+      setClaims(token ? decodeToken(token) : null);
+    };
+    sync();
     setIsHydrated(true);
+    return subscribeSessionChange(sync);
   }, []);
 
   const userId = claims?.userId ?? null;

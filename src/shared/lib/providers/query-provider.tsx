@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { routeError } from "@/shared/errors/error-router";
 import { getRetryCount } from "@/shared/errors/retry-policy";
 import { logError } from "@/shared/errors/error-telemetry";
+import { claimSignOut } from "@/shared/lib/session-state";
 
 /**
  * Set `meta: { skipGlobalErrorHandling: true }` on a query or mutation whose failure is
@@ -40,14 +41,27 @@ export default function QueryProvider({
 
       const result = routeError(error);
 
-      if (result.toast) {
-        toast.error(result.toast);
+      // A dead session fans out: the queries mounted on a seller page all 401
+      // within the same tick. Each one used to toast and dispatch, and each
+      // dispatch tore the cache down again, re-arming the queries that produced
+      // the next round. The latch makes the first 401 the only one that is
+      // acted on; it is released when a new credential is written.
+      //
+      // logError stays above it — all of them belong in telemetry, only the
+      // first belongs in the UI.
+      if (result.action === "logout") {
+        if (typeof window === "undefined") return;
+        if (!claimSignOut()) return;
+
+        if (result.toast) {
+          toast.error(result.toast);
+        }
+        window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+        return;
       }
 
-      if (result.action === "logout") {
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("auth:unauthorized"));
-        }
+      if (result.toast) {
+        toast.error(result.toast);
       }
     };
 
