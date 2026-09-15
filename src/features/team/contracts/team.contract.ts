@@ -94,6 +94,9 @@ export const OrgMemberSchema = z
         email: z.string(),
         firstName: z.string(),
         lastName: z.string(),
+        // Defaulted true so a response from an API predating this field still
+        // parses as "complete" rather than wrongly badging every member pending.
+        isPasswordSet: z.boolean().default(true),
       })
       .loose(),
     assignedStores: z

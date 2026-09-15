@@ -17,11 +17,15 @@ import type {
   CreatedStaff,
 } from "../contracts/team.contract";
 
+// `requiresAuth` on all three: the org endpoints are meaningless without a
+// credential, and these default to enabled, so on sign-out they would otherwise
+// fire once against a 401 before settling.
 export function useOrgContext(enabled = true) {
   return useSafeQuery<OrgContext, Error>({
     queryKey: teamKeys.context(),
     queryFn: getOrgContext,
     enabled,
+    requiresAuth: true,
   });
 }
 
@@ -30,6 +34,7 @@ export function useOrgStores(enabled = true) {
     queryKey: teamKeys.stores(),
     queryFn: getOrgStores,
     enabled,
+    requiresAuth: true,
   });
 }
 
@@ -38,6 +43,7 @@ export function useOrgMembers(enabled = true) {
     queryKey: teamKeys.members(),
     queryFn: listMembers,
     enabled,
+    requiresAuth: true,
   });
 }
 

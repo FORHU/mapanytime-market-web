@@ -3,17 +3,37 @@ import { useSafeMutation } from "@/shared/query/useSafeMutation";
 import { login, logout, register, type UserRole } from "../api/login.api";
 import { useAuthStore } from "../stores/auth.store";
 import { clearClientSession } from "@/shared/lib/session";
+import { claimSignOut } from "@/shared/lib/session-state";
 
 export function clearAuthSession(
   setToken: (token: string | null) => void,
   queryClient: QueryClient,
 ) {
-  // setToken(null) first so the zustand store updates and subscribed components
-  // re-render; clearClientSession then covers everything storage-side, including
-  // the analytics session id that used to outlive the credential.
+  // Latch first. Our own in-flight requests are about to answer 401; the
+  // dispatch sites in http.ts and query-provider.tsx read this latch and stay
+  // quiet, which is what stops those 401s from triggering another teardown.
+  claimSignOut();
+
+  // Credential first. Removing a query does not stop it: the next render
+  // rebuilds the cache entry and `setOptions` refetches it unless `enabled` has
+  // already gone false, and only dropping the token makes that happen.
+  //
+  // The order relative to the clear below is presentational rather than
+  // load-bearing — every line here runs synchronously before React can render,
+  // so what actually matters is that the credential is gone by the time it
+  // does. Written in causal order anyway, because the next reader will assume
+  // it matters.
   setToken(null);
   clearClientSession();
-  queryClient.clear();
+
+  // Abort what is already in flight so it never reaches QueryCache.onError.
+  // The default `revert: true` matters: a reverted cancellation skips the error
+  // dispatch entirely, so tearing down produces no phantom toast.
+  queryClient.cancelQueries();
+
+  // getQueryCache().clear(), not queryClient.clear() — the latter also wipes the
+  // mutation cache, and this runs inside the logout mutation's own onSettled.
+  queryClient.getQueryCache().clear();
 }
 
 interface LoginVariables {
@@ -43,7 +63,10 @@ export function useAuth() {
     // seller context.
     clearClientSession();
     setToken(accessToken, refreshToken);
-    queryClient.clear();
+    // getQueryCache().clear() rather than queryClient.clear(): this runs inside
+    // the login mutation's own onSuccess, and clear() would wipe the mutation
+    // cache out from under it.
+    queryClient.getQueryCache().clear();
   };
 
   const loginMutation = useSafeMutation({

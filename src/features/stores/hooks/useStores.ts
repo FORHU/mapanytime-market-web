@@ -9,6 +9,9 @@ export function useStores() {
   return useSafeQuery<StoresResponse, Error>({
     queryKey: storesKeys.myStores(),
     queryFn: listMyStores,
+    // "My stores" is per-seller and unconditionally enabled: hold it until a
+    // credential exists rather than let it fire tokenless on sign-out.
+    requiresAuth: true,
   });
 }
 

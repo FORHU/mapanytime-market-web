@@ -119,6 +119,9 @@ export function MembersPanel({
                   {member.isOwner && (
                     <StatusPill label="Owner" variant="success" />
                   )}
+                  {!member.user.isPasswordSet && (
+                    <StatusPill label="Pending Invitation" variant="warning" />
+                  )}
                 </div>
                 <p className="truncate text-xs text-[var(--text-secondary)]">
                   {member.user.email} · {scopeLabel(member)}
