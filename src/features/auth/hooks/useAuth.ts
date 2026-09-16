@@ -1,6 +1,13 @@
 import { useQueryClient, QueryClient } from "@tanstack/react-query";
 import { useSafeMutation } from "@/shared/query/useSafeMutation";
-import { login, logout, register, type UserRole } from "../api/login.api";
+import {
+  login,
+  loginWithFacebook,
+  loginWithGoogle,
+  logout,
+  register,
+  type UserRole,
+} from "../api/login.api";
 import { useAuthStore } from "../stores/auth.store";
 import { clearClientSession } from "@/shared/lib/session";
 
@@ -56,6 +63,20 @@ export function useAuth() {
     onSuccess: (data) => adoptSession(data.accessToken, data.refreshToken),
   });
 
+  const facebookLoginMutation = useSafeMutation({
+    mutationFn: (accessToken: string) => loginWithFacebook(accessToken),
+    // Same reasoning as loginMutation: a rejection here is a form-level
+    // sign-in failure, not a session expiring mid-app.
+    meta: { skipGlobalErrorHandling: true },
+    onSuccess: (data) => adoptSession(data.accessToken, data.refreshToken),
+  });
+
+  const googleLoginMutation = useSafeMutation({
+    mutationFn: (idToken: string) => loginWithGoogle(idToken),
+    meta: { skipGlobalErrorHandling: true },
+    onSuccess: (data) => adoptSession(data.accessToken, data.refreshToken),
+  });
+
   const registerMutation = useSafeMutation({
     mutationFn: async ({ userData, roleName }: RegisterVariables) => {
       const result = await register(userData, roleName);
@@ -92,10 +113,16 @@ export function useAuth() {
   return {
     login: (credentials: Record<string, string>, roleName: UserRole) =>
       loginMutation.mutateAsync({ credentials, roleName }),
+    loginWithFacebook: (accessToken: string) =>
+      facebookLoginMutation.mutateAsync(accessToken),
+    loginWithGoogle: (idToken: string) =>
+      googleLoginMutation.mutateAsync(idToken),
     register: (userData: Record<string, string>, roleName: UserRole) =>
       registerMutation.mutateAsync({ userData, roleName }),
     logout: logoutMutation.mutateAsync,
     isLoggingIn: loginMutation.isPending,
+    isLoggingInWithFacebook: facebookLoginMutation.isPending,
+    isLoggingInWithGoogle: googleLoginMutation.isPending,
     isRegistering: registerMutation.isPending,
     isLoggingOut: logoutMutation.isPending,
   };

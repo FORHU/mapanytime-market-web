@@ -51,6 +51,24 @@ const envSchema = z.object({
    */
   NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: z.string().optional(),
 
+  // ── Facebook Login ────────────────────────────────────────────────────────
+  /**
+   * Public Facebook App ID — safe to ship in the bundle, unlike the App Secret
+   * (server-only, verifies tokens in the API). Optional: the "Continue with
+   * Facebook" button disables itself when this is unset instead of crashing.
+   */
+  NEXT_PUBLIC_FACEBOOK_APP_ID: z.string().optional(),
+
+  // ── Google Sign-In ────────────────────────────────────────────────────────
+  /**
+   * OAuth 2.0 Client ID from console.cloud.google.com. Public by design —
+   * Google Identity Services is a browser SDK, and the ID token it produces
+   * is what actually proves identity; the API verifies that token's
+   * signature against Google's own keys rather than trusting this value.
+   * Optional: the "Continue with Google" button disables itself when unset.
+   */
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().optional(),
+
   // ── Feature Flags ─────────────────────────────────────────────────────────
   /** Runtime environment name. Drives feature flag defaults. */
   NEXT_PUBLIC_APP_ENV: z
@@ -72,6 +90,8 @@ function createEnv() {
     NEXT_PUBLIC_SOCKET_SERVER_URL: process.env.NEXT_PUBLIC_SOCKET_SERVER_URL,
     NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN:
       process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN,
+    NEXT_PUBLIC_FACEBOOK_APP_ID: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
     NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
   });
 

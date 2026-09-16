@@ -47,6 +47,60 @@ export const login = async (
 };
 
 /**
+ * Facebook Login.
+ *
+ * Sends only the access token the Facebook JS SDK produced — the API verifies
+ * it against the Graph API and derives identity from that, never from
+ * anything asserted here. See auth.service.ts's facebookLogin for why.
+ */
+export const loginWithFacebook = async (
+  accessToken: string,
+): Promise<AuthResult> => {
+  const raw = await fetcher<unknown>("/api/v1/auth/facebook", {
+    method: "POST",
+    body: JSON.stringify({ accessToken }),
+  });
+
+  const envelope = LoginResponseEnvelopeSchema.parse(raw);
+  return AuthResultSchema.parse({
+    accessToken: envelope.data.accessToken,
+    refreshToken: envelope.data.refreshToken,
+    hasStores: Array.isArray(envelope.data.stores)
+      ? envelope.data.stores.length > 0
+      : false,
+    orgContext: envelope.data.orgContext,
+    user: envelope.data.user,
+    seller: envelope.data.seller,
+  });
+};
+
+/**
+ * Google Sign-In.
+ *
+ * Sends only the ID token Google Identity Services produced — the API
+ * verifies its signature/audience/issuer against Google's own keys and
+ * derives identity from that, never from anything asserted here.
+ */
+export const loginWithGoogle = async (idToken: string): Promise<AuthResult> => {
+  const raw = await fetcher<unknown>("/api/v1/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ idToken }),
+  });
+
+  const envelope = LoginResponseEnvelopeSchema.parse(raw);
+  return AuthResultSchema.parse({
+    accessToken: envelope.data.accessToken,
+    refreshToken: envelope.data.refreshToken,
+    hasStores: Array.isArray(envelope.data.stores)
+      ? envelope.data.stores.length > 0
+      : false,
+    orgContext: envelope.data.orgContext,
+    user: envelope.data.user,
+    seller: envelope.data.seller,
+  });
+};
+
+/**
  * Unified Registration Handler
  * Replaces both registerBuyer and registerSeller
  */
