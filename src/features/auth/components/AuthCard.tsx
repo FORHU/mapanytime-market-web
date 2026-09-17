@@ -21,6 +21,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useAuth } from "../hooks/useAuth";
+import { useFacebookLogin } from "../hooks/useFacebookLogin";
+import GoogleLoginButton from "./GoogleLoginButton";
+import { env } from "@/shared/lib/env";
 import {
   isSellerRole,
   isBuyerRole,
@@ -29,6 +32,7 @@ import {
   resolveSellerLandingRoute,
 } from "../utils/resolveHomeRoute";
 import type { UserRole as ApiUserRole } from "../api/login.api";
+import type { AuthResult } from "../contracts/auth.contract";
 import type { LoginRole } from "../types";
 
 export type AuthRole = "seller" | "buyer" | "universal";
@@ -91,7 +95,18 @@ export default function AuthCard({
   portalRole,
 }: AuthCardProps) {
   const router = useRouter();
-  const { login, register, isLoggingIn, isRegistering } = useAuth();
+  const {
+    login,
+    loginWithFacebook,
+    register,
+    isLoggingIn,
+    isLoggingInWithFacebook,
+    isRegistering,
+  } = useAuth();
+  const {
+    loginWithFacebook: getFacebookAccessToken,
+    isConfigured: isFacebookConfigured,
+  } = useFacebookLogin();
   const config = PORTAL_CONFIG[portalRole];
 
   const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
@@ -179,6 +194,60 @@ export default function AuthCard({
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
+  /**
+   * Shared by the password form and the Facebook button — both end up with the
+   * same `AuthResult` shape and should route the same way afterward.
+   */
+  const handleLoginResult = (result: AuthResult) => {
+    const roles = result.user?.roles || [];
+    const isBuyer = isBuyerRole(roles);
+    const isSeller = isSellerRole(roles);
+    const isAdmin = isAdminRole(roles);
+    const isAgent = isAgentRole(roles);
+
+    if (roles.length > 1) {
+      setPendingAuthResult(result);
+      setShowDualRolePrompt(true);
+    } else if (isSeller) {
+      toast.success("Redirecting to Seller Dashboard...");
+      setTimeout(() => {
+        router.push(resolveSellerLandingRoute(result));
+      }, 500);
+    } else if (isBuyer) {
+      toast.success("Redirecting to Buyer Dashboard...");
+      setTimeout(() => {
+        router.push("/buyer");
+      }, 500);
+    } else if (isAdmin) {
+      toast.success("Redirecting to Admin Portal...");
+      setTimeout(() => {
+        router.push("/admin");
+      }, 500);
+    } else if (isAgent) {
+      toast.success("Redirecting to Agent Portal...");
+      setTimeout(() => {
+        router.push("/agent");
+      }, 500);
+    } else {
+      toast.success("Login Successful...");
+      setTimeout(() => {
+        router.push("/");
+      }, 500);
+    }
+  };
+
+  const handleFacebookLogin = async () => {
+    try {
+      const accessToken = await getFacebookAccessToken();
+      const result = await loginWithFacebook(accessToken);
+      handleLoginResult(result);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Facebook sign-in failed.",
+      );
+    }
+  };
+
   const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
     // Errors are deliberately *not* cleared here. Wiping them up front collapsed the
@@ -210,41 +279,7 @@ export default function AuthCard({
       setLoginErrors({});
       setFormError(null);
 
-      const roles = result.user?.roles || [];
-      const isBuyer = isBuyerRole(roles);
-      const isSeller = isSellerRole(roles);
-      const isAdmin = isAdminRole(roles);
-      const isAgent = isAgentRole(roles);
-
-      if (roles.length > 1) {
-        setPendingAuthResult(result);
-        setShowDualRolePrompt(true);
-      } else if (isSeller) {
-        toast.success("Redirecting to Seller Dashboard...");
-        setTimeout(() => {
-          router.push(resolveSellerLandingRoute(result));
-        }, 500);
-      } else if (isBuyer) {
-        toast.success("Redirecting to Buyer Dashboard...");
-        setTimeout(() => {
-          router.push("/buyer");
-        }, 500);
-      } else if (isAdmin) {
-        toast.success("Redirecting to Admin Portal...");
-        setTimeout(() => {
-          router.push("/admin");
-        }, 500);
-      } else if (isAgent) {
-        toast.success("Redirecting to Agent Portal...");
-        setTimeout(() => {
-          router.push("/agent");
-        }, 500);
-      } else {
-        toast.success("Login Successful...");
-        setTimeout(() => {
-          router.push("/");
-        }, 500);
-      }
+      handleLoginResult(result);
     } catch (err) {
       setLoadingStep("");
 
@@ -563,6 +598,34 @@ export default function AuthCard({
                   accent={config.accent}
                 />
               </form>
+
+              {(isFacebookConfigured || env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) && (
+                <>
+                  <div className="flex items-center gap-3 mt-5">
+                    <div className="h-px flex-1 bg-[var(--border-light)]" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      Or
+                    </span>
+                    <div className="h-px flex-1 bg-[var(--border-light)]" />
+                  </div>
+                  {isFacebookConfigured && (
+                    <button
+                      type="button"
+                      onClick={handleFacebookLogin}
+                      disabled={isLoggingInWithFacebook}
+                      className="w-full mt-4 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-[var(--border-default)] bg-[var(--background-primary)] text-[var(--text-primary)] hover:bg-[var(--background-secondary)] transition-[background-color,transform] duration-150 ease-out active:scale-[0.96] disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {isLoggingInWithFacebook ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <FacebookLogo />
+                      )}
+                      <span>Continue with Facebook</span>
+                    </button>
+                  )}
+                  <GoogleLoginButton onSuccess={handleLoginResult} />
+                </>
+              )}
 
               {config.showRegister && (
                 <p className="mt-5 text-center text-xs text-[var(--text-tertiary)]">
@@ -976,6 +1039,24 @@ function SubmitButton({
         </>
       )}
     </button>
+  );
+}
+
+/** The official Facebook "f" mark, inline — matches how `_GoogleLogo` is done on mobile. */
+function FacebookLogo() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 18 18"
+      aria-hidden
+    >
+      <path
+        fill="#1877F2"
+        d="M18 9a9 9 0 1 0-10.406 8.89v-6.29H5.309V9h2.285V7.017c0-2.256 1.344-3.502 3.4-3.502.985 0 2.014.176 2.014.176v2.215h-1.135c-1.118 0-1.467.694-1.467 1.406V9h2.496l-.399 2.6h-2.097v6.29A9.002 9.002 0 0 0 18 9Z"
+      />
+    </svg>
   );
 }
 

@@ -17,7 +17,6 @@ export interface OrderRecord {
   status: "PENDING" | "SHIPPED" | "CANCELLED" | string;
   createdAt: string;
   subtotalAmount?: number;
-  taxAmount?: number;
   marketplaceFeeAmount?: number;
   sellerNetAmount?: number;
   totalAmount?: number;
