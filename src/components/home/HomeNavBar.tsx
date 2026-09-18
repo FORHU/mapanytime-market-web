@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ShieldCheck, Menu, X, Sun, Moon } from "lucide-react";
 
 export function ThemeIcon({
@@ -40,6 +41,13 @@ export default function HomeNavBar({
           href="/"
           className="font-display text-headline-md font-bold text-on-surface flex items-center gap-2 group transition-colors"
         >
+          <Image
+            src="/logo.png"
+            alt="MapAnytime Logo"
+            width={32}
+            height={32}
+            className="w-8 h-8 rounded-lg object-contain"
+          />
           <span className="text-primary group-hover:text-primary-fixed transition-colors">
             Map
           </span>

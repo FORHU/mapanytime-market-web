@@ -8,6 +8,7 @@ import { fetcher } from "@/shared/lib/http";
 
 interface TokenClaims {
   userId: string | null;
+  roles?: string[];
 }
 
 interface MeResponse {
@@ -29,7 +30,10 @@ function decodeToken(token: string): TokenClaims | null {
         .join(""),
     );
     const claims = JSON.parse(jsonPayload);
-    return { userId: claims.userId ?? null };
+    return {
+      userId: claims.userId ?? null,
+      roles: Array.isArray(claims.roles) ? claims.roles : [],
+    };
   } catch {
     return null;
   }
@@ -37,33 +41,12 @@ function decodeToken(token: string): TokenClaims | null {
 
 /**
  * Reads the signed-in user's identity from the access token and their roles from
- * the API.
- *
- * `userId` comes from the token and is available as soon as `isHydrated` is true.
- * Roles do NOT: the access token deliberately carries no `roles` claim
- * (mapanytime-api F105 — a claim nobody verifies is only an invitation to start
- * trusting it), so they are fetched from `/users/me`, which resolves them from
- * the database on every call.
- *
- * That split is the thing to keep in mind when using this hook:
- *
- *  - `isHydrated` means "the token has been read", nothing more. Gate `userId`
- *    on it, as the seller pages do. It deliberately does NOT wait on the roles
- *    request — making it do so would delay every page that only needs `userId`.
- *  - `roles` is asynchronous. Branch on `rolesStatus`, never on `roles.length`:
- *    an empty array is indistinguishable from a pending or failed request, and
- *    treating "not known yet" as "holds nothing" is what blanked the seller
- *    sidebar when the claim was removed.
+ * the API or JWT claims.
  */
 export function useCurrentUser() {
   const [claims, setClaims] = useState<TokenClaims | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Subscribed, not read-once. This used to seed `claims` a single time on
-  // mount, which made the hook structurally incapable of noticing a logout:
-  // `userId` stayed truthy after the token was gone, `enabled` below stayed
-  // true, and clearing the query cache on sign-out therefore refetched
-  // /users/me with no credential — forever.
   useEffect(() => {
     const sync = () => {
       const token = getToken();
@@ -82,6 +65,8 @@ export function useCurrentUser() {
       const res = await fetcher<MeResponse>("/api/v1/users/me");
       return res?.data?.roles?.map((role) => role.roleName) ?? [];
     },
+    initialData:
+      claims?.roles && claims.roles.length > 0 ? claims.roles : undefined,
     // Anonymous visitors hit the landing page, which reads this hook. Without
     // this guard every one of those visits fires a request that can only 401.
     enabled: !!userId,

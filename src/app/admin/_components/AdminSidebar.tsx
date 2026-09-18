@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -140,8 +141,14 @@ export function AdminSidebar({
             className="flex items-center gap-3 cursor-pointer overflow-hidden"
             onClick={() => router.push("/admin")}
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-cyan-400 flex items-center justify-center font-black text-white text-sm shadow-md">
-              MA
+            <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shadow-md shrink-0">
+              <Image
+                src="/logo.png"
+                alt="MapAnytime Logo"
+                width={36}
+                height={36}
+                className="w-full h-full object-contain"
+              />
             </div>
             {sidebarOpen && (
               <div className="flex flex-col text-left">
