@@ -23,6 +23,9 @@ export function useStoreProfiles() {
   return useSafeQuery<StoreProfilesResponse, Error>({
     queryKey: storeProfileKeys.lists(),
     queryFn: listMyStores,
+    // Unconditionally enabled and mounted by the seller layout, so without this
+    // it refires the moment the cache is cleared on sign-out — with no token.
+    requiresAuth: true,
   });
 }
 
