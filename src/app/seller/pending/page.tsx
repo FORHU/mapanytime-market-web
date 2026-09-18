@@ -5,15 +5,13 @@ import { useOrgContext } from "@/features/team";
 import { isSellerRejected } from "@/shared/lib/sellerVerification";
 
 /**
- * Where a seller waits while an administrator reviews their registration.
+ * Where a seller waits while Mapanytime is in Alpha Testing and administrators
+ * are slowly rolling out access.
  *
  * Rendered inside the seller shell rather than as a standalone page, so the
  * sidebar stays visible with its items locked. Seeing the tools they are waiting
  * for — greyed out, with a reason — reads as "not yet", which is the truth. A
  * bare page with no navigation reads as being signed out of the wrong account.
- *
- * Deliberately not styled as an error. Nothing has gone wrong: this is the
- * normal first state of every new seller account.
  */
 export default function SellerPendingPage() {
   const orgQuery = useOrgContext();
@@ -34,20 +32,22 @@ export default function SellerPendingPage() {
       </div>
 
       <h1 className="mt-6 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
-        {rejected ? "Application not approved" : "Account under review"}
+        {rejected
+          ? "Application not approved"
+          : "Mapanytime is in Alpha Testing"}
       </h1>
 
       <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--text-secondary)]">
         {rejected
           ? "Your seller application was reviewed and not approved. Contact support if you believe this was a mistake, or to ask what would need to change."
-          : "Your seller account is currently being reviewed by an administrator. You will be able to access seller features once your account has been verified."}
+          : "We are currently in an early, limited phase of development. Alpha testing means we are still actively building features, fixing bugs, and ensuring the platform is stable before opening it to everyone. Your account is on our waitlist!"}
       </p>
 
       {!rejected && (
         <>
           <div className="mt-10 w-full rounded-2xl border border-[var(--border-light)] bg-[var(--background-elevated)] p-6 text-left">
             <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
-              Available once verified
+              Available once your account is activated
             </p>
             <ul className="mt-4 space-y-3">
               {[
@@ -67,9 +67,10 @@ export default function SellerPendingPage() {
           </div>
 
           <p className="mt-6 text-xs text-[var(--text-tertiary)]">
-            There is nothing for you to submit — an administrator reviews new
-            seller accounts directly. This page updates on its own once yours is
-            approved.
+            Thank you for your early interest! There is no further action
+            required from you right now. We will notify you and update this page
+            automatically as we expand our testing pool and activate your
+            account.
           </p>
         </>
       )}

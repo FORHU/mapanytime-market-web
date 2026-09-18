@@ -16,7 +16,10 @@ import {
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLatestRelease } from "@/features/app-releases/hooks/useLatestRelease";
-import { useNearbyStores } from "@/features/stores/hooks/useNearbyStores";
+import {
+  useNearbyStores,
+  type NearbyStore,
+} from "@/features/stores/hooks/useNearbyStores";
 import { useCategories } from "@/features/stores/hooks/useCategories";
 
 const LiveHeroMap = dynamic(() => import("@/components/home/LiveHeroMap"), {
@@ -32,7 +35,7 @@ export default function ExploreMapSection({
   mounted,
   setIsDownloadModalOpen,
 }: ExploreMapSectionProps) {
-  const [selectedStore, setSelectedStore] = useState<any | null>(null);
+  const [selectedStore, setSelectedStore] = useState<NearbyStore | null>(null);
   const { downloadUrl: apkDownloadUrl } = useLatestRelease();
   const { stores: nearbyStores, loading: storesLoading } = useNearbyStores(3);
   const { data: categories, isLoading: categoriesLoading } = useCategories();
