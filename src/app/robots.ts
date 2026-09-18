@@ -1,14 +1,22 @@
 import { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://www.mapanytime-market-web.app";
+  const baseUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL || "https://mapanytime.com"
+  ).replace(/\/+$/, "");
 
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/dashboard/", "/api/"], // Protect private routes from crawling
+      disallow: [
+        "/admin/",
+        "/seller/",
+        "/buyer/",
+        "/agent/",
+        "/api/",
+        "/checkout/",
+      ],
     },
     sitemap: `${baseUrl}/sitemap.xml`,
   };
