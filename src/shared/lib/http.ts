@@ -2,6 +2,7 @@ import { ApiError } from "@/shared/errors/api-error";
 import { env } from "@/shared/lib/env";
 import { getToken, getRefreshToken, setToken } from "@/shared/lib/token";
 import { clearClientSession } from "@/shared/lib/session";
+import { claimSignOut } from "@/shared/lib/session-state";
 
 function classify(
   status: number,
@@ -205,8 +206,17 @@ export async function fetcher<T>(
             onTokenClearCallback();
           }
 
-          if (!window.location.pathname.startsWith("/login")) {
-            window.location.href = "/login";
+          // Was `window.location.href = "/login"`, guarded on
+          // window.location.pathname. Two layers owned the redirect — this one
+          // and AuthListener — and a document navigation racing an RSC
+          // navigation cancelled each other on every turn, which is why the
+          // login?_rsc requests sat pending forever. The guard could not be made
+          // correct here either: during an uncommitted App Router navigation
+          // window.location still reports the old path.
+          //
+          // This layer now only reports. AuthListener owns clearing and routing.
+          if (claimSignOut()) {
+            window.dispatchEvent(new CustomEvent("auth:unauthorized"));
           }
         }
       }
