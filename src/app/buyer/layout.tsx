@@ -6,6 +6,7 @@ import { useAuthStore } from "@/features/auth/stores/auth.store";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import Link from "next/link";
+import Image from "next/image";
 import { Map, ShoppingBag, User, LogOut } from "lucide-react";
 
 export default function BuyerLayout({
@@ -57,6 +58,13 @@ export default function BuyerLayout({
           href="/buyer"
           className="font-display text-lg md:text-xl font-bold flex items-center gap-2"
         >
+          <Image
+            src="/logo.png"
+            alt="MapAnytime Logo"
+            width={28}
+            height={28}
+            className="w-7 h-7 rounded-md object-contain"
+          />
           <span className="text-primary">Map</span>Anytime
         </Link>
 

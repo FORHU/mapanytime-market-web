@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -59,8 +60,14 @@ export interface SellerAccessSummary {
 function BrandMark() {
   return (
     <>
-      <div className="w-8 h-8 rounded-xl bg-[var(--brand-core)] flex items-center justify-center text-white font-black text-sm shadow-md">
-        MA
+      <div className="w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center shadow-md bg-[var(--brand-core)] shrink-0">
+        <Image
+          src="/logo.png"
+          alt="MapAnytime Logo"
+          width={32}
+          height={32}
+          className="w-full h-full object-contain"
+        />
       </div>
       <div className="flex flex-col text-left">
         <span className="text-base font-semibold tracking-tight leading-none text-[var(--text-primary)]">

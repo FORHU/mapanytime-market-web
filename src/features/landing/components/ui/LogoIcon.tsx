@@ -1,16 +1,23 @@
-import { MapPin } from "lucide-react";
+import Image from "next/image";
 
 interface LogoIconProps {
   iconSize?: number;
   className?: string;
 }
 
-export function LogoIcon({ iconSize = 17, className }: LogoIconProps) {
+export function LogoIcon({ className }: LogoIconProps) {
   return (
     <span
-      className={`flex items-center justify-center rounded-[10px] bg-[#22d3ee] text-[#021521] shadow-[0_0_25px_rgba(34,211,238,0.35)] ${className ?? ""}`}
+      className={`relative inline-flex items-center justify-center overflow-hidden rounded-[8px] ${className ?? "h-[31px] w-[31px]"}`}
     >
-      <MapPin size={iconSize} />
+      <Image
+        src="/logo.png"
+        alt="MapAnytime"
+        width={40}
+        height={40}
+        className="h-full w-full object-contain"
+        priority
+      />
     </span>
   );
 }
