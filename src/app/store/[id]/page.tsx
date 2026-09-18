@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import StorePageClient from "./StorePageClient";
 
 interface Props {
@@ -42,7 +43,12 @@ function toHHMM(mins: number): string {
   return `${h}:${m}`;
 }
 
-function buildJsonLd(store: any, siteUrl: string, storeId: string) {
+function buildJsonLd(
+  store: any,
+  siteUrl: string,
+  storeId: string,
+  ogImageUrl: string,
+) {
   const location = Array.isArray(store.storeLocations)
     ? store.storeLocations[0]
     : store.storeLocations;
@@ -83,25 +89,32 @@ function buildJsonLd(store: any, siteUrl: string, storeId: string) {
         }
       : undefined;
 
+  const canonicalUrl = `${siteUrl}/store/${encodeURIComponent(store.slug || storeId)}`;
+
   const jsonLd: Record<string, any> = {
     "@context": "https://schema.org",
     "@type": "Store",
-    "@id": `${siteUrl}/store/${encodeURIComponent(store.slug || storeId)}#store`,
+    "@id": `${canonicalUrl}#store`,
     name: store.storeName,
-    url: `${siteUrl}/store/${encodeURIComponent(store.slug || storeId)}`,
+    url: canonicalUrl,
+    image: ogImageUrl,
     description: store.description || undefined,
     telephone: store.phone || undefined,
     email: store.email || undefined,
     address,
     geo,
     openingHoursSpecification: openingHours?.length ? openingHours : undefined,
-    priceRange: "$$",
   };
 
-  if (store.ratingCount && store.ratingCount > 0) {
+  if (
+    typeof store.ratingCount === "number" &&
+    store.ratingCount > 0 &&
+    typeof store.ratingAverage === "number" &&
+    store.ratingAverage > 0
+  ) {
     jsonLd.aggregateRating = {
       "@type": "AggregateRating",
-      ratingValue: store.ratingAverage || 5,
+      ratingValue: store.ratingAverage,
       reviewCount: store.ratingCount,
     };
   }
@@ -115,17 +128,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const siteUrl = (
     process.env.NEXT_PUBLIC_SITE_URL || "https://mapanytime.com"
   ).replace(/\/+$/, "");
-  const canonicalUrl = `${siteUrl}/store/${encodeURIComponent(store?.slug || id)}`;
 
   if (!store) {
     return {
-      title: "Store",
-      description: "Discover local stores and offline merchants on MapAnytime.",
-      alternates: {
-        canonical: canonicalUrl,
+      title: "Store Not Found | MapAnytime",
+      description: "The requested store is not available on MapAnytime.",
+      robots: {
+        index: false,
+        follow: false,
       },
     };
   }
+
+  const storeSlug = store.slug?.trim() || store.id || id;
+  const canonicalUrl = `${siteUrl}/store/${encodeURIComponent(storeSlug)}`;
 
   const location = Array.isArray(store.storeLocations)
     ? store.storeLocations[0]
@@ -134,13 +150,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const locationName = [location?.city, location?.province]
     .filter(Boolean)
     .join(", ");
+
   const title = locationName
     ? `${store.storeName} — ${locationName} | MapAnytime`
-    : `${store.storeName} | MapAnytime`;
+    : `${store.storeName} — MapAnytime`;
 
   const description =
     store.description?.trim() ||
-    `Visit ${store.storeName}${locationName ? ` in ${locationName}` : ""}. Browse products, view live operating hours, and order for direct pickup on MapAnytime.`;
+    `Discover ${store.storeName}${locationName ? ` in ${locationName}` : ""}, view available products, and see pickup information on MapAnytime.`;
+
+  const ogImageUrl =
+    store.bannerUrl || store.logoUrl || `${siteUrl}/og-image.png`;
 
   return {
     title,
@@ -156,9 +176,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       images: [
         {
-          url: "/og-image.png",
-          width: 1200,
-          height: 630,
+          url: ogImageUrl,
           alt: store.storeName,
         },
       ],
@@ -167,7 +185,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       card: "summary_large_image",
       title,
       description,
-      images: ["/og-image.png"],
+      images: [ogImageUrl],
     },
   };
 }
@@ -175,10 +193,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function StorePage({ params }: Props) {
   const { id } = await params;
   const store = await getStore(id);
+
+  if (!store) {
+    notFound();
+  }
+
   const siteUrl = (
     process.env.NEXT_PUBLIC_SITE_URL || "https://mapanytime.com"
   ).replace(/\/+$/, "");
-  const jsonLd = store ? buildJsonLd(store, siteUrl, id) : null;
+  const ogImageUrl =
+    store.bannerUrl || store.logoUrl || `${siteUrl}/og-image.png`;
+  const jsonLd = buildJsonLd(store, siteUrl, id, ogImageUrl);
 
   return (
     <>
@@ -188,7 +213,7 @@ export default async function StorePage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
-      <StorePageClient storeId={id} />
+      <StorePageClient storeId={store.id} />
     </>
   );
 }
