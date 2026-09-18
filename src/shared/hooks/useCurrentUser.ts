@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getToken } from "@/shared/lib/token";
+import { fetcher } from "@/shared/lib/http";
 
 interface TokenClaims {
   userId: string | null;
@@ -40,8 +41,35 @@ export function useCurrentUser() {
 
   useEffect(() => {
     const token = getToken();
-    setClaims(token ? decodeToken(token) : null);
+    const decoded = token ? decodeToken(token) : null;
+    setClaims(decoded);
     setIsHydrated(true);
+
+    // Fallback: if token exists and has userId but roles is empty (e.g. token minted without roles claim),
+    // fetch `/api/v1/users/me` to populate roles so navbars and role-gates never break.
+    if (
+      token &&
+      decoded?.userId &&
+      (!decoded.roles || decoded.roles.length === 0)
+    ) {
+      fetcher<{ data?: { roles?: Array<{ roleName: string } | string> } }>(
+        "/api/v1/users/me",
+      )
+        .then((res) => {
+          const rawRoles = res?.data?.roles;
+          if (Array.isArray(rawRoles) && rawRoles.length > 0) {
+            const roleNames = rawRoles.map((r) =>
+              typeof r === "string" ? r : r.roleName,
+            );
+            setClaims((prev) =>
+              prev
+                ? { ...prev, roles: roleNames }
+                : { userId: decoded.userId, roles: roleNames },
+            );
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
 
   return {
