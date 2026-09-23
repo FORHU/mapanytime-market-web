@@ -33,6 +33,9 @@ vi.mock("@/features/auth/components/SellerAuthGate", () => ({
     <>{children}</>
   ),
 }));
+vi.mock("@/app/seller/_components/tour/SellerTourHost", () => ({
+  SellerTourHost: () => null,
+}));
 
 function mockContext(
   state:
