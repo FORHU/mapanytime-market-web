@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
+import { SellerTourHost } from "@/app/seller/_components/tour/SellerTourHost";
 import { useStoreProfiles } from "@/features/store-profile/hooks/useStoreProfile";
 import { useOrgContext } from "@/features/team";
 import { SellerAuthGate } from "@/features/auth/components/SellerAuthGate";
@@ -32,6 +33,9 @@ export function SellerAppLayout({ children }: { children: React.ReactNode }) {
   const orgQuery = useOrgContext();
   const pathname = usePathname();
   const router = useRouter();
+
+  // Counter, not boolean, so re-opening a just-finished tour still triggers.
+  const [tourRequest, setTourRequest] = useState(0);
 
   const access = useMemo(
     () => ({
@@ -126,7 +130,17 @@ export function SellerAppLayout({ children }: { children: React.ReactNode }) {
       access={access}
       // Sidebar-only: the nav greys out, but the review page still renders.
       navLocked={isRestricted}
+      // Hidden for unverified sellers: the nav is locked, so there's nothing to tour.
+      onOpenTutorial={
+        isRestricted ? undefined : () => setTourRequest((n) => n + 1)
+      }
     >
+      <SellerTourHost
+        accessStatus={access.status}
+        // Stays off until the seller is approved.
+        disabled={isRestricted}
+        openRequest={tourRequest}
+      />
       {leavingForPendingRoute ? null : gatedAndUnresolved ? (
         <div className="space-y-3 p-6">
           {access.status === "error" ? (

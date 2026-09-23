@@ -28,6 +28,7 @@ import {
   X,
   ChevronDown,
   Save,
+  RefreshCw,
   UploadCloud,
   Boxes,
   AlignLeft,
@@ -977,38 +978,40 @@ export default function ProductForm({
         <ImageDropzone images={images} setImages={setImages} />
       </SectionCard>
 
-      {/* Floating save bar */}
+      {/* Save action */}
       <div className="flex justify-center px-4 pb-5">
-        <div
-          className="flex w-full max-w-md items-center justify-between rounded-2xl px-5 py-3.5 sm:w-auto"
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex w-full max-w-md items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-[var(--shadow-border)] transition-[transform,box-shadow,opacity] duration-150 ease-out hover:shadow-[var(--shadow-border-hover)] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none sm:w-auto"
           style={{
-            background: "var(--md-sys-color-surface-container-high)",
-            border: "1px solid var(--border-default)",
+            background: "var(--md-sys-color-primary)",
+            color: "var(--md-sys-color-on-primary)",
           }}
         >
-          <div className="hidden sm:block">
-            <p
-              className="text-xs font-medium"
-              style={{ color: "var(--text-secondary)" }}
-            ></p>
-            <p
-              className="text-sm font-semibold"
-              style={{ color: "var(--text-primary)" }}
-            ></p>
-          </div>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="animate-pulse-glow glow-primary flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-transform duration-150 hover:scale-[1.02] disabled:opacity-60"
-            style={{
-              background: "var(--brand-core)",
-              color: "var(--background-primary)",
-            }}
-          >
-            <Save className="h-4 w-4" />
-            {isSubmitting ? "Saving…" : "Save Product"}
-          </button>
-        </div>
+          {/* Icons cross-fade in separate wrappers, since `animate-spin` would override a scale on the same node. */}
+          <span className="relative inline-flex h-4 w-4 shrink-0">
+            <span
+              className={`absolute inset-0 transition-[transform,opacity,filter] duration-150 ease-[cubic-bezier(0.2,0,0,1)] ${
+                isSubmitting
+                  ? "scale-[0.25] opacity-0 blur-[4px]"
+                  : "scale-100 opacity-100 blur-0"
+              }`}
+            >
+              <Save className="h-4 w-4" />
+            </span>
+            <span
+              className={`absolute inset-0 transition-[transform,opacity,filter] duration-150 ease-[cubic-bezier(0.2,0,0,1)] ${
+                isSubmitting
+                  ? "scale-100 opacity-100 blur-0"
+                  : "scale-[0.25] opacity-0 blur-[4px]"
+              }`}
+            >
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            </span>
+          </span>
+          {isSubmitting ? "Saving…" : "Save product"}
+        </button>
       </div>
     </form>
   );

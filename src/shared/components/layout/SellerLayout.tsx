@@ -8,11 +8,11 @@ import {
   Moon,
   Lock,
   Unlock,
-  RefreshCw,
   Bell,
   ShoppingBag,
   Check,
   User,
+  HelpCircle,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
@@ -42,6 +42,8 @@ interface SellerLayoutProps {
    */
   access?: SellerAccessSummary;
   navLocked?: boolean;
+  /** Replays the seller tutorial (composed in `app/`); omitted hides the Help button. */
+  onOpenTutorial?: () => void;
 }
 
 interface NotificationItem {
@@ -59,6 +61,7 @@ export function SellerLayout({
   stores,
   access,
   navLocked = false,
+  onOpenTutorial,
 }: SellerLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -206,6 +209,9 @@ export function SellerLayout({
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
+              // The tutorial clicks this to open the drawer for nav-item steps.
+              data-tour="mobile-menu"
+              aria-label="Open menu"
               className="p-2 border rounded-xl md:hidden transition-colors disabled:opacity-30"
               style={{
                 backgroundColor: "var(--background-tertiary)",
@@ -235,16 +241,6 @@ export function SellerLayout({
           </div>
 
           <div className="flex items-center gap-3">
-            {activeStoreId && pathname !== "/seller/manage-stores" && (
-              <Button
-                variant="dark"
-                onClick={handleClearContext}
-                className="!h-9 !px-4 !rounded-xl !text-xs"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Clear Context
-              </Button>
-            )}
-
             {roles.includes("BUYER") && (
               <Button
                 variant="secondary"
@@ -343,6 +339,19 @@ export function SellerLayout({
                 </div>
               )}
             </div>
+
+            {onOpenTutorial && (
+              <Button
+                variant="secondary"
+                onClick={onOpenTutorial}
+                className="!w-9 !h-9 !p-0 !rounded-xl border"
+                style={{ borderColor: "var(--border-light)" }}
+                aria-label="Help and tutorial"
+                title="Replay the seller tutorial"
+              >
+                <HelpCircle className="w-4 h-4 text-zinc-400" />
+              </Button>
+            )}
 
             <Button
               variant="secondary"
