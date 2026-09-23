@@ -53,7 +53,14 @@ export default function PromotionsPage() {
         </div>
         <button
           onClick={() => (isFormOpen ? closeForm() : setIsFormOpen(true))}
-          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-[var(--brand-core)] px-4 py-2 text-sm font-medium text-white transition-all hover:opacity-90"
+          disabled={!activeStoreId}
+          title={
+            activeStoreId
+              ? undefined
+              : "Please select a specific store from the sidebar to create a promotion"
+          }
+          data-tour="new-promotion"
+          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-[var(--brand-core)] px-4 py-2 text-sm font-medium text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:opacity-50"
         >
           {isFormOpen ? (
             <X className="h-4 w-4" />

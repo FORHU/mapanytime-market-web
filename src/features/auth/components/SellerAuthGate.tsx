@@ -12,6 +12,7 @@ export function SellerAuthGate({
   stores,
   access,
   navLocked,
+  onOpenTutorial,
 }: {
   children: React.ReactNode;
   stores?: any[];
@@ -24,6 +25,8 @@ export function SellerAuthGate({
   access?: SellerAccessSummary;
   /** Grey out the nav while still rendering the page — see `SellerLayout`. */
   navLocked?: boolean;
+  /** Forwarded to the header's Help button; composed in `app/`, like `access`. */
+  onOpenTutorial?: () => void;
 }) {
   const token = useAuthStore((state) => state.token);
   const { logout } = useAuth();
@@ -73,6 +76,7 @@ export function SellerAuthGate({
       stores={stores}
       access={access}
       navLocked={navLocked}
+      onOpenTutorial={onOpenTutorial}
     >
       {children}
     </SellerLayout>

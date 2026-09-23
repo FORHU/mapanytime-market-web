@@ -40,7 +40,12 @@ export function ProductTable({
               )}
               <th className="py-3.5 px-4 w-[18%]">Category</th>
               <th className="py-3.5 px-4 text-right w-[16%]">Price</th>
-              <th className="py-3.5 px-4 text-right w-[14%]">Stock</th>
+              <th
+                data-tour="stock-column"
+                className="py-3.5 px-4 text-right w-[14%]"
+              >
+                Stock
+              </th>
               <th className="py-3.5 px-4 text-center w-[12%]">Info</th>
             </tr>
           </thead>

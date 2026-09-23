@@ -121,6 +121,8 @@ interface NavItem {
   permission?: string;
   /** Only organization admins see this item, whatever their feature list. */
   adminOnly?: boolean;
+  /** Tutorial anchor emitted as `data-tour`; hidden items drop their own tour step. */
+  tourId?: string;
 }
 
 export function Sidebar({
@@ -174,6 +176,7 @@ export function Sidebar({
           icon: Package,
           roles: ["SELLER", "ADMIN"],
           permission: "products.view",
+          tourId: "nav-products",
         },
       ],
     },
@@ -188,6 +191,7 @@ export function Sidebar({
           icon: ShoppingBag,
           roles: ["SELLER", "ADMIN"],
           permission: "orders.process",
+          tourId: "nav-orders",
         },
         {
           label: "Promotions & ads",
@@ -250,6 +254,7 @@ export function Sidebar({
       icon: Users,
       roles: ["SELLER", "ADMIN"],
       adminOnly: true,
+      tourId: "nav-team",
     },
     {
       // Store create/update are requireSellerOrgAdmin on the API.
@@ -475,6 +480,7 @@ export function Sidebar({
               <Link
                 href="/seller/manage-stores"
                 onClick={onClose}
+                data-tour="store-switcher"
                 className="flex items-center justify-between w-full p-3 rounded-xl bg-[var(--background-tertiary)] hover:bg-[var(--background-hover)] border border-[var(--border-light)] transition-colors group"
               >
                 {storeSwitcherSummary}
@@ -611,6 +617,7 @@ export function Sidebar({
                                 href={child.href || "#"}
                                 prefetch={true}
                                 onClick={onClose}
+                                data-tour={child.tourId}
                                 className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-all ${
                                   isChildSelected
                                     ? "bg-[var(--brand-core)] text-white shadow-sm"
@@ -658,6 +665,7 @@ export function Sidebar({
                     href={item.href || "#"}
                     prefetch={true}
                     onClick={onClose}
+                    data-tour={item.tourId}
                     className={`${linkBaseClasses} justify-between ${
                       isActive
                         ? "bg-[var(--brand-core)] text-white shadow-sm"
