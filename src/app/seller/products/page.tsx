@@ -155,6 +155,7 @@ export default function ProductsPage() {
           <button
             onClick={() => setIsFormOpen(!isFormOpen)}
             disabled={isAdding}
+            data-tour="add-product"
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl text-white bg-[var(--brand-core)] hover:opacity-90 transition-all disabled:opacity-50 shrink-0"
           >
             {isFormOpen ? (
@@ -167,6 +168,8 @@ export default function ProductsPage() {
         ) : (
           <button
             disabled
+            // Anchored while disabled so the tutorial can say "pick a store first".
+            data-tour="add-product"
             title="Please select a specific store from the sidebar to add a product"
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl text-white bg-[var(--brand-core)] opacity-50 cursor-not-allowed shrink-0"
           >

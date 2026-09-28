@@ -74,6 +74,14 @@
     --border-default: var(--md-sys-color-outline-variant);
     --border-light: var(--md-sys-color-surface-variant);
     --border-strong: var(--md-sys-color-outline);
+
+    /* Shadow-as-border for depth on buttons/cards; dividers stay real borders. */
+    --shadow-border:
+      0px 0px 0px 1px oklch(0 0 0 / 0.06), 0px 1px 2px -1px oklch(0 0 0 / 0.06),
+      0px 2px 4px 0px oklch(0 0 0 / 0.04);
+    --shadow-border-hover:
+      0px 0px 0px 1px oklch(0 0 0 / 0.08), 0px 1px 2px -1px oklch(0 0 0 / 0.08),
+      0px 2px 4px 0px oklch(0 0 0 / 0.06);
   }
 
   .dark {
@@ -125,6 +133,10 @@
     --md-sys-color-error: #ffb4ab;
     --md-sys-color-surface-container-lowest: #00101b;
     --md-sys-color-surface-variant: #243744;
+
+    /* Depth shadows vanish on dark backgrounds, so just a white ring. */
+    --shadow-border: 0 0 0 1px oklch(1 0 0 / 0.08);
+    --shadow-border-hover: 0 0 0 1px oklch(1 0 0 / 0.13);
   }
 
   body {

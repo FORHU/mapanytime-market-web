@@ -21,7 +21,20 @@ import {
   LandPlot,
   MapPin,
   ShieldCheck,
+  type LucideIcon,
 } from "lucide-react";
+
+interface StatCard {
+  label: string;
+  value: string;
+  hint: string;
+  icon: LucideIcon;
+  accent: string;
+  valueClass: string;
+  ready: boolean;
+  /** Anchor for the seller tutorial; only the card the tour opens on has one. */
+  tourId?: string;
+}
 
 export default function SellerDashboard() {
   const { userId, isHydrated } = useCurrentUser();
@@ -71,7 +84,7 @@ export default function SellerDashboard() {
     return <PropertyDashboardContent query={propertyQuery} />;
   }
 
-  const stats = [
+  const stats: StatCard[] = [
     {
       label: "Total sales",
       value: `₱${totalRevenue.toLocaleString()}`,
@@ -80,6 +93,8 @@ export default function SellerDashboard() {
       accent: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
       valueClass: "text-[var(--text-primary)]",
       ready: statsReady,
+      // The tutorial walks this row card by card, after `statsReady`.
+      tourId: "stat-sales",
     },
     {
       label: "Orders to handle",
@@ -89,6 +104,7 @@ export default function SellerDashboard() {
       accent: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
       valueClass: "text-amber-600 dark:text-amber-400",
       ready: statsReady,
+      tourId: "stat-orders",
     },
     {
       label: "Completed orders",
@@ -98,6 +114,7 @@ export default function SellerDashboard() {
       accent: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
       valueClass: "text-emerald-600 dark:text-emerald-400",
       ready: statsReady,
+      tourId: "stat-completed",
     },
     {
       label: "Low stock",
@@ -107,6 +124,7 @@ export default function SellerDashboard() {
       accent: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
       valueClass: "text-rose-600 dark:text-rose-400",
       ready: statsReady,
+      tourId: "stat-lowstock",
     },
   ];
 
@@ -133,9 +151,19 @@ export default function SellerDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map(
-          ({ label, value, hint, icon: Icon, accent, valueClass, ready }) => (
+          ({
+            label,
+            value,
+            hint,
+            icon: Icon,
+            accent,
+            valueClass,
+            ready,
+            tourId,
+          }) => (
             <Card
               key={label}
+              data-tour={tourId}
               className="p-4 border border-[var(--border-light)] bg-[var(--background-secondary)] shadow-sm"
             >
               <div className="flex items-center justify-between">
