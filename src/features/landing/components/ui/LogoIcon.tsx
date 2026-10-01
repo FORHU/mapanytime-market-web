@@ -1,23 +1,21 @@
 import Image from "next/image";
 
 interface LogoIconProps {
-  iconSize?: number;
-  className?: string;
+  /** Rendered height in px; width follows the wordmark's 400x195 aspect ratio. */
+  height?: number;
+  priority?: boolean;
 }
 
-export function LogoIcon({ className }: LogoIconProps) {
+/** The MapAnytime wordmark, cropped from /logo.png to its visible area (transparent background). */
+export function LogoIcon({ height = 36, priority = false }: LogoIconProps) {
   return (
-    <span
-      className={`relative inline-flex items-center justify-center overflow-hidden rounded-[8px] ${className ?? "h-[31px] w-[31px]"}`}
-    >
-      <Image
-        src="/logo.png"
-        alt="MapAnytime"
-        width={40}
-        height={40}
-        className="h-full w-full object-contain"
-        priority
-      />
-    </span>
+    <Image
+      src="/landing/logo-wordmark.png"
+      alt="MapAnytime"
+      width={400}
+      height={195}
+      priority={priority}
+      style={{ height, width: "auto" }}
+    />
   );
 }
