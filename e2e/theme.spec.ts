@@ -8,7 +8,7 @@ test.describe("Theme toggle", () => {
     await expect(html).toHaveClass(/light/, { timeout: 3000 });
   });
 
-  // The landing page (src/features/landing) has no theme toggle — it is a
-  // fixed-dark design. There is currently no route under test that renders
-  // one, so there is nothing here to click.
+  // The landing page (src/features/landing) has no theme toggle of its own — it
+  // follows the site theme through the `.dark` class. There is currently no
+  // route under test that renders a toggle, so there is nothing here to click.
 });

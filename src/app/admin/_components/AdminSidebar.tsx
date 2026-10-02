@@ -18,6 +18,7 @@ import {
   ExternalLink,
   LogOut,
   CheckCircle,
+  Smartphone,
 } from "lucide-react";
 
 interface AdminNavChild {
@@ -65,6 +66,12 @@ const navItems: AdminNavItem[] = [
         name: "Categories",
         href: "/admin/categories",
         icon: Grid,
+        roles: ["ADMIN"],
+      },
+      {
+        name: "App Releases",
+        href: "/admin/app-releases",
+        icon: Smartphone,
         roles: ["ADMIN"],
       },
     ],
