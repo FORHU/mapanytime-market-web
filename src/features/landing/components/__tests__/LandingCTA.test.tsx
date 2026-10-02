@@ -8,44 +8,65 @@ const release = {
   minAndroidVersion: "Android 8.0+",
   fileSize: "115.9 MB",
 };
+const INSTALL_LINK = "http://localhost:4002/api/v1/app/download";
 
 describe("LandingCTA", () => {
-  it("renders a QR code when a release is published", () => {
+  it("makes Install the App a direct download of the selected version", () => {
     render(
       <LandingCTA
-        {...release}
-        downloadUrl="https://downloads.example.com/mapanytime.apk"
-        onInstall={() => {}}
+        downloadUrl={INSTALL_LINK}
+        release={release}
+        onShowDetails={() => {}}
       />,
     );
 
     expect(
+      screen.getByRole("link", { name: /Install the App/ }),
+    ).toHaveAttribute("href", INSTALL_LINK);
+    expect(
       screen.getByTitle("QR code to download the MapAnytime Android app"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Scan to download on Android")).toBeInTheDocument();
     expect(screen.getByText("Android 8.0+")).toBeInTheDocument();
   });
 
-  it("explains where the download will appear when nothing is published", () => {
-    render(<LandingCTA {...release} downloadUrl={null} onInstall={() => {}} />);
+  it("opens the details dialog from Version details", async () => {
+    const user = userEvent.setup();
+    const onShowDetails = vi.fn();
+    render(
+      <LandingCTA
+        downloadUrl={INSTALL_LINK}
+        release={release}
+        onShowDetails={onShowDetails}
+      />,
+    );
 
+    await user.click(screen.getByRole("button", { name: "Version details" }));
+
+    expect(onShowDetails).toHaveBeenCalledTimes(1);
+  });
+
+  it("links nothing and explains where the download will appear when none is selected", async () => {
+    const user = userEvent.setup();
+    const onShowDetails = vi.fn();
+    render(
+      <LandingCTA
+        downloadUrl={null}
+        release={null}
+        onShowDetails={onShowDetails}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("link", { name: /Install the App/ }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByTitle("QR code to download the MapAnytime Android app"),
     ).not.toBeInTheDocument();
     expect(
       screen.getByText("The download will appear here once it's published."),
     ).toBeInTheDocument();
-  });
-
-  it("opens the download dialog from the Install button", async () => {
-    const user = userEvent.setup();
-    const onInstall = vi.fn();
-    render(
-      <LandingCTA {...release} downloadUrl={null} onInstall={onInstall} />,
-    );
 
     await user.click(screen.getByRole("button", { name: /Install the App/ }));
-
-    expect(onInstall).toHaveBeenCalledTimes(1);
+    expect(onShowDetails).toHaveBeenCalledTimes(1);
   });
 });

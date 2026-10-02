@@ -1876,6 +1876,28 @@
   color: var(--lp-on-carbon-2);
   margin: 24px 0 40px;
 }
+.lp-inst__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+.lp-inst__details {
+  padding: 8px 2px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: var(--lp-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--lp-on-carbon-2);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  transition: color 0.4s var(--lp-spring);
+}
+.lp-inst__details:hover {
+  color: var(--lp-on-carbon);
+}
 .lp-soon {
   display: flex;
   flex-wrap: wrap;

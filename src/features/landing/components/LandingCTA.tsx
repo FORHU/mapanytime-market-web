@@ -8,29 +8,37 @@ import { PillButton } from "./ui/PillButton";
 import { Reveal } from "./ui/Reveal";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 
-interface LandingCTAProps {
-  /** Resolved APK URL of the latest published release, or null when none is published. */
-  downloadUrl: string | null;
+interface InstallableRelease {
   version: string;
   minAndroidVersion: string;
   fileSize: string;
-  /** Opens the APK download dialog. */
-  onInstall: () => void;
+}
+
+interface LandingCTAProps {
+  /**
+   * The API's install link, or null until an admin makes a version downloadable. It names no
+   * version or storage path: the API redirects it to whichever version is currently selected.
+   */
+  downloadUrl: string | null;
+  /** The version that link currently serves, for the details card. */
+  release: InstallableRelease | null;
+  /** Opens the download dialog (version details, checksum, install guide). */
+  onShowDetails: () => void;
 }
 
 /**
- * Install section. The QR only renders when a release is actually published, so it can never scan
- * to a dead link; otherwise it says where the download will appear.
+ * Install section. "Install the App" downloads the selected APK directly; the QR encodes the same
+ * link. With nothing downloadable yet, the button opens the dialog instead and the QR slot says
+ * where the download will appear, so nothing on the page ever points at a missing file.
  */
 export function LandingCTA({
   downloadUrl,
-  version,
-  minAndroidVersion,
-  fileSize,
-  onInstall,
+  release,
+  onShowDetails,
 }: LandingCTAProps) {
   const coreRef = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
+  const available = Boolean(downloadUrl && release);
 
   // The glow follows the pointer and the QR card tilts toward it (fine pointers only).
   useEffect(() => {
@@ -81,14 +89,36 @@ export function LandingCTA({
                   Install the Android app to browse the live map, order ahead,
                   and track your pickups.
                 </p>
-                <PillButton
-                  variant="sky"
-                  icon={ArrowDownRight}
-                  onClick={onInstall}
-                  magnetic
-                >
-                  Install the App
-                </PillButton>
+                <div className="lp-inst__actions">
+                  {available && downloadUrl ? (
+                    <PillButton
+                      href={downloadUrl}
+                      variant="sky"
+                      icon={ArrowDownRight}
+                      magnetic
+                    >
+                      Install the App
+                    </PillButton>
+                  ) : (
+                    <PillButton
+                      variant="sky"
+                      icon={ArrowDownRight}
+                      onClick={onShowDetails}
+                      magnetic
+                    >
+                      Install the App
+                    </PillButton>
+                  )}
+                  {available && (
+                    <button
+                      type="button"
+                      className="lp-inst__details"
+                      onClick={onShowDetails}
+                    >
+                      Version details
+                    </button>
+                  )}
+                </div>
                 <div className="lp-soon">
                   <span>
                     <Smartphone aria-hidden="true" />
@@ -103,7 +133,7 @@ export function LandingCTA({
 
               <div className="lp-qr-shell">
                 <div className="lp-qr-core">
-                  {downloadUrl ? (
+                  {available && downloadUrl ? (
                     <div className="lp-qr">
                       <QRCodeSVG
                         value={downloadUrl}
@@ -120,23 +150,24 @@ export function LandingCTA({
                   )}
                   <div className="lp-rel">
                     <b>
-                      {downloadUrl
+                      {available
                         ? "Scan to download on Android"
                         : "Android download"}
                     </b>
-                    {!downloadUrl && (
+                    {available && release ? (
+                      <dl>
+                        <dt>Version</dt>
+                        <dd>{release.version}</dd>
+                        <dt>Requires</dt>
+                        <dd>{release.minAndroidVersion}</dd>
+                        <dt>Size</dt>
+                        <dd>{release.fileSize}</dd>
+                      </dl>
+                    ) : (
                       <p>
                         The download will appear here once it&apos;s published.
                       </p>
                     )}
-                    <dl>
-                      <dt>Version</dt>
-                      <dd>{version}</dd>
-                      <dt>Requires</dt>
-                      <dd>{minAndroidVersion}</dd>
-                      <dt>Size</dt>
-                      <dd>{fileSize}</dd>
-                    </dl>
                   </div>
                 </div>
               </div>

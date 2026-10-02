@@ -9,7 +9,7 @@ import { LandingFeatures } from "@/features/landing/components/LandingFeatures";
 import { LandingSellers } from "@/features/landing/components/LandingSellers";
 import { LandingCTA } from "@/features/landing/components/LandingCTA";
 import { LandingFooter } from "@/features/landing/components/LandingFooter";
-import { useLatestRelease } from "@/features/app-releases/hooks/useLatestRelease";
+import { useLatestRelease } from "@/features/app-releases/hooks";
 import ApkDownloadModal from "@/components/apk-download-modal";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { resolveHomeRoute } from "@/features/auth/utils/resolveHomeRoute";
@@ -22,7 +22,8 @@ export default function MapAnytimeLanding() {
   const homeRoute =
     rolesStatus === "ready" ? resolveHomeRoute(roles) : undefined;
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
-  // Same source as the download modal, so the QR and the modal always advertise the same build.
+  // Same source as the download modal, so the button, the QR and the modal always agree. The
+  // install link names no version: the API serves whichever version an admin made downloadable.
   const { release, downloadUrl } = useLatestRelease();
 
   return (
@@ -37,10 +38,8 @@ export default function MapAnytimeLanding() {
         <LandingSellers />
         <LandingCTA
           downloadUrl={downloadUrl}
-          version={release.version}
-          minAndroidVersion={release.minAndroidVersion}
-          fileSize={release.fileSize}
-          onInstall={() => setIsDownloadModalOpen(true)}
+          release={release}
+          onShowDetails={() => setIsDownloadModalOpen(true)}
         />
       </main>
 
