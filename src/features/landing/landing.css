@@ -2,60 +2,12 @@
  * MapAnytime landing page.
  *
  * Everything is scoped under `.landing` and prefixed `lp-` so none of it leaks into the rest of the
- * app. Tokens follow the site theme: next-themes puts `.dark` on <html>, which swaps the palette
- * below. Imported only by src/app/page.tsx, so other routes never download it.
+ * app. The landing page is dark only: these tokens do not follow the visitor's in-app theme, and
+ * the theme provider forces `.dark` on <html> for this route so shared pieces (cookie banner,
+ * install modal, toasts) match. Imported only by src/app/page.tsx, so other routes never download it.
  */
 
 .landing {
-  --lp-bg: #f3f5f7;
-  --lp-bg-2: #e9eef2;
-  --lp-paper: #ffffff;
-  --lp-ink: #0b1620;
-  --lp-ink-2: #364653;
-  --lp-ink-3: #5e6e7a;
-  --lp-hair: rgba(11, 22, 32, 0.07);
-  --lp-hair-2: rgba(11, 22, 32, 0.12);
-  --lp-shell: rgba(11, 22, 32, 0.035);
-  --lp-brand: #64acda;
-  --lp-brand-deep: #3a8ec6;
-  --lp-wash: #e4eff8;
-  --lp-action: #0a6ba2;
-  --lp-action-hover: #075c8d;
-  --lp-on-action: #ffffff;
-  --lp-carbon: #0e1a23;
-  --lp-carbon-2: #152430;
-  --lp-on-carbon: #eef3f6;
-  --lp-on-carbon-2: #9cb0bd;
-  --lp-carbon-hair: rgba(255, 255, 255, 0.09);
-  --lp-glass: rgba(255, 255, 255, 0.72);
-  --lp-overlay: rgba(243, 245, 247, 0.88);
-  --lp-inset: inset 0 1px 1px rgba(255, 255, 255, 0.95);
-  --lp-soft:
-    0 30px 60px -28px rgba(11, 22, 32, 0.2),
-    0 10px 24px -14px rgba(11, 22, 32, 0.08);
-  --lp-soft-lg:
-    0 50px 90px -40px rgba(11, 22, 32, 0.28),
-    0 18px 36px -20px rgba(11, 22, 32, 0.1);
-  --lp-pill-bg: #ffffff;
-  --lp-map-filter: none;
-  --lp-scrim-rgb: 243, 245, 247;
-  --lp-display: var(--font-plus-jakarta), system-ui, sans-serif;
-  --lp-body: var(--font-hanken), system-ui, sans-serif;
-  --lp-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
-  --lp-spring: cubic-bezier(0.32, 0.72, 0, 1);
-  --lp-out: cubic-bezier(0.16, 1, 0.3, 1);
-
-  position: relative;
-  min-height: 100dvh;
-  overflow-x: clip;
-  background: var(--lp-bg);
-  color: var(--lp-ink);
-  font-family: var(--lp-body);
-  font-size: 17px;
-  line-height: 1.55;
-}
-
-.dark .landing {
   color-scheme: dark;
   --lp-bg: #070d12;
   --lp-bg-2: #0b141b;
@@ -74,6 +26,9 @@
   --lp-on-action: #04121b;
   --lp-carbon: #0c1820;
   --lp-carbon-2: #13232e;
+  --lp-on-carbon: #eef3f6;
+  --lp-on-carbon-2: #9cb0bd;
+  --lp-carbon-hair: rgba(255, 255, 255, 0.09);
   --lp-glass: rgba(15, 26, 34, 0.72);
   --lp-overlay: rgba(7, 13, 18, 0.9);
   --lp-inset: inset 0 1px 1px rgba(255, 255, 255, 0.06);
@@ -84,6 +39,23 @@
   --lp-pill-bg: #13232e;
   --lp-map-filter: brightness(0.74) saturate(0.85);
   --lp-scrim-rgb: 7, 13, 18;
+  --lp-world-bg: #111c25;
+  --lp-cta-a: #0d3c5c;
+  --lp-cta-b: #15557f;
+  --lp-display: var(--font-plus-jakarta), system-ui, sans-serif;
+  --lp-body: var(--font-hanken), system-ui, sans-serif;
+  --lp-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --lp-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --lp-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  position: relative;
+  min-height: 100dvh;
+  overflow-x: clip;
+  background: var(--lp-bg);
+  color: var(--lp-ink);
+  font-family: var(--lp-body);
+  font-size: 17px;
+  line-height: 1.55;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -289,9 +261,6 @@
 .lp-btn--sm .lp-btn__ico svg {
   width: 15px;
   height: 15px;
-}
-.lp-btn--nudge {
-  animation: lp-nudge 1.6s var(--lp-spring) infinite;
 }
 
 .lp-eyebrow {
@@ -542,11 +511,12 @@
 .lp-slide.is-on {
   opacity: 1;
 }
-/* The globe source is only 757px wide, so it is fitted to the height rather than stretched. */
+/* The globe art is fitted to the hero height and pinned right, so the globe never crops; the
+   background is the art's own edge colour, so the area beside it continues the night sky. */
 .lp-slide--globe {
   object-fit: contain;
   object-position: right center;
-  background: #0c1a32;
+  background: #07182a;
 }
 .lp-scrim {
   position: absolute;
@@ -727,617 +697,1353 @@
   }
 }
 
-/* ── How it works ───────────────────────────────────────────────────────── */
-.lp-steps {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 20px;
-}
-.lp-step {
-  all: unset;
-  box-sizing: border-box;
-  cursor: pointer;
+/* ── How it works: scroll story ─────────────────────────────────────────── */
+/*
+ * A tall track with a sticky stage. Scrolling through the track sets custom properties on
+ * .lp-stage (see howStory.ts): continuous values from 0 to 1 that the transforms below read, and
+ * .lp-b-* beat classes that switch moments on. The scene ("world") is the section's background:
+ * on wide screens it fills the stage edge to edge with the copy on the left over a veil in the page
+ * colour; on tablets and phones the copy moves into a bottom sheet over it.
+ */
+.lp-track {
   position: relative;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 16px;
-  align-items: center;
-  padding: 20px 22px;
-  border-radius: 26px;
-  background: var(--lp-paper);
-  box-shadow:
-    0 0 0 1px var(--lp-hair-2),
-    var(--lp-inset);
-  transition:
-    transform 0.6s var(--lp-spring),
-    background-color 0.5s var(--lp-spring),
-    box-shadow 0.5s var(--lp-spring);
+  height: 520vh;
 }
-.lp-step:hover {
-  transform: translateY(-3px);
-  box-shadow:
-    0 0 0 1.5px var(--lp-action),
-    var(--lp-soft);
-}
-.lp-step:focus-visible {
-  outline: 2px solid var(--lp-action);
-  outline-offset: 3px;
-}
-.lp-step:active {
-  transform: scale(0.98);
-}
-.lp-step__num {
-  grid-row: span 2;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--lp-wash);
-  color: var(--lp-action);
-  font-family: var(--lp-display);
-  font-weight: 800;
-  font-size: 22px;
-  transition:
-    background-color 0.5s var(--lp-spring),
-    color 0.5s var(--lp-spring),
-    transform 0.6s var(--lp-spring);
-}
-.lp-step__num svg {
-  width: 24px;
-  height: 24px;
-}
-.landing .lp-step__num svg.lucide {
-  stroke-width: 2.25;
-}
-.lp-step strong {
-  font-family: var(--lp-display);
-  font-weight: 800;
-  font-size: 26px;
-  letter-spacing: -0.035em;
-  line-height: 1.05;
-  color: var(--lp-ink);
-}
-.lp-step small {
-  font-size: 14px;
-  color: var(--lp-ink-3);
-  font-weight: 500;
-}
-.lp-step.is-done .lp-step__num {
-  background: var(--lp-action);
-  color: var(--lp-on-action);
-}
-.lp-step.is-on {
-  background: var(--lp-action);
-  box-shadow:
-    0 22px 40px -18px rgba(10, 107, 162, 0.7),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  transform: translateY(-4px);
-}
-.lp-step.is-on strong,
-.lp-step.is-on small {
-  color: var(--lp-on-action);
-}
-.lp-step.is-on .lp-step__num {
-  background: var(--lp-on-action);
-  color: var(--lp-action);
-  transform: scale(1.06);
-}
-.lp-step.is-on::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -9px;
-  width: 18px;
-  height: 18px;
-  background: var(--lp-action);
-  transform: translateX(-50%) rotate(45deg);
-  border-radius: 4px;
+.lp-stage {
+  --tilt: 0;
+  --dim: 1;
+  --zoom: 0;
+  --zs: 1;
+  --reveal: 0;
+  --shop: 0;
+  --cA: 0;
+  --cB: 0;
+  --cC: 0;
+  --sheet: 0;
+  --fill: 0;
+  --exit: 0;
+  --pickIn: 0;
+  --pick: 0;
+  --pass: 0;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
 }
 
-.lp-stage > .lp-core {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  min-height: 560px;
-}
-.lp-stage__vis {
-  position: relative;
-  overflow: hidden;
-  background: var(--lp-bg-2);
-}
-.lp-pv {
+/* Copy */
+.lp-copy {
   position: absolute;
-  inset: 0;
-  opacity: 0;
-  visibility: hidden;
-  transform: scale(1.04);
-  transition:
-    opacity 0.7s var(--lp-spring),
-    transform 1s var(--lp-spring),
-    visibility 0.7s;
-}
-.lp-pv.is-on {
-  opacity: 1;
-  visibility: visible;
-  transform: none;
-}
-.lp-stage__txt {
-  position: relative;
-  display: grid;
-}
-.lp-pt {
-  grid-area: 1 / 1;
-  padding: 56px;
-  display: grid;
-  gap: 20px;
-  align-content: center;
-  justify-items: start;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(24px);
-  transition:
-    opacity 0.6s var(--lp-spring),
-    transform 0.8s var(--lp-spring),
-    visibility 0.6s;
-}
-.lp-pt.is-on {
-  opacity: 1;
-  visibility: visible;
-  transform: none;
-}
-.lp-pt h3 {
-  font-size: clamp(34px, 3.6vw, 50px);
-  line-height: 1;
-  letter-spacing: -0.045em;
-  font-weight: 800;
-}
-.lp-pt p {
-  font-size: 18px;
-  color: var(--lp-ink-3);
-  max-width: 34ch;
-}
-.lp-todo {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  border-radius: 999px;
-  padding: 9px 16px 9px 10px;
-  background: var(--lp-wash);
-  color: var(--lp-ink);
-  font-family: var(--lp-display);
-  font-weight: 600;
-  font-size: 14px;
-}
-.lp-todo svg {
-  width: 18px;
-  height: 18px;
-  color: var(--lp-action);
-}
-.landing .lp-todo svg.lucide {
-  stroke-width: 2;
-}
-.lp-todo.is-done {
-  background: var(--lp-action);
-  color: var(--lp-on-action);
-}
-.lp-todo.is-done svg {
-  color: var(--lp-on-action);
-}
-.lp-pt__nav {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-.lp-round {
-  all: unset;
-  cursor: pointer;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--lp-shell);
-  box-shadow: 0 0 0 1px var(--lp-hair-2);
-  color: var(--lp-ink);
-  transition: transform 0.5s var(--lp-spring);
-}
-.lp-round:hover {
-  transform: translateX(-3px);
-}
-.lp-round:focus-visible {
-  outline: 2px solid var(--lp-action);
-  outline-offset: 3px;
-}
-.lp-round svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Demo widgets inside the stage */
-.lp-demo-btn {
-  all: unset;
-  box-sizing: border-box;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 999px;
-  padding: 12px 20px;
-  background: var(--lp-action);
-  color: var(--lp-on-action);
-  font-family: var(--lp-display);
-  font-weight: 700;
-  font-size: 15px;
-  transition:
-    transform 0.5s var(--lp-spring),
-    background-color 0.4s var(--lp-spring);
-}
-.lp-demo-btn:hover {
-  background: var(--lp-action-hover);
-}
-.lp-demo-btn:active {
-  transform: scale(0.97);
-}
-.lp-demo-btn:focus-visible {
-  outline: 2px solid var(--lp-action);
-  outline-offset: 3px;
-}
-.lp-demo-btn svg {
-  width: 17px;
-  height: 17px;
-}
-.landing .lp-demo-btn svg.lucide {
-  stroke-width: 2;
-}
-.lp-demo-btn.is-done {
-  background: var(--lp-wash);
-  color: var(--lp-ink);
-  cursor: default;
-}
-.lp-demo-btn.is-done svg {
-  color: var(--lp-action);
-}
-.lp-tap-hint {
-  position: absolute;
-  left: 20px;
-  top: 20px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: 999px;
-  padding: 9px 14px;
-  background: var(--lp-paper);
-  box-shadow:
-    0 0 0 1px var(--lp-hair),
-    var(--lp-soft);
-  font-family: var(--lp-display);
-  font-weight: 700;
-  font-size: 14px;
-}
-.lp-tap-hint svg {
-  width: 16px;
-  height: 16px;
-  color: var(--lp-action);
-}
-
-/* The app's own map screenshot sits in a box with its exact aspect ratio, so the hotspots stay
-   glued to its markers while the sides crop. */
-.lp-pv--map {
-  background: #3a4552;
-}
-.lp-mapbox {
-  position: absolute;
+  z-index: 6;
   top: 0;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  aspect-ratio: 1295 / 727;
-  height: 100%;
-  max-width: none;
+  left: max(32px, calc((100vw - 1176px) / 2));
+  width: min(540px, 36vw);
+  padding-top: 72px;
+  display: grid;
+  gap: 40px;
+  align-content: center;
 }
-.lp-mapbox > img {
+.lp-scenes {
+  display: grid;
+  min-height: 330px;
+  align-content: center;
+}
+.lp-sc {
+  grid-area: 1 / 1;
+  display: grid;
+  gap: 22px;
+  align-content: center;
+}
+.lp-sc h3 {
+  font-size: clamp(46px, 5.4vw, 92px);
+  line-height: 0.94;
+  letter-spacing: -0.052em;
+  font-weight: 800;
+}
+.lp-w {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+.lp-w > span {
+  display: inline-block;
+  transform: translateY(135%);
+  transition: transform 0.9s var(--lp-spring);
+  transition-delay: calc(var(--i, 0) * 0.05s);
+}
+.lp-sc p {
+  font-size: 19px;
+  color: var(--lp-ink-3);
+  max-width: 34ch;
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.6s var(--lp-spring),
+    transform 0.8s var(--lp-spring);
+}
+.lp-sc.is-on .lp-w > span {
+  transform: none;
+}
+.lp-sc.is-past .lp-w > span {
+  transform: translateY(-135%);
+  transition-delay: 0s;
+  transition-duration: 0.5s;
+}
+.lp-sc.is-on p {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.25s;
+}
+
+/* World: the scene, filling the stage as the section's background */
+.lp-world {
+  position: absolute;
+  inset: 0;
+}
+.lp-world__core {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--lp-world-bg);
+}
+.lp-layer {
+  position: absolute;
+  inset: 0;
+}
+
+/* Find + Explore: the map */
+.lp-cam {
+  perspective: 1500px;
+  perspective-origin: 50% 20%;
+}
+.lp-tilt {
+  transform-origin: 50% 70%;
+  transform: rotateX(calc((1 - var(--tilt)) * 50deg))
+    scale(calc(0.74 + var(--tilt) * 0.26));
+  will-change: transform;
+}
+/* Exact aspect ratio of the screenshot, so markers stay glued to it while the sides crop. */
+.lp-smap {
+  position: absolute;
+  top: 50%;
+  left: 64%;
+  aspect-ratio: 1295 / 727;
+  width: max(110%, calc(100dvh * 1295 / 727));
+  translate: -50% -50%;
+  transform-origin: 53% 44%;
+  transform: scale(var(--zs));
+  will-change: transform;
+}
+.lp-smap > img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   max-width: none;
 }
-.lp-hot {
-  all: unset;
-  cursor: pointer;
-  position: absolute;
-  width: 62px;
-  height: 62px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition:
-    box-shadow 0.4s var(--lp-spring),
-    transform 0.5s var(--lp-spring);
+.lp-fog {
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--lp-world-bg) 0%, transparent 55%);
+  opacity: calc(1 - var(--tilt));
 }
-.lp-hot::before {
+.lp-dim {
+  pointer-events: none;
+  background: #0a1219;
+  opacity: calc(var(--dim) * 0.62);
+}
+.lp-you,
+.lp-mk,
+.lp-spin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+.lp-you {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #64acda;
+  border: 4px solid #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  scale: 0;
+  transition: scale 0.7s var(--lp-spring);
+}
+.lp-you::before,
+.lp-you::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 520px;
+  height: 520px;
+  margin: -260px 0 0 -260px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(100, 172, 218, 0.55);
+  background: radial-gradient(
+    closest-side,
+    rgba(100, 172, 218, 0.16),
+    transparent
+  );
+  opacity: 0;
+  scale: 0.05;
+}
+.lp-b-you .lp-you {
+  scale: 1;
+}
+
+.lp-mks {
+  opacity: calc(1 - var(--zoom) * 2.2);
+}
+.lp-mk {
+  width: 64px;
+  height: 64px;
+}
+.lp-mk::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 2px solid #fff;
-  opacity: 0.9;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 7px rgba(100, 172, 218, 0.45);
+  scale: 0.2;
+  opacity: 0;
+  transition:
+    scale 0.7s var(--lp-spring),
+    opacity 0.4s var(--lp-spring);
 }
-.lp-hot::after {
-  content: "";
+.lp-chip {
   position: absolute;
-  inset: -6px;
+  left: calc(100% + 6px);
+  top: 50%;
+  translate: -12px -50%;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--lp-paper);
+  color: var(--lp-ink);
+  font-family: var(--lp-display);
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: var(--lp-soft);
+  opacity: 0;
+  transition:
+    opacity 0.5s var(--lp-spring),
+    translate 0.7s var(--lp-spring);
+}
+.lp-chip .lp-mono {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--lp-ink-3);
+}
+.lp-b-mk1 [data-mk="1"]::before,
+.lp-b-mk2 [data-mk="2"]::before,
+.lp-b-mk3 [data-mk="3"]::before {
+  scale: 1;
+  opacity: 1;
+}
+.lp-b-mk1 [data-mk="1"] .lp-chip,
+.lp-b-mk2 [data-mk="2"] .lp-chip,
+.lp-b-mk3 [data-mk="3"] .lp-chip {
+  opacity: 1;
+  translate: 0 -50%;
+}
+
+/* The story's store pin: drops in, gets tapped, and the store opens out of it */
+.lp-spin {
+  width: 66px;
+  height: 66px;
+}
+.lp-spin__body {
+  position: absolute;
+  inset: 0;
+  translate: 0 -220px;
+  opacity: 0;
+  transition:
+    translate 0.9s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.3s;
+}
+.lp-b-pin .lp-spin__body {
+  translate: 0 -44px;
+  opacity: 1;
+}
+.lp-spin__head {
+  position: absolute;
+  inset: 0;
+  rotate: -45deg;
+  border-radius: 50% 50% 50% 8px;
+  background: #0a6ba2;
+  border: 3px solid #fff;
+  box-shadow: 0 16px 30px -8px rgba(0, 0, 0, 0.55);
+}
+.lp-spin__ini {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-family: var(--lp-display);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+.lp-spin__shadow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 10px;
+  margin: -5px 0 0 -17px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.45);
+  filter: blur(3px);
+  scale: 0;
+  transition: scale 0.9s var(--lp-spring);
+}
+.lp-b-pin .lp-spin__shadow {
+  scale: 1;
+}
+.lp-spin__tap {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 44px);
+  width: 80px;
+  height: 80px;
+  margin: -40px 0 0 -40px;
+  border-radius: 50%;
+  border: 3px solid #fff;
   opacity: 0;
 }
-.lp-hot:hover {
-  transform: translate(-50%, -50%) scale(1.08);
+.lp-spin__chip {
+  left: calc(100% + 10px);
+  top: calc(50% - 44px);
+  font-size: 14px;
+  padding: 8px 14px;
 }
-.lp-hot[aria-pressed="true"] {
-  box-shadow: 0 0 0 6px rgba(100, 172, 218, 0.55);
+.lp-b-pin .lp-spin__chip {
+  opacity: calc(1 - var(--zoom) * 2.5);
+  translate: 0 -50%;
+  transition-delay: 0.35s;
 }
-.lp-hot[aria-pressed="true"]::before {
-  border-color: #64acda;
-  border-width: 3px;
-}
-.lp-hot:focus-visible {
-  outline: 3px solid #64acda;
-  outline-offset: 4px;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .lp-hot::after {
-    animation: lp-ring 2s var(--lp-out) infinite;
-    animation-delay: calc(var(--i, 0) * 0.6s);
-  }
-}
-.lp-store-card {
+
+.lp-count {
   position: absolute;
-  right: 20px;
-  bottom: 20px;
-  z-index: 3;
-  width: min(260px, calc(100% - 40px));
-}
-.lp-store-card__body {
-  padding: 16px;
+  left: calc(40% + 24px);
+  bottom: 24px;
   display: grid;
-  gap: 8px;
+  gap: 2px;
+  padding: 18px 22px;
+  border-radius: 22px;
+  background: var(--lp-paper);
+  box-shadow:
+    0 0 0 1px var(--lp-hair),
+    var(--lp-soft-lg);
+  translate: 0 140%;
+  opacity: 0;
+  transition:
+    translate 0.9s var(--lp-spring),
+    opacity 0.5s var(--lp-spring);
 }
-.lp-store-card__row {
+.lp-count b {
+  font-family: var(--lp-display);
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.lp-count span {
+  font-size: 14px;
+  color: var(--lp-ink-3);
+}
+.lp-b-count .lp-count {
+  translate: 0 0;
+  opacity: calc(1 - var(--zoom) * 3);
+}
+
+.lp-preview {
+  position: absolute;
+  z-index: 3;
+  left: var(--ox);
+  top: var(--oy);
+  width: 300px;
+  /* Beside the zoomed pin rather than above it, where the nav island would cover it. */
+  translate: calc(38px * var(--zs) + 28px) -50%;
+  opacity: calc(1 - var(--reveal) * 3);
+  pointer-events: none;
+}
+.lp-preview__in {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--lp-paper);
+  box-shadow:
+    0 0 0 1px var(--lp-hair),
+    var(--lp-soft-lg);
+  transform-origin: 0% 50%;
+  scale: 0.4;
+  opacity: 0;
+  transition:
+    scale 0.7s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.35s;
+}
+.lp-b-preview .lp-preview__in {
+  scale: 1;
+  opacity: 1;
+}
+.lp-preview__top {
   display: flex;
   gap: 12px;
   align-items: center;
 }
-.lp-store-card b {
-  font-family: var(--lp-display);
-  font-weight: 700;
-  font-size: 16px;
-  display: block;
-}
-.lp-store-card small {
-  font-size: 12.5px;
-  color: var(--lp-ink-3);
-  line-height: 1.4;
-}
-.lp-store-card .lp-mono {
-  font-size: 12.5px;
-  color: var(--lp-ink-2);
-}
-.lp-avatar {
-  width: 44px;
-  height: 44px;
+.lp-preview__ava {
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   flex: none;
+  background: #0a6ba2;
   color: #fff;
   font-family: var(--lp-display);
   font-weight: 800;
-  font-size: 14px;
+  font-size: 15px;
 }
-.lp-pv--shop {
+.lp-preview b {
+  display: block;
+  font-family: var(--lp-display);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.lp-preview small {
+  font-size: 13px;
+  color: var(--lp-ink-3);
+}
+.lp-preview__meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Choose: the store page opens out of the pin */
+.lp-shop {
+  clip-path: circle(calc(var(--reveal) * 150%) at var(--ox) var(--oy));
   background: #021521;
 }
-.lp-pv--shop > img {
-  object-fit: cover;
-  object-position: 0% 0%;
-}
-.lp-prod {
+.lp-shop__shot {
   position: absolute;
-  right: 20px;
-  bottom: 20px;
-  z-index: 3;
-  width: min(300px, calc(100% - 40px));
+  inset: 0 0 -16% 32%;
+  background: url("/landing/app-store.jpg") 0 0 / cover no-repeat;
+  transform-origin: 0 0;
+  transform: translateY(calc(var(--shop) * -12%))
+    scale(calc(1.18 - var(--reveal) * 0.18));
+  will-change: transform;
 }
-.lp-prod__body {
-  padding: 18px;
-  display: grid;
-  gap: 12px;
+.lp-shop__shade {
+  background:
+    linear-gradient(100deg, transparent 20%, rgba(2, 12, 20, 0.78) 70%),
+    linear-gradient(0deg, rgba(2, 12, 20, 0.6), transparent 50%);
+  opacity: calc(0.25 + var(--cB) * 0.75);
 }
-.lp-prod b {
-  font-family: var(--lp-display);
-  font-weight: 700;
-  font-size: 17px;
+.lp-dim2 {
+  pointer-events: none;
+  background: #050c12;
+  opacity: calc(var(--sheet) * 0.7);
+}
+.lp-shop__shot,
+.lp-photo__ph {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%);
+  mask-image: linear-gradient(90deg, transparent, #000 22%);
+}
+/* The page colour, washed over the scene: solid behind the copy, clear by the middle, and
+   fading into the page above and below so the background has no hard edges. */
+.lp-veil {
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(var(--lp-scrim-rgb)) 0%,
+      rgba(var(--lp-scrim-rgb), 0.96) 30%,
+      rgba(var(--lp-scrim-rgb), 0.7) 42%,
+      rgba(var(--lp-scrim-rgb), 0) 60%
+    ),
+    linear-gradient(
+      180deg,
+      rgb(var(--lp-scrim-rgb)) 0%,
+      rgba(var(--lp-scrim-rgb), 0) 14%,
+      rgba(var(--lp-scrim-rgb), 0) 86%,
+      rgb(var(--lp-scrim-rgb)) 100%
+    );
+}
+
+.lp-ui {
+  position: absolute;
+  inset: 0 0 0 40%;
+  pointer-events: none;
+}
+.lp-deck {
+  position: absolute;
+  right: 4%;
+  bottom: 9%;
+  width: 90%;
+  height: 64%;
+}
+.lp-pcard {
+  position: absolute;
+  width: 33%;
+  padding: 6px;
+  border-radius: 24px;
+  background: var(--lp-paper);
+  box-shadow:
+    0 0 0 1px var(--lp-hair),
+    var(--lp-soft-lg);
+  transform: translate3d(
+      calc((1 - var(--c)) * 170%),
+      calc(var(--shop) * var(--dy) + (1 - var(--c)) * 30px),
+      0
+    )
+    rotate(calc(var(--r) + (1 - var(--c)) * 14deg));
+  opacity: calc(var(--c) * 1.6 - var(--sheet) * 2.2);
+  will-change: transform;
+}
+/* Three depths: each card enters on its own beat and drifts at its own rate. */
+.lp-pcard[data-card="1"] {
+  --c: var(--cA);
+  --r: -5deg;
+  --dy: -40px;
+  left: 0;
+  top: 16%;
+}
+.lp-pcard[data-card="2"] {
+  --c: var(--cB);
+  --r: 0deg;
+  --dy: -90px;
+  left: 33.5%;
+  top: 2%;
+  z-index: 2;
+}
+.lp-pcard[data-card="3"] {
+  --c: var(--cC);
+  --r: 5deg;
+  --dy: -60px;
+  left: 67%;
+  top: 20%;
+}
+/* Product photos are crops of the produce banner on the store screenshot (1875x902). */
+.lp-crop {
   display: block;
+  aspect-ratio: 4 / 3;
+  border-radius: 18px;
+  background: url("/landing/app-store.jpg") no-repeat;
+  background-size: 721% auto;
 }
-.lp-prod small {
+.lp-crop--lettuce {
+  background-position: 9.3% 1.4%;
+}
+.lp-crop--red {
+  background-position: 44.6% 2.8%;
+}
+.lp-crop--yellow {
+  background-position: 80.5% 1.4%;
+}
+/* The photo that flies from a product card into the cart. Appended to <body>, so fixed. */
+.lp-ghost {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+}
+.lp-pcard__b {
+  display: grid;
+  gap: 4px;
+  padding: 12px 10px 8px;
+}
+.lp-pcard__b b {
+  font-family: var(--lp-display);
+  font-size: clamp(14px, 1.25vw, 18px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.lp-pcard__b small {
   font-size: 12.5px;
   color: var(--lp-ink-3);
 }
-.lp-bag {
+.lp-pcard__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+.lp-pcard__price {
+  font-size: clamp(15px, 1.3vw, 19px);
+  font-weight: 600;
+}
+.lp-add {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--lp-action);
+  color: var(--lp-on-action);
+  font-family: var(--lp-display);
+  font-weight: 700;
+  font-size: 13px;
+  transition:
+    background-color 0.4s var(--lp-spring),
+    color 0.4s var(--lp-spring);
+}
+.lp-add svg {
+  width: 15px;
+  height: 15px;
+}
+.landing .lp-add svg.lucide {
+  stroke-width: 2.25;
+}
+.lp-add::after {
+  content: "";
   position: absolute;
-  right: 20px;
-  top: 20px;
-  z-index: 3;
-  width: 54px;
-  height: 54px;
+  inset: -6px;
+  border-radius: 999px;
+  border: 2px solid var(--lp-action);
+  opacity: 0;
+}
+.lp-add .lp-yes,
+.lp-place .lp-yes {
+  display: none;
+}
+.lp-b-add1 [data-card="1"] .lp-add,
+.lp-b-add2 [data-card="2"] .lp-add,
+.lp-b-add3 [data-card="3"] .lp-add {
+  background: var(--lp-wash);
+  color: var(--lp-ink);
+}
+.lp-b-add1 [data-card="1"] .lp-no,
+.lp-b-add2 [data-card="2"] .lp-no,
+.lp-b-add3 [data-card="3"] .lp-no {
+  display: none;
+}
+.lp-b-add1 [data-card="1"] .lp-yes,
+.lp-b-add2 [data-card="2"] .lp-yes,
+.lp-b-add3 [data-card="3"] .lp-yes {
+  display: inline;
+}
+.lp-b-add1 [data-card="1"] svg.lp-yes,
+.lp-b-add2 [data-card="2"] svg.lp-yes,
+.lp-b-add3 [data-card="3"] svg.lp-yes {
+  color: var(--lp-action);
+}
+
+.lp-cartb {
+  position: absolute;
+  z-index: 4;
+  right: 32px;
+  top: 104px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   background: var(--lp-paper);
+  color: var(--lp-ink);
   box-shadow:
     0 0 0 1px var(--lp-hair),
-    var(--lp-soft);
-  color: var(--lp-ink);
+    var(--lp-soft-lg);
+  opacity: 0;
+  scale: 0.4;
+  transition:
+    opacity 0.5s var(--lp-spring),
+    scale 0.7s var(--lp-spring);
 }
-.lp-bag svg {
-  width: 22px;
-  height: 22px;
+.lp-cartb svg {
+  width: 28px;
+  height: 28px;
 }
-.lp-bag b {
+.lp-cartb b {
   position: absolute;
   top: -4px;
   right: -4px;
-  min-width: 24px;
-  height: 24px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
   border-radius: 999px;
-  padding: 0 6px;
   display: grid;
   place-items: center;
   background: var(--lp-action);
   color: var(--lp-on-action);
   font-family: var(--lp-display);
-  font-size: 12px;
   font-weight: 800;
+  font-size: 14px;
 }
-.lp-pv--cart {
+.lp-b-store .lp-cartb {
+  opacity: calc(1 - var(--sheet) * 3);
+  scale: 1;
+}
+
+/* Check out: the cart bubble grows into one sheet */
+.lp-sheet-pos {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  padding: 28px;
-  background: radial-gradient(
-    120% 90% at 20% 0%,
-    var(--lp-wash),
-    var(--lp-bg-2)
-  );
+  padding: 24px;
 }
-.lp-cart {
-  width: min(360px, 100%);
+.lp-sheet {
+  width: min(500px, 92%);
+  padding: 6px;
+  border-radius: 30px;
+  background: var(--lp-shell);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transform-origin: 92% 0%;
+  transform: translate(
+      calc((1 - var(--sheet)) * 38%),
+      calc((1 - var(--sheet)) * -48% + var(--exit) * 140%)
+    )
+    scale(calc(0.12 + var(--sheet) * 0.88)) rotate(calc(var(--exit) * 9deg));
+  opacity: calc(min(1, var(--sheet) * 4) - var(--exit) * 1.2);
+  will-change: transform;
 }
-.lp-cart__body {
-  padding: 20px;
+.lp-sheet__core {
   display: grid;
   gap: 14px;
+  padding: 22px;
+  border-radius: 25px;
+  background: var(--lp-paper);
+  box-shadow:
+    var(--lp-inset),
+    0 0 0 1px var(--lp-hair),
+    var(--lp-soft-lg);
 }
-.lp-cart__head {
+.lp-sheet__head {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
 }
-.lp-cart__head b {
+.lp-sheet__head b {
   font-family: var(--lp-display);
-  font-weight: 600;
-  font-size: 15px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
-.lp-cart__head .lp-mono {
+.lp-sheet__head span {
+  font-size: 13px;
+  color: var(--lp-ink-3);
+}
+.lp-grp {
+  display: grid;
+  gap: 10px;
+}
+.lp-grp__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--lp-display);
+  font-weight: 700;
   font-size: 12.5px;
   color: var(--lp-ink-3);
 }
-.lp-cart__item {
+.lp-grp__name svg {
+  width: 14px;
+  height: 14px;
+  color: var(--lp-action);
+}
+/* Lines slide in from alternating sides and stack into one order. */
+.lp-line {
+  --from: -60px;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 44px 1fr auto;
   gap: 12px;
   align-items: center;
+  opacity: 0;
+  transform: translateX(var(--from));
+  transition:
+    opacity 0.5s var(--lp-spring),
+    transform 0.8s var(--lp-spring);
+  transition-delay: calc(var(--i, 0) * 0.09s);
 }
-.lp-cart__thumb {
-  width: 36px;
-  height: 36px;
+.lp-line:nth-of-type(odd) {
+  --from: 60px;
+}
+.lp-b-items .lp-line {
+  opacity: 1;
+  transform: none;
+}
+.lp-line .lp-crop,
+.lp-line__thumb {
+  width: 44px;
+  height: 44px;
+  aspect-ratio: auto;
   border-radius: 12px;
+}
+/* Square crops: a narrower slice of the banner, so they stay clear of the store name. */
+.lp-line .lp-crop {
+  background-size: 987% auto;
+}
+.lp-line .lp-crop--lettuce {
+  background-position: 10.1% 1.4%;
+}
+.lp-line .lp-crop--red {
+  background-position: 45.1% 2.8%;
+}
+.lp-line .lp-crop--yellow {
+  background-position: 78.9% 1.4%;
+}
+.lp-line__thumb {
   display: grid;
   place-items: center;
   background: var(--lp-wash);
   color: var(--lp-action);
 }
-.lp-cart__thumb svg {
-  width: 17px;
-  height: 17px;
+.lp-line__thumb svg {
+  width: 20px;
+  height: 20px;
 }
-.lp-cart__item b {
-  font-family: var(--lp-display);
-  font-weight: 600;
-  font-size: 14px;
+.lp-line b {
   display: block;
+  font-family: var(--lp-display);
+  font-size: 14.5px;
+  font-weight: 700;
 }
-.lp-cart__item small {
+.lp-line small {
   font-size: 12px;
   color: var(--lp-ink-3);
 }
-.lp-cart__item .lp-mono {
-  font-size: 12.5px;
-  color: var(--lp-ink-2);
+.lp-line .lp-mono {
+  font-size: 14px;
 }
-.lp-cart__status {
+.lp-sum {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding-top: 12px;
+  align-items: baseline;
+  padding-top: 14px;
   border-top: 1px dashed var(--lp-hair-2);
-  font-size: 13px;
+}
+.lp-sum span {
+  font-size: 14px;
   color: var(--lp-ink-3);
 }
-.lp-cart .lp-demo-btn {
-  width: 100%;
-  margin-top: 4px;
+.lp-sum b {
+  font-size: 24px;
+  font-weight: 600;
 }
-.lp-pv--pick > img {
+.lp-place {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 56px;
+  border-radius: 999px;
+  background: var(--lp-action);
+  color: var(--lp-on-action);
+  font-family: var(--lp-display);
+  font-weight: 800;
+  font-size: 16px;
+}
+.lp-place__fill {
+  position: absolute;
+  inset: 0;
+  background: var(--lp-action-hover);
+  transform-origin: left;
+  transform: scaleX(var(--fill));
+}
+.lp-place > span:not(.lp-place__fill) {
+  position: relative;
+}
+.lp-place svg {
+  width: 19px;
+  height: 19px;
+}
+.landing .lp-place svg.lucide {
+  stroke-width: 2.25;
+}
+.lp-b-placed .lp-place .lp-no {
+  display: none;
+}
+.lp-b-placed .lp-place .lp-yes {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Pick up */
+.lp-photo {
+  overflow: hidden;
+  opacity: var(--pickIn);
+}
+.lp-photo__ph {
+  position: absolute;
+  inset: 0 0 0 32%;
+  transform: scale(calc(1.28 - var(--pick) * 0.28));
+  will-change: transform;
+}
+.lp-photo__ph > img {
   object-fit: cover;
   object-position: 40% 28%;
 }
-.lp-pick-card {
+.lp-photo::after {
+  content: "";
   position: absolute;
-  left: 20px;
-  bottom: 20px;
-  z-index: 3;
-  width: min(310px, calc(100% - 40px));
+  inset: 0;
+  background: linear-gradient(
+    0deg,
+    rgba(4, 12, 18, 0.75),
+    rgba(4, 12, 18, 0.2) 60%
+  );
+  opacity: calc(1 - var(--pick) * 0.55);
 }
-@media (max-width: 1000px) {
-  .lp-steps {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.lp-notif {
+  position: absolute;
+  z-index: 4;
+  left: 32px;
+  top: 104px;
+  width: min(420px, 78%);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+  border-radius: 24px;
+  background: var(--lp-glass);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  box-shadow:
+    0 0 0 1px var(--lp-hair),
+    var(--lp-soft-lg);
+  translate: 0 -170%;
+  opacity: 0;
+  transition:
+    translate 0.9s cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 0.4s var(--lp-spring);
+}
+.lp-b-notify .lp-notif {
+  translate: 0 0;
+  opacity: 1;
+}
+.lp-notif__ico {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: #0a6ba2;
+  color: #fff;
+}
+.lp-notif__ico svg {
+  width: 24px;
+  height: 24px;
+  transform-origin: 50% 10%;
+}
+.lp-notif__top {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--lp-display);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--lp-ink-3);
+}
+.lp-notif b {
+  display: block;
+  font-family: var(--lp-display);
+  font-size: 16.5px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+.lp-notif small {
+  font-size: 13.5px;
+  color: var(--lp-ink-2);
+}
+.lp-notif__done,
+.lp-b-done .lp-notif__ready {
+  display: none;
+}
+.lp-b-done .lp-notif__done {
+  display: block;
+}
+
+.lp-pass {
+  position: absolute;
+  z-index: 3;
+  right: 5%;
+  top: 14%;
+  width: min(310px, 44%);
+  padding: 6px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.16),
+    var(--lp-soft-lg);
+  transform-origin: 50% 100%;
+  transform: perspective(1000px) rotateX(calc((1 - var(--pass)) * -85deg))
+    translateY(calc((1 - var(--pass)) * 50%));
+  opacity: calc(var(--pass) * 1.6);
+}
+.lp-pass__core {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  padding: 22px;
+  border-radius: 23px;
+  background: var(--lp-paper);
+  text-align: center;
+}
+.lp-pass__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--lp-display);
+  font-weight: 800;
+  font-size: 15px;
+}
+.lp-pass__label svg {
+  width: 18px;
+  height: 18px;
+  color: var(--lp-action);
+}
+.lp-qr {
+  position: relative;
+  padding: 10px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-hair-2);
+}
+.lp-qr canvas {
+  display: block;
+  width: 150px;
+  height: 150px;
+  image-rendering: pixelated;
+}
+.lp-qr__scan {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 8px;
+  height: 3px;
+  border-radius: 3px;
+  background: #64acda;
+  box-shadow: 0 0 14px 3px rgba(100, 172, 218, 0.7);
+  opacity: 0;
+}
+.lp-pass__code {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--lp-action);
+  letter-spacing: 0.02em;
+}
+.lp-pass small {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--lp-ink-3);
+}
+.lp-stamp {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  translate: -50% -50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: var(--lp-action);
+  color: var(--lp-on-action);
+  font-family: var(--lp-display);
+  font-weight: 800;
+  font-size: 20px;
+  white-space: nowrap;
+  box-shadow: 0 20px 40px -14px rgba(10, 107, 162, 0.8);
+  rotate: -8deg;
+  scale: 2.4;
+  opacity: 0;
+  transition:
+    scale 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.25s;
+}
+.lp-stamp svg {
+  width: 22px;
+  height: 22px;
+}
+.landing .lp-stamp svg.lucide {
+  stroke-width: 2.5;
+}
+.lp-b-done .lp-stamp {
+  scale: 1;
+  opacity: 1;
+}
+
+/* Layers that are out of play stop painting */
+.lp-stage:not(.show-map) :is(.lp-cam, .lp-fog, .lp-dim, .lp-count),
+.lp-stage:not(.show-store) :is(.lp-shop, .lp-deck),
+.lp-stage:not(.show-photo) :is(.lp-photo, .lp-pass) {
+  visibility: hidden;
+}
+
+/* Loops run only while their scene is on screen */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-stage[data-scene="0"].lp-b-you .lp-you::before {
+    animation: lp-radar 2.8s var(--lp-out) infinite;
   }
-  .lp-step.is-on::after {
+  .lp-stage[data-scene="0"].lp-b-you .lp-you::after {
+    animation: lp-radar 2.8s var(--lp-out) 1.4s infinite;
+  }
+  .lp-b-tap .lp-spin__tap {
+    animation: lp-tap 1.1s var(--lp-out) 2;
+  }
+  .lp-b-add1 [data-card="1"] .lp-add::after,
+  .lp-b-add2 [data-card="2"] .lp-add::after,
+  .lp-b-add3 [data-card="3"] .lp-add::after {
+    animation: lp-press 0.7s var(--lp-out);
+  }
+  .lp-b-placed .lp-place {
+    animation: lp-pop-in 0.6s var(--lp-spring);
+  }
+  .lp-b-notify .lp-notif__ico svg {
+    animation: lp-bell 0.9s var(--lp-spring) 0.5s 2;
+  }
+  .lp-b-scan .lp-qr__scan {
+    animation: lp-qrscan 1.1s var(--lp-spring) 2;
+  }
+}
+
+/* Tablet and phone: the world is the screen, the story sits in a bottom sheet over it */
+@media (max-width: 1080px) {
+  .lp-track {
+    height: 560svh;
+  }
+  .lp-stage {
+    height: 100svh;
+  }
+  .lp-copy {
+    position: absolute;
+    z-index: 6;
+    top: auto;
+    left: 10px;
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    gap: 14px;
+    padding: 16px 18px 20px;
+    border-radius: 26px;
+    background: var(--lp-glass);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+    box-shadow:
+      0 0 0 1px var(--lp-hair),
+      var(--lp-soft-lg);
+  }
+  .lp-scenes {
+    min-height: 158px;
+    align-content: start;
+  }
+  .lp-sc {
+    gap: 10px;
+    align-content: start;
+  }
+  .lp-sc h3 {
+    font-size: clamp(32px, 9vw, 40px);
+  }
+  .lp-sc p {
+    font-size: 15.5px;
+    max-width: none;
+  }
+  /* Keeps floating UI between the nav island and the story sheet. */
+  .lp-ui {
+    inset: 84px 12px 270px 12px;
+  }
+  .lp-smap {
+    top: 0;
+    left: 50%;
+    width: auto;
+    height: 72%;
+    translate: -50% 0;
+  }
+  .lp-shop__shot,
+  .lp-photo__ph {
+    left: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .lp-veil {
     display: none;
   }
-  .lp-stage > .lp-core {
-    grid-template-columns: 1fr;
+  .lp-chip {
+    display: none;
+    font-size: 12px;
+    padding: 6px 10px;
   }
-  .lp-stage__vis {
-    min-height: 440px;
+  .lp-mk[data-mk="1"] .lp-chip {
+    display: inline-flex;
   }
-  .lp-pt {
-    padding: 36px 32px 40px;
+  .lp-count {
+    left: 12px;
+    bottom: 280px;
+    padding: 14px 18px;
   }
-}
-@media (max-width: 767px) {
-  .lp-steps {
+  .lp-count b {
+    font-size: 28px;
+  }
+  .lp-preview {
+    width: min(300px, 86vw);
+    left: 50%;
+    top: auto;
+    bottom: 284px;
+    translate: -50% 0;
+  }
+  .lp-preview__in {
+    transform-origin: 50% 100%;
+  }
+  .lp-deck {
+    inset: 0;
+    width: auto;
+    height: auto;
+  }
+  .lp-pcard {
+    width: 60%;
+  }
+  .lp-pcard[data-card="1"] {
+    --dy: -20px;
+    left: 0;
+    top: 0;
+  }
+  .lp-pcard[data-card="2"] {
+    --dy: -46px;
+    left: 20%;
+    top: 12%;
+  }
+  .lp-pcard[data-card="3"] {
+    --dy: -30px;
+    left: 40%;
+    top: 24%;
+  }
+  .lp-pcard__b {
+    padding: 10px 8px 6px;
+  }
+  .lp-pcard__b small {
+    display: none;
+  }
+  .lp-add {
+    padding: 8px 12px;
+    font-size: 12.5px;
+  }
+  .lp-cartb {
+    right: 0;
+    top: -6px;
+    width: 58px;
+    height: 58px;
+  }
+  .lp-cartb svg {
+    width: 24px;
+    height: 24px;
+  }
+  .lp-sheet-pos {
+    padding: 0;
+    align-items: start;
+  }
+  .lp-sheet {
+    width: 100%;
+  }
+  .lp-sheet__core {
+    padding: 16px;
     gap: 10px;
   }
-  .lp-step {
-    padding: 14px;
-    column-gap: 12px;
-    border-radius: 22px;
-  }
-  .lp-step__num {
-    width: 40px;
-    height: 40px;
-    font-size: 17px;
-  }
-  .lp-step strong {
+  .lp-sheet__head b {
     font-size: 19px;
   }
-  .lp-step small {
+  .lp-line {
+    grid-template-columns: 38px 1fr auto;
+    gap: 10px;
+  }
+  .lp-line .lp-crop,
+  .lp-line__thumb {
+    width: 38px;
+    height: 38px;
+  }
+  .lp-line b {
+    font-size: 13.5px;
+  }
+  .lp-line small {
     display: none;
   }
-  .lp-stage__vis {
-    min-height: 380px;
+  .lp-sum {
+    padding-top: 10px;
   }
-  .lp-pt {
-    padding: 28px 22px 32px;
+  .lp-sum b {
+    font-size: 20px;
   }
-  .lp-hot {
-    width: 50px;
+  .lp-place {
     height: 50px;
+    font-size: 15px;
+  }
+  .lp-notif {
+    left: 0;
+    right: 0;
+    top: 0;
+    width: auto;
+    padding: 12px 14px;
+  }
+  .lp-notif__ico {
+    width: 42px;
+    height: 42px;
+  }
+  .lp-pass {
+    left: 50%;
+    right: auto;
+    top: auto;
+    bottom: 0;
+    width: min(250px, 72%);
+    translate: -50% 0;
+  }
+  .lp-pass__core {
+    padding: 14px;
+    gap: 10px;
+  }
+  .lp-qr canvas {
+    width: 104px;
+    height: 104px;
+  }
+  .lp-pass small {
+    display: none;
+  }
+  .lp-stamp {
+    font-size: 17px;
+  }
+}
+@media (min-width: 768px) and (max-width: 1080px) {
+  .lp-copy {
+    right: auto;
+    width: min(620px, calc(100% - 20px));
+  }
+  .lp-ui {
+    inset: 96px 24px 300px 24px;
+  }
+  .lp-pcard {
+    width: 44%;
+  }
+  .lp-pcard[data-card="2"] {
+    left: 28%;
+  }
+  .lp-pcard[data-card="3"] {
+    left: 56%;
+  }
+}
+@media (max-width: 767px) and (max-height: 700px) {
+  .lp-ui {
+    inset: 76px 10px 248px 10px;
+  }
+  .lp-grp:nth-of-type(2) {
+    display: none;
   }
 }
 
@@ -2136,15 +2842,6 @@
 .lp-bump {
   animation: lp-bump 0.6s var(--lp-spring);
 }
-.lp-me {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--lp-action);
-  border: 3px solid #fff;
-  transform: translate(-50%, -50%);
-}
 @keyframes lp-kenburns {
   from {
     transform: scale(1.14) translate3d(1.5%, 1%, 0);
@@ -2181,16 +2878,6 @@
     filter: blur(0);
   }
 }
-@keyframes lp-ring {
-  0% {
-    transform: scale(0.8);
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(1.45);
-    opacity: 0;
-  }
-}
 @keyframes lp-scan {
   0% {
     transform: translateY(10px);
@@ -2203,19 +2890,6 @@
   100% {
     transform: translateY(52px);
     opacity: 0;
-  }
-}
-@keyframes lp-nudge {
-  0%,
-  100% {
-    box-shadow:
-      0 14px 30px -14px rgba(10, 107, 162, 0.75),
-      0 0 0 0 rgba(100, 172, 218, 0.55);
-  }
-  50% {
-    box-shadow:
-      0 14px 30px -14px rgba(10, 107, 162, 0.75),
-      0 0 0 10px rgba(100, 172, 218, 0);
   }
 }
 @keyframes lp-bump {
@@ -2231,6 +2905,71 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes lp-radar {
+  0% {
+    scale: 0.05;
+    opacity: 0.9;
+  }
+  100% {
+    scale: 1;
+    opacity: 0;
+  }
+}
+@keyframes lp-tap {
+  0% {
+    scale: 0.4;
+    opacity: 1;
+  }
+  100% {
+    scale: 1.8;
+    opacity: 0;
+  }
+}
+@keyframes lp-press {
+  0% {
+    opacity: 1;
+    scale: 0.9;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.3;
+  }
+}
+@keyframes lp-pop-in {
+  40% {
+    transform: scale(1.04);
+  }
+}
+@keyframes lp-bell {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  25% {
+    rotate: 16deg;
+  }
+  50% {
+    rotate: -14deg;
+  }
+  75% {
+    rotate: 8deg;
+  }
+}
+@keyframes lp-qrscan {
+  0% {
+    opacity: 0;
+    top: 8px;
+  }
+  15%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    top: calc(100% - 10px);
   }
 }
 

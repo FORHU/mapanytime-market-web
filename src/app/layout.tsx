@@ -8,7 +8,7 @@ import "./globals.css";
 import QueryProvider from "@/shared/lib/providers/query-provider";
 import { Toaster } from "sonner";
 import { AuthListener } from "@/features/auth/components/AuthListener";
-import { ThemeProvider } from "next-themes";
+import ThemeProvider from "@/shared/lib/providers/theme-provider";
 import { AnalyticsListener } from "@/shared/components/AnalyticsListener";
 import { CookieConsentBanner } from "@/shared/components/CookieConsentBanner";
 
@@ -68,13 +68,8 @@ export const metadata: Metadata = {
       "Connecting 450M Offline Stores to the World Through a Map, a Photo, and a Pickup.",
     images: ["/og-image.png"],
   },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.png", type: "image/png" },
-    ],
-    apple: "/apple-touch-icon.png",
-  },
+  // Icons come from Next's file conventions in this folder: favicon.ico (16/32/48), icon1.svg,
+  // icon2.png and apple-icon.png. Listing paths here instead linked a /favicon.ico that did not exist.
 };
 
 export default function RootLayout({
@@ -90,12 +85,7 @@ export default function RootLayout({
       <body
         className={`${plusJakarta.variable} ${hanken.variable} ${jetbrainsMono.variable} font-body text-body-md antialiased bg-background text-on-surface min-h-screen flex flex-col selection:bg-primary-container selection:text-on-primary-container`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ThemeProvider>
           <QueryProvider>
             {children}
             <Toaster position="top-right" theme="system" richColors />

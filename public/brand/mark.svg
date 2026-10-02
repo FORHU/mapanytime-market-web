@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- The M of MapAnytime is a map folded in four: the stems and diagonals are its panels -->
+  <path fill="#7dbde6" d="M7 53V11h12v42z"/>
+  <path fill="#3d8cc0" d="M19 11 32 30.5V50.5L19 31z"/>
+  <path fill="#7dbde6" d="M32 30.5 45 11v20L32 50.5z"/>
+  <path fill="#3d8cc0" d="M45 11h12v42H45z"/>
+</svg>

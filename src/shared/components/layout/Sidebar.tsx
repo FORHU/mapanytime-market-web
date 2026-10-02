@@ -60,12 +60,13 @@ export interface SellerAccessSummary {
 function BrandMark() {
   return (
     <>
-      <div className="w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center shadow-md bg-[var(--brand-core)] shrink-0">
+      <div className="w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center shadow-md shrink-0">
         <Image
-          src="/logo.png"
-          alt="MapAnytime Logo"
+          src="/brand/mark-tile.svg"
+          alt=""
           width={32}
           height={32}
+          unoptimized
           className="w-full h-full object-contain"
         />
       </div>
