@@ -5,17 +5,16 @@
  * It is a static declaration consumed by tools/validate-architecture.mjs.
  */
 export const featureManifest = {
-  name: "landing",
+  name: "app-releases",
   dependsOn: [] as const,
   exposes: [
-    "LandingNav",
-    "LandingHero",
-    "LandingHowItWorks",
-    "LandingFeatures",
-    "LandingSellers",
-    "LandingCTA",
-    "LandingFooter",
+    "useLatestRelease",
+    "useReleaseHistory",
+    "useAdminReleases",
+    "useUploadRelease",
+    "ReleaseUploadForm",
+    "ReleaseList",
   ] as const,
 } as const;
 
-export type LandingManifest = typeof featureManifest;
+export type AppReleasesManifest = typeof featureManifest;
