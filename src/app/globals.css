@@ -142,7 +142,7 @@
   body {
     background: var(--md-sys-color-background);
     color: var(--md-sys-color-on-surface);
-    /* The actual variable next/font defines in layout.tsx. This read `var(--font-body-md)`,
+    /* The actual variable fonts.css defines (the self-hosted fonts). This read `var(--font-body-md)`,
        which is not defined anywhere — the body font silently fell back to the browser default. */
     font-family: var(--font-hanken), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
