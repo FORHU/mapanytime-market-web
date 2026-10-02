@@ -28,6 +28,7 @@ import type {
   LinkItem,
   MapPin,
   MapStore,
+  StoryProduct,
 } from "./types";
 
 /*
@@ -40,43 +41,37 @@ import type {
  */
 
 export const HERO_SLIDES: HeroSlide[] = [
-  { src: "/landing/globe.jpg", label: "Live map", fit: "globe" },
+  { src: "/landing/globe-hd.jpg", label: "Live map", fit: "globe" },
   { src: "/landing/h-store.jpg", label: "Thrift shop" },
   { src: "/landing/h-books.jpg", label: "Bookstore" },
   { src: "/landing/h-floral.jpg", label: "Flower stall" },
   { src: "/landing/h-seller.jpg", label: "Sellers" },
 ];
 
+/*
+ * The five scenes of the How it works scroll story. `heading` is the large line that animates in
+ * with each scene.
+ */
 export const HOW_STEPS: HowStep[] = [
   {
-    title: "Discover",
-    hint: "Find a store",
-    heading: "Find stores near you.",
-    body: "Open the map and tap any store marker to see the store and how far away it is.",
-    todo: "Try it: tap a store marker",
-    doneText: "Nice. That is the store card.",
+    heading: "Find a store near you.",
+    body: "Open the map and see the stores around you, from the coffee roaster down the street to the stall across town.",
   },
   {
-    title: "Shop",
-    hint: "Fill your cart",
-    heading: "Add what you like to your cart.",
-    body: "Open a store, pick a product, and add it. You can shop from several stores at once.",
-    todo: "Try it: press Add to cart",
-    doneText: "Added. Your cart now has 2 items.",
+    heading: "Tap in and look around.",
+    body: "Tap a marker to open the store. See its products, its hours, and how far it is from you.",
   },
   {
-    title: "Purchase",
-    hint: "Order once",
-    heading: "Place one pickup order.",
-    body: "Check out once for everything in your cart. Each store sees your order and gets it ready.",
-    todo: "Try it: place the order",
-    doneText: "Done. The stores are preparing it.",
+    heading: "Pick what you want.",
+    body: "Add products to one cart as you browse. Shop from more than one store if you like.",
   },
   {
-    title: "Pick up",
-    hint: "Collect it",
-    heading: "Collect it at the store.",
-    body: "You get a notification when it's ready. Show your pickup pass at the counter and you're done.",
+    heading: "Check out once.",
+    body: "One checkout covers everything in your cart, however many stores it came from.",
+  },
+  {
+    heading: "Walk in. Pick it up.",
+    body: "You get a notification when it is ready. Show your pickup pass at the counter and it is yours.",
   },
 ];
 
@@ -111,15 +106,43 @@ export const MAP_STORES: MapStore[] = [
   },
 ];
 
-export const SHOP_PRODUCT = {
-  name: "Fresh Baguio Carrots (1kg)",
-  store: "Baguio Fresh Harvest",
+/*
+ * The store the story opens. It has no marker baked into the map screenshot, so its pin is drawn
+ * over an empty spot near the middle, where the zoom into it stays centred in the frame.
+ */
+export const STORY_STORE = {
+  initials: "BH",
+  name: "Baguio Fresh Harvest",
+  area: "Baguio City Public Market",
+  address: "Stall 42-45, Baguio City Public Market",
+  hours: "Open until 8:00 PM",
+  distance: "0.8 km",
+  x: 53,
+  y: 44,
 };
 
-export const CART_ITEMS: { icon: LucideIcon; name: string; store: string }[] = [
-  { icon: ShoppingBasket, name: SHOP_PRODUCT.name, store: SHOP_PRODUCT.store },
-  { icon: Coffee, name: "Benguet coffee beans", store: "Kalye Roasters" },
+/** Where the shopper stands on the map screenshot, in percent. */
+export const STORY_YOU = { x: 48, y: 63 };
+
+/*
+ * Products picked in the story. Their photos are crops of the produce banner at the top of the
+ * store screenshot (/landing/app-store.jpg), so `crop` names a modifier class in landing.css.
+ */
+export const STORY_PRODUCTS: StoryProduct[] = [
+  { name: "Highland lettuce", size: "1 bundle", price: 85, crop: "lettuce" },
+  { name: "Red bell peppers", size: "500 g", price: 120, crop: "red" },
+  { name: "Yellow bell peppers", size: "500 g", price: 130, crop: "yellow" },
 ];
+
+/** Already in the cart from another store, so the checkout shows two stores in one order. */
+export const STORY_EXTRA_ITEM = {
+  name: "Benguet coffee beans",
+  size: "250 g",
+  price: 380,
+  store: "Kalye Roasters",
+};
+
+export const STORY_ORDER_CODE = "MA-4820";
 
 /** Store icons scattered over the features map card. Positions are percentages of the card. */
 export const VIEWPORT_PINS: MapPin[] = [

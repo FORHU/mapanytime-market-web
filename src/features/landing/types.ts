@@ -3,19 +3,22 @@ import type { LucideIcon } from "lucide-react";
 export interface HeroSlide {
   src: string;
   label: string;
-  /** The globe art is small, so it is fitted to the hero height instead of covering it. */
+  /** The globe art is fitted to the hero height instead of covering it, so the globe never crops. */
   fit?: "cover" | "globe";
 }
 
 export interface HowStep {
-  title: string;
-  hint: string;
   heading: string;
   body: string;
-  /** Prompt shown before the visitor tries the step's action. Absent for steps with no action. */
-  todo?: string;
-  /** Confirmation shown once the action is done. */
-  doneText?: string;
+}
+
+export interface StoryProduct {
+  name: string;
+  size: string;
+  /** Example price in pesos. */
+  price: number;
+  /** Which crop of the store banner to show, as `.lp-crop--<crop>` in landing.css. */
+  crop: "lettuce" | "red" | "yellow";
 }
 
 export interface MapStore {

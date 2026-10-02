@@ -150,10 +150,11 @@ export function AdminSidebar({
           >
             <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shadow-md shrink-0">
               <Image
-                src="/logo.png"
-                alt="MapAnytime Logo"
+                src="/brand/mark-tile.svg"
+                alt="MapAnytime"
                 width={36}
                 height={36}
+                unoptimized
                 className="w-full h-full object-contain"
               />
             </div>

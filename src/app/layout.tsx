@@ -1,39 +1,31 @@
 import type { Metadata } from "next";
-import {
-  Plus_Jakarta_Sans,
-  Hanken_Grotesk,
-  JetBrains_Mono,
-} from "next/font/google";
+import "./fonts.css";
 import "./globals.css";
 import QueryProvider from "@/shared/lib/providers/query-provider";
 import { Toaster } from "sonner";
 import { AuthListener } from "@/features/auth/components/AuthListener";
-import { ThemeProvider } from "next-themes";
+import ThemeProvider from "@/shared/lib/providers/theme-provider";
 import { AnalyticsListener } from "@/shared/components/AnalyticsListener";
 import { CookieConsentBanner } from "@/shared/components/CookieConsentBanner";
 
+// Fonts are self-hosted (fonts.css + public/fonts) rather than loaded through next/font/google,
+// which downloads them from Google during `next build`; a malformed Google response once failed
+// the CI build. fonts.css sets the same --font-plus-jakarta / --font-hanken / --font-jetbrains-mono
+// variables next/font did, so nothing that reads them changed.
+//
 // Three families at 11 weights was a lot to load on a public landing page. Plus Jakarta is the
 // display family — every `font-display` site in src/ pairs it with a type style of 600, 700 or
 // 800, and none with font-normal/font-medium, so 400 and 500 were downloaded and never drawn.
 // Hanken (body) and JetBrains (mono) weights are all still in use; if the LCP budget needs more,
 // measure before cutting those, since dropping a used weight causes synthetic-bold fallback.
-const plusJakarta = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta",
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-});
+// These are variable fonts, so each language subset is one file covering all its weights.
 
-const hanken = Hanken_Grotesk({
-  variable: "--font-hanken",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  weight: ["400", "700"],
-});
+/** The latin files, preloaded as next/font did; the other subsets load only when a page needs them. */
+const PRELOADED_FONTS = [
+  "/fonts/plus-jakarta-sans-latin.woff2",
+  "/fonts/hanken-grotesk-latin.woff2",
+  "/fonts/jetbrains-mono-latin.woff2",
+];
 
 export const metadata: Metadata = {
   title: {
@@ -68,13 +60,8 @@ export const metadata: Metadata = {
       "Connecting 450M Offline Stores to the World Through a Map, a Photo, and a Pickup.",
     images: ["/og-image.png"],
   },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.png", type: "image/png" },
-    ],
-    apple: "/apple-touch-icon.png",
-  },
+  // Icons come from Next's file conventions in this folder: favicon.ico (16/32/48), icon1.svg,
+  // icon2.png and apple-icon.png. Listing paths here instead linked a /favicon.ico that did not exist.
 };
 
 export default function RootLayout({
@@ -84,18 +71,25 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {PRELOADED_FONTS.map((href) => (
+          <link
+            key={href}
+            rel="preload"
+            href={href}
+            as="font"
+            type="font/woff2"
+            crossOrigin="anonymous"
+          />
+        ))}
+      </head>
       {/* `font-body` sets the family; `text-body-md` sets the base size/line-height. This
           previously read `font-body-md`, which resolved to a family only — the document had no
           base type size at all. */}
       <body
-        className={`${plusJakarta.variable} ${hanken.variable} ${jetbrainsMono.variable} font-body text-body-md antialiased bg-background text-on-surface min-h-screen flex flex-col selection:bg-primary-container selection:text-on-primary-container`}
+        className={`font-body text-body-md antialiased bg-background text-on-surface min-h-screen flex flex-col selection:bg-primary-container selection:text-on-primary-container`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ThemeProvider>
           <QueryProvider>
             {children}
             <Toaster position="top-right" theme="system" richColors />

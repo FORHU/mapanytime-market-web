@@ -59,10 +59,11 @@ export default function BuyerLayout({
           className="font-display text-lg md:text-xl font-bold flex items-center gap-2"
         >
           <Image
-            src="/logo.png"
-            alt="MapAnytime Logo"
+            src="/brand/mark-tile.svg"
+            alt=""
             width={28}
             height={28}
+            unoptimized
             className="w-7 h-7 rounded-md object-contain"
           />
           <span className="text-primary">Map</span>Anytime

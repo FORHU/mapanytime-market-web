@@ -1,448 +1,607 @@
 "use client";
 
 import {
-  useReducer,
+  Fragment,
+  useEffect,
   useRef,
+  useState,
   type CSSProperties,
-  type KeyboardEvent,
+  type RefObject,
 } from "react";
 import Image from "next/image";
 import clsx from "clsx";
 import {
-  ArrowDownRight,
-  ArrowLeft,
-  ArrowRight,
   BellRing,
   Check,
-  Loader,
+  Clock,
+  Coffee,
+  MapPin,
   Plus,
-  Pointer,
-  RotateCcw,
-  Send,
   ShoppingBag,
-  ShoppingCart,
+  Store,
+  Ticket,
 } from "lucide-react";
-import { Bezel } from "./ui/Bezel";
-import { PillButton } from "./ui/PillButton";
 import { Reveal } from "./ui/Reveal";
 import {
-  CART_ITEMS,
   HOW_STEPS,
   MAP_STORES,
-  SHOP_PRODUCT,
+  STORY_EXTRA_ITEM,
+  STORY_ORDER_CODE,
+  STORY_PRODUCTS,
+  STORY_STORE,
+  STORY_YOU,
 } from "../landing.content";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useFrameWhileVisible } from "../hooks/useFrameWhileVisible";
+import {
+  STORY_BEATS,
+  follow,
+  sceneAt,
+  storyVars,
+  visibleLayers,
+  type StoryVar,
+} from "../howStory";
 
-/* ── State ──────────────────────────────────────────────────────────────── */
+/* The cart already holds the coffee from another store when the story starts. */
+const ORDER_TOTAL =
+  STORY_PRODUCTS.reduce((sum, p) => sum + p.price, 0) + STORY_EXTRA_ITEM.price;
+const ITEM_COUNT = STORY_PRODUCTS.length + 1;
 
-interface DemoState {
-  step: number;
-  /** Which steps the visitor has completed by trying the step's action. */
-  done: boolean[];
-  store: number;
-  added: boolean;
-  placed: boolean;
-}
-
-type DemoAction =
-  | { type: "go"; step: number }
-  | { type: "pickStore"; store: number }
-  | { type: "add" }
-  | { type: "place" }
-  | { type: "reset" };
-
-const INITIAL: DemoState = {
-  step: 0,
-  done: HOW_STEPS.map(() => false),
-  store: 0,
-  added: false,
-  placed: false,
-};
-
-function markDone(done: boolean[], i: number) {
-  return done.map((d, k) => (k === i ? true : d));
-}
-
-function reducer(state: DemoState, action: DemoAction): DemoState {
-  switch (action.type) {
-    case "go":
-      return { ...state, step: action.step };
-    case "pickStore":
-      return { ...state, store: action.store, done: markDone(state.done, 0) };
-    case "add":
-      return { ...state, added: true, done: markDone(state.done, 1) };
-    case "place":
-      return { ...state, placed: true, done: markDone(state.done, 2) };
-    case "reset":
-      return INITIAL;
-  }
-}
-
-/* ── Section ────────────────────────────────────────────────────────────── */
+const peso = (n: number) => `₱${n}`;
+const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
 /**
- * "How it works" as a guided walkthrough: four big step tabs drive one demo stage, and each of the
- * first three steps has a single action the visitor can try. Nothing advances on its own.
+ * "How it works" as a scroll story. A tall track holds a sticky stage; scrolling through the track
+ * plays five connected scenes (find, explore, choose, check out, pick up) as the section's full
+ * background, with the matching headline over it. Timing lives in `howStory.ts`. Each frame writes custom
+ * properties and classes straight onto the stage, so the only re-render is the scene change.
  */
 export function LandingHowItWorks() {
   const reduce = useReducedMotion();
-  const [state, dispatch] = useReducer(reducer, INITIAL);
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const last = HOW_STEPS.length - 1;
+  const [scene, setScene] = useState(0);
 
-  const go = (step: number, focus = false) => {
-    dispatch({ type: "go", step });
-    if (focus) tabRefs.current[step]?.focus();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const coreRef = useRef<HTMLDivElement>(null);
+  const pinRef = useRef<HTMLSpanElement>(null);
+  const cartRef = useRef<HTMLSpanElement>(null);
+  const cartCountRef = useRef<HTMLElement>(null);
+  const totalRef = useRef<HTMLElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const frame = useRef({
+    /** Progress as painted, chasing the scroll position (see `follow`). */
+    p: -1,
+    /** Time of the last frame, for frame-rate independent smoothing. */
+    t: 0,
+    pinX: -1,
+    pinY: -1,
+    scene: 0,
+    reduce,
+    beats: new Set<string>(),
+    /** Last value written per style key, so unchanged values cost no style work. */
+    written: new Map<string, string>(),
+  });
+
+  // A change of preference repaints the current position in the new mode.
+  useEffect(() => {
+    frame.current.reduce = reduce;
+    frame.current.p = -1;
+    frame.current.written.clear();
+  }, [reduce]);
+
+  /** Sets a style property only when its value changed; `id` names the slot in the cache. */
+  const write = (el: HTMLElement, prop: string, value: string, id = prop) => {
+    const written = frame.current.written;
+    if (written.get(id) === value) return;
+    written.set(id, value);
+    el.style.setProperty(prop, value);
   };
 
-  const onTabKey = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
-    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-    e.preventDefault();
-    const delta = e.key === "ArrowRight" ? 1 : -1;
-    go((i + delta + HOW_STEPS.length) % HOW_STEPS.length, true);
+  /** A product photo leaves its card and drops into the cart bubble. */
+  const flyToCart = (index: number) => {
+    const card = cardRefs.current[index];
+    const crop = card?.querySelector<HTMLElement>(".lp-crop");
+    const cart = cartRef.current;
+    if (!crop || !cart || typeof crop.animate !== "function") return;
+    const from = crop.getBoundingClientRect();
+    const to = cart.getBoundingClientRect();
+    const ghost = crop.cloneNode() as HTMLElement;
+    ghost.classList.add("lp-ghost");
+    Object.assign(ghost.style, {
+      left: `${from.left}px`,
+      top: `${from.top}px`,
+      width: `${from.width}px`,
+    });
+    document.body.appendChild(ghost);
+    const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+    const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+    const flight = ghost.animate(
+      [
+        { transform: "none", opacity: 1 },
+        {
+          transform: `translate(${dx * 0.45}px, ${dy * 0.45 - 90}px) scale(0.6) rotate(-8deg)`,
+          opacity: 1,
+          offset: 0.5,
+        },
+        {
+          transform: `translate(${dx}px, ${dy}px) scale(0.12)`,
+          opacity: 0.2,
+        },
+      ],
+      { duration: 720, easing: "cubic-bezier(0.5, 0, 0.3, 1)" },
+    );
+    flight.onfinish = () => {
+      ghost.remove();
+      cart.classList.remove("lp-bump");
+      void cart.offsetWidth; // restart the bump animation
+      cart.classList.add("lp-bump");
+    };
   };
+
+  /** The order total ticks up as the items land in the checkout sheet. */
+  const countUp = () => {
+    const el = totalRef.current;
+    if (!el) return;
+    const start = performance.now();
+    const step = (now: number) => {
+      const k = clamp((now - start) / 900);
+      el.textContent = peso(Math.round(ORDER_TOTAL * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+
+  const paint = (p: number) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const state = frame.current;
+
+    const vars = storyVars(p, state.reduce);
+    for (const key of Object.keys(vars) as StoryVar[]) {
+      write(stage, `--${key}`, vars[key].toFixed(4));
+    }
+    const layers = visibleLayers(p);
+    stage.classList.toggle("show-map", layers.map);
+    stage.classList.toggle("show-store", layers.store);
+    stage.classList.toggle("show-photo", layers.photo);
+
+    for (const [beat, at] of STORY_BEATS) {
+      const on = p >= at;
+      if (on === state.beats.has(beat)) continue;
+      if (on) state.beats.add(beat);
+      else state.beats.delete(beat);
+      stage.classList.toggle(`lp-${beat}`, on);
+      if (!on || state.reduce) continue;
+      if (beat.startsWith("b-add")) flyToCart(Number(beat.slice(5)) - 1);
+      if (beat === "b-items") countUp();
+    }
+    if (state.reduce && totalRef.current) {
+      totalRef.current.textContent = peso(ORDER_TOTAL);
+    }
+    if (cartCountRef.current) {
+      const added = STORY_PRODUCTS.filter((_, i) =>
+        state.beats.has(`b-add${i + 1}`),
+      ).length;
+      cartCountRef.current.textContent = String(1 + added);
+    }
+
+    const next = sceneAt(p);
+    if (next !== state.scene) {
+      state.scene = next;
+      setScene(next);
+    }
+  };
+
+  useFrameWhileVisible(trackRef, () => {
+    const track = trackRef.current;
+    const stage = stageRef.current;
+    if (!track || !stage) return;
+    const state = frame.current;
+
+    // All reads first, then writes, so a frame never forces a second layout.
+    const now = performance.now();
+    const dt = state.t ? Math.min(now - state.t, 100) : 16;
+    state.t = now;
+    const vh = window.innerHeight;
+    const box = track.getBoundingClientRect();
+    const length = box.height - vh;
+    const target = length > 0 ? clamp(-box.top / length) : 0;
+    // The story glides after the scroll position instead of stepping with each wheel notch.
+    const p = state.reduce ? target : follow(state.p, target, dt);
+
+    // The store opens out of its pin, so the reveal circle needs the pin's spot in the frame.
+    let pinMoved = false;
+    const core = coreRef.current;
+    const pin = pinRef.current;
+    if (p < 0.42 && core && pin) {
+      const c = core.getBoundingClientRect();
+      const h = pin.getBoundingClientRect();
+      const x = h.left + h.width / 2 - c.left;
+      const y = h.top + h.height / 2 - c.top;
+      if (Math.abs(x - state.pinX) > 0.5 || Math.abs(y - state.pinY) > 0.5) {
+        state.pinX = x;
+        state.pinY = y;
+        pinMoved = true;
+      }
+    }
+
+    if (pinMoved) {
+      stage.style.setProperty("--ox", `${state.pinX}px`);
+      stage.style.setProperty("--oy", `${state.pinY}px`);
+    }
+    if (p !== state.p || pinMoved) {
+      state.p = p;
+      paint(p);
+    }
+  });
 
   return (
-    <section id="how" className="lp-sec" aria-labelledby="lp-how-title">
+    <section id="how" className="lp-sec lp-how" aria-labelledby="lp-how-title">
       <div className="lp-wrap">
         <Reveal className="lp-head">
           <h2 id="lp-how-title" className="lp-h2">
             How it works.
           </h2>
           <p className="lp-lede">
-            Four steps from finding a store to holding your order. Tap a step,
-            or try each one below.
+            From a pin on the map to a bag in your hand, in five steps.
           </p>
         </Reveal>
+      </div>
 
-        <Reveal>
-          <div
-            className="lp-steps"
-            role="tablist"
-            aria-label="How MapAnytime works"
-          >
-            {HOW_STEPS.map((s, i) => {
-              const on = i === state.step;
-              const done = state.done[i] && !on;
-              return (
-                <button
-                  key={s.title}
-                  ref={(el) => {
-                    tabRefs.current[i] = el;
-                  }}
-                  type="button"
-                  role="tab"
-                  id={`lp-step-tab-${i}`}
-                  aria-selected={on}
-                  aria-controls="lp-step-panel"
-                  tabIndex={on ? 0 : -1}
-                  className={clsx("lp-step", on && "is-on", done && "is-done")}
-                  onClick={() => go(i)}
-                  onKeyDown={(e) => onTabKey(e, i)}
+      <div ref={trackRef} className="lp-track">
+        <div
+          ref={stageRef}
+          className="lp-stage"
+          data-scene={scene}
+          style={{ "--ox": "50%", "--oy": "45%" } as CSSProperties}
+        >
+          <div className="lp-copy">
+            <div className="lp-scenes">
+              {HOW_STEPS.map((s, i) => (
+                <div
+                  key={s.heading}
+                  className={clsx(
+                    "lp-sc",
+                    i === scene && "is-on",
+                    i < scene && "is-past",
+                  )}
                 >
-                  <span className="lp-step__num" aria-hidden="true">
-                    {done ? <Check /> : i + 1}
-                  </span>
-                  <strong>{s.title}</strong>
-                  <small>{s.hint}</small>
-                </button>
-              );
-            })}
+                  <h3>
+                    <Words text={s.heading} />
+                  </h3>
+                  <p>{s.body}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </Reveal>
 
-        <Reveal>
-          <Bezel
-            className="lp-stage"
-            id="lp-step-panel"
-            role="tabpanel"
-            aria-labelledby={`lp-step-tab-${state.step}`}
-          >
-            <div className="lp-stage__vis">
-              <DiscoverDemo
-                active={state.step === 0}
-                store={state.store}
-                onPick={(store) => dispatch({ type: "pickStore", store })}
-              />
-              <ShopDemo
-                active={state.step === 1}
-                added={state.added}
-                onAdd={() => dispatch({ type: "add" })}
-              />
-              <PurchaseDemo
-                active={state.step === 2}
-                placed={state.placed}
-                onPlace={() => dispatch({ type: "place" })}
-              />
-              <PickupDemo active={state.step === 3} />
-            </div>
+          <div className="lp-world" aria-hidden="true">
+            <div ref={coreRef} className="lp-world__core">
+              <MapScene pinRef={pinRef} />
+              <div className="lp-layer lp-fog" />
+              <div className="lp-layer lp-dim" />
+              <div className="lp-count">
+                <b>{MAP_STORES.length + 1} stores</b>
+                <span>within 2 km of you</span>
+              </div>
 
-            <div className="lp-stage__txt">
-              {HOW_STEPS.map((s, i) => {
-                const on = i === state.step;
-                const isLast = i === last;
-                return (
-                  <div
-                    key={s.title}
-                    className={clsx("lp-pt", on && "is-on")}
-                    aria-hidden={!on}
-                  >
-                    <h3>{s.heading}</h3>
-                    <p>{s.body}</p>
-                    {s.todo && (
-                      <span
-                        className={clsx("lp-todo", state.done[i] && "is-done")}
-                        aria-live="polite"
-                      >
-                        {state.done[i] ? <Check /> : <Pointer />}
-                        {state.done[i] ? s.doneText : s.todo}
+              <div className="lp-layer lp-shop">
+                <div className="lp-shop__shot" />
+                <div className="lp-layer lp-shop__shade" />
+              </div>
+              <div className="lp-layer lp-dim2" />
+
+              <div className="lp-layer lp-photo">
+                <div className="lp-photo__ph">
+                  <Image
+                    src="/landing/pickup.jpg"
+                    alt=""
+                    fill
+                    sizes="(max-width: 767px) 100vw, 64vw"
+                  />
+                </div>
+              </div>
+
+              <div className="lp-layer lp-veil" />
+
+              <StorePreview />
+
+              <div className="lp-ui">
+                <div className="lp-deck">
+                  {STORY_PRODUCTS.map((prod, i) => (
+                    <div
+                      key={prod.name}
+                      ref={(el) => {
+                        cardRefs.current[i] = el;
+                      }}
+                      className="lp-pcard"
+                      data-card={i + 1}
+                    >
+                      <span className={`lp-crop lp-crop--${prod.crop}`} />
+                      <span className="lp-pcard__b">
+                        <b>{prod.name}</b>
+                        <small>{STORY_STORE.name}</small>
+                        <span className="lp-pcard__row">
+                          <span className="lp-mono lp-pcard__price">
+                            {peso(prod.price)}
+                          </span>
+                          <span className="lp-add">
+                            <Plus className="lp-no" />
+                            <Check className="lp-yes" />
+                            <span className="lp-no">Add</span>
+                            <span className="lp-yes">Added</span>
+                          </span>
+                        </span>
                       </span>
-                    )}
-                    <div className="lp-pt__nav">
-                      {i > 0 && (
-                        <button
-                          type="button"
-                          className="lp-round"
-                          aria-label={`Back to ${HOW_STEPS[i - 1].title}`}
-                          onClick={() => go(i - 1)}
-                        >
-                          <ArrowLeft />
-                        </button>
-                      )}
-                      {isLast ? (
-                        <>
-                          <PillButton href="#install" icon={ArrowDownRight}>
-                            Install the App
-                          </PillButton>
-                          <button
-                            type="button"
-                            className="lp-round"
-                            aria-label="Start over"
-                            onClick={() => dispatch({ type: "reset" })}
-                          >
-                            <RotateCcw />
-                          </button>
-                        </>
-                      ) : (
-                        <PillButton
-                          icon={ArrowRight}
-                          onClick={() => go(i + 1)}
-                          className={clsx(
-                            state.done[i] && !reduce && "lp-btn--nudge",
-                          )}
-                        >
-                          {`Next: ${HOW_STEPS[i + 1].title}`}
-                        </PillButton>
-                      )}
                     </div>
-                  </div>
-                );
-              })}
+                  ))}
+                </div>
+
+                <span ref={cartRef} className="lp-cartb">
+                  <ShoppingBag />
+                  <b ref={cartCountRef}>1</b>
+                </span>
+
+                <Checkout totalRef={totalRef} />
+                <Pickup />
+              </div>
             </div>
-          </Bezel>
-        </Reveal>
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-/* ── Demo panels ────────────────────────────────────────────────────────── */
+/** Splits a headline into masked words that rise in one after another. */
+function Words({ text }: { text: string }) {
+  return text.split(" ").map((word, i) => (
+    <Fragment key={i}>
+      {i > 0 && " "}
+      <span className="lp-w">
+        <span style={{ "--i": i } as CSSProperties}>{word}</span>
+      </span>
+    </Fragment>
+  ));
+}
 
-function DiscoverDemo({
-  active,
-  store,
-  onPick,
-}: {
-  active: boolean;
-  store: number;
-  onPick: (store: number) => void;
-}) {
-  const s = MAP_STORES[store];
+/* ── Scenes ─────────────────────────────────────────────────────────────── */
+
+const at = (x: number, y: number): CSSProperties => ({
+  left: `${x}%`,
+  top: `${y}%`,
+});
+
+/** Find and Explore: the app's map of Baguio, the shopper, nearby stores, and the store's pin. */
+function MapScene({ pinRef }: { pinRef: RefObject<HTMLSpanElement | null> }) {
   return (
-    <div
-      className={clsx("lp-pv lp-pv--map", active && "is-on")}
-      aria-hidden={!active}
-    >
-      <div className="lp-mapbox">
-        <Image
-          src="/landing/app-map.jpg"
-          alt="The MapAnytime app map of Baguio City with store markers"
-          width={1295}
-          height={727}
-          sizes="(max-width: 1000px) 140vw, 1000px"
-        />
-        {MAP_STORES.map((m, i) => (
-          <button
-            key={m.initials}
-            type="button"
-            className="lp-hot"
-            style={
-              { left: `${m.x}%`, top: `${m.y}%`, "--i": i } as CSSProperties
-            }
-            aria-pressed={i === store}
-            aria-label={`Open ${m.name}`}
-            tabIndex={active ? 0 : -1}
-            onClick={() => onPick(i)}
+    <div className="lp-layer lp-cam">
+      <div className="lp-layer lp-tilt">
+        <div className="lp-smap">
+          <Image
+            src="/landing/app-map.jpg"
+            alt=""
+            width={1295}
+            height={727}
+            sizes="(max-width: 767px) 200vw, 110vw"
           />
-        ))}
-      </div>
-      <span className="lp-tap-hint">
-        <Pointer />
-        Tap a store marker
-      </span>
-      <Bezel
-        key={store}
-        size="sm"
-        className="lp-store-card lp-float lp-pop"
-        coreClassName="lp-store-card__body"
-      >
-        <div className="lp-store-card__row">
-          <span className="lp-avatar" style={{ background: s.color }}>
-            {s.initials}
-          </span>
-          <span>
-            <b>{s.name}</b>
-            <small>{s.area}</small>
-          </span>
-        </div>
-        <span className="lp-mono">{s.distance}</span>
-      </Bezel>
-    </div>
-  );
-}
-
-function ShopDemo({
-  active,
-  added,
-  onAdd,
-}: {
-  active: boolean;
-  added: boolean;
-  onAdd: () => void;
-}) {
-  return (
-    <div
-      className={clsx("lp-pv lp-pv--shop", active && "is-on")}
-      aria-hidden={!active}
-    >
-      <Image
-        src="/landing/app-store.jpg"
-        alt="A store page in the MapAnytime app showing its products"
-        fill
-        sizes="(max-width: 1000px) 100vw, 680px"
-      />
-      <span
-        key={added ? "two" : "one"}
-        className={clsx("lp-bag", added && "lp-bump")}
-        aria-label={`Cart, ${added ? 2 : 1} items`}
-      >
-        <ShoppingBag />
-        <b>{added ? 2 : 1}</b>
-      </span>
-      <Bezel
-        size="sm"
-        className="lp-prod lp-float"
-        coreClassName="lp-prod__body"
-      >
-        <span>
-          <b>{SHOP_PRODUCT.name}</b>
-          <small>{SHOP_PRODUCT.store}</small>
-        </span>
-        <button
-          type="button"
-          className={clsx("lp-demo-btn", added && "is-done")}
-          onClick={onAdd}
-          disabled={added}
-          tabIndex={active ? 0 : -1}
-        >
-          {added ? <Check /> : <Plus />}
-          {added ? "Added to cart" : "Add to cart"}
-        </button>
-      </Bezel>
-    </div>
-  );
-}
-
-function PurchaseDemo({
-  active,
-  placed,
-  onPlace,
-}: {
-  active: boolean;
-  placed: boolean;
-  onPlace: () => void;
-}) {
-  return (
-    <div
-      className={clsx("lp-pv lp-pv--cart", active && "is-on")}
-      aria-hidden={!active}
-    >
-      <Bezel
-        size="sm"
-        className="lp-cart lp-float"
-        coreClassName="lp-cart__body"
-      >
-        <div className="lp-cart__head">
-          <b>Your cart</b>
-          <span className="lp-mono">2 stores</span>
-        </div>
-        {CART_ITEMS.map(({ icon: Icon, name, store }) => (
-          <div key={name} className="lp-cart__item">
-            <span className="lp-cart__thumb" aria-hidden="true">
-              <Icon />
-            </span>
-            <span>
-              <b>{name}</b>
-              <small>{store}</small>
-            </span>
-            <span className="lp-mono">x1</span>
+          <div className="lp-mks">
+            {MAP_STORES.map((m, i) => (
+              <span
+                key={m.initials}
+                className="lp-mk"
+                data-mk={i + 1}
+                style={at(m.x, m.y)}
+              >
+                <span className="lp-chip">
+                  {m.name}
+                  <span className="lp-mono">
+                    {m.distance.replace(" away", "")}
+                  </span>
+                </span>
+              </span>
+            ))}
           </div>
-        ))}
-        <div className="lp-cart__status">
-          <span>Order status</span>
-          <span className="lp-tag">
-            {placed ? <Loader /> : <ShoppingCart />}
-            {placed ? "Processing" : "In cart"}
+          <span className="lp-you" style={at(STORY_YOU.x, STORY_YOU.y)} />
+          <span className="lp-spin" style={at(STORY_STORE.x, STORY_STORE.y)}>
+            <span className="lp-spin__shadow" />
+            <span className="lp-spin__body">
+              <span ref={pinRef} className="lp-spin__head" />
+              <span className="lp-spin__ini">{STORY_STORE.initials}</span>
+            </span>
+            <span className="lp-spin__tap" />
+            <span className="lp-chip lp-spin__chip">
+              {STORY_STORE.name}
+              <span className="lp-mono">{STORY_STORE.distance}</span>
+            </span>
           </span>
         </div>
-        <button
-          type="button"
-          className={clsx("lp-demo-btn", placed && "is-done")}
-          onClick={onPlace}
-          disabled={placed}
-          tabIndex={active ? 0 : -1}
-        >
-          {placed ? <Check /> : <Send />}
-          {placed ? "Order placed" : "Place pickup order"}
-        </button>
-      </Bezel>
+      </div>
     </div>
   );
 }
 
-function PickupDemo({ active }: { active: boolean }) {
+/** The store card that pops out of the tapped pin. */
+function StorePreview() {
   return (
-    <div
-      className={clsx("lp-pv lp-pv--pick", active && "is-on")}
-      aria-hidden={!active}
-    >
-      <Image
-        src="/landing/pickup.jpg"
-        alt="A shopper collecting her order at a store counter"
-        fill
-        sizes="(max-width: 1000px) 100vw, 680px"
-      />
-      <Bezel size="sm" className="lp-pick-card lp-float">
-        <div className="lp-note">
-          <span className="lp-note__ring" aria-hidden="true">
-            <BellRing />
-          </span>
+    <div className="lp-preview">
+      <div className="lp-preview__in">
+        <div className="lp-preview__top">
+          <span className="lp-preview__ava">{STORY_STORE.initials}</span>
           <span>
-            <b>Your order is ready for pickup</b>
-            <small>{SHOP_PRODUCT.store}, 1 item</small>
+            <b>{STORY_STORE.name}</b>
+            <small>{STORY_STORE.area}</small>
           </span>
         </div>
-      </Bezel>
+        <div className="lp-preview__meta">
+          <span className="lp-tag">
+            <Clock />
+            {STORY_STORE.hours}
+          </span>
+          <span className="lp-tag">
+            <MapPin />
+            {STORY_STORE.distance}
+          </span>
+        </div>
+      </div>
     </div>
   );
+}
+
+/** Check out: the cart bubble grows into one checkout sheet for both stores. */
+function Checkout({ totalRef }: { totalRef: RefObject<HTMLElement | null> }) {
+  return (
+    <div className="lp-sheet-pos">
+      <div className="lp-sheet">
+        <div className="lp-sheet__core">
+          <div className="lp-sheet__head">
+            <b>Your cart</b>
+            <span>2 stores, {ITEM_COUNT} items</span>
+          </div>
+          <div className="lp-grp">
+            <span className="lp-grp__name">
+              <Store />
+              {STORY_STORE.name}
+            </span>
+            {STORY_PRODUCTS.map((prod, i) => (
+              <div
+                key={prod.name}
+                className="lp-line"
+                style={{ "--i": i } as CSSProperties}
+              >
+                <span className={`lp-crop lp-crop--${prod.crop}`} />
+                <span>
+                  <b>{prod.name}</b>
+                  <small>{prod.size}</small>
+                </span>
+                <span className="lp-mono">{peso(prod.price)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="lp-grp">
+            <span className="lp-grp__name">
+              <Store />
+              {STORY_EXTRA_ITEM.store}
+            </span>
+            <div
+              className="lp-line"
+              style={{ "--i": STORY_PRODUCTS.length } as CSSProperties}
+            >
+              <span className="lp-line__thumb">
+                <Coffee />
+              </span>
+              <span>
+                <b>{STORY_EXTRA_ITEM.name}</b>
+                <small>{STORY_EXTRA_ITEM.size}</small>
+              </span>
+              <span className="lp-mono">{peso(STORY_EXTRA_ITEM.price)}</span>
+            </div>
+          </div>
+          <div className="lp-sum">
+            <span>Total</span>
+            <b ref={totalRef} className="lp-mono">
+              {peso(ORDER_TOTAL)}
+            </b>
+          </div>
+          <div className="lp-place">
+            <span className="lp-place__fill" />
+            <span className="lp-no">Place order</span>
+            <span className="lp-yes">
+              <Check />
+              Order placed
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Pick up: the ready notification, then the pickup pass is scanned at the counter. */
+function Pickup() {
+  return (
+    <>
+      <div className="lp-notif">
+        <span className="lp-notif__ico">
+          <BellRing />
+        </span>
+        <span>
+          <span className="lp-notif__top">
+            <span>MapAnytime</span>
+            <span>now</span>
+          </span>
+          <span className="lp-notif__ready">
+            <b>Your order is ready for pickup</b>
+            <small>
+              {STORY_STORE.name}, {STORY_PRODUCTS.length} items
+            </small>
+          </span>
+          <span className="lp-notif__done">
+            <b>Order picked up</b>
+            <small>Thanks for shopping at {STORY_STORE.name}.</small>
+          </span>
+        </span>
+      </div>
+
+      <div className="lp-pass">
+        <div className="lp-pass__core">
+          <span className="lp-pass__label">
+            <Ticket />
+            Pickup pass
+          </span>
+          <span className="lp-qr">
+            <PassCode />
+            <span className="lp-qr__scan" />
+          </span>
+          <span className="lp-mono lp-pass__code">#{STORY_ORDER_CODE}</span>
+          <small>
+            Show this at the counter.
+            <br />
+            {STORY_STORE.address}
+          </small>
+          <span className="lp-stamp">
+            <Check />
+            Picked up
+          </span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/*
+ * A stand-in for the pass's scan code: a fixed pseudo-random grid with the three corner finder
+ * squares, drawn on a 25x25 canvas and scaled up with crisp pixels. It is illustration only and
+ * encodes nothing.
+ */
+function PassCode() {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const ctx = ref.current?.getContext("2d");
+    if (!ctx) return;
+    const n = 25;
+    let seed = 4820;
+    const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, n, n);
+    ctx.fillStyle = "#0b1620";
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) if (rnd() > 0.52) ctx.fillRect(x, y, 1, 1);
+    }
+    for (const [x, y] of [
+      [0, 0],
+      [n - 7, 0],
+      [0, n - 7],
+    ]) {
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(Math.max(0, x - 1), Math.max(0, y - 1), 8, 8);
+      ctx.fillStyle = "#0b1620";
+      ctx.fillRect(x, y, 7, 7);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(x + 1, y + 1, 5, 5);
+      ctx.fillStyle = "#0b1620";
+      ctx.fillRect(x + 2, y + 2, 3, 3);
+    }
+  }, []);
+  return <canvas ref={ref} width={25} height={25} />;
 }
