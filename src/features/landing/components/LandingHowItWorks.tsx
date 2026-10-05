@@ -90,13 +90,6 @@ export function LandingHowItWorks() {
     flights: [] as number[],
   });
 
-  // A change of preference repaints the current position in the new mode.
-  useEffect(() => {
-    frame.current.reduce = reduce;
-    frame.current.p = -1;
-    frame.current.written.clear();
-  }, [reduce]);
-
   /** The elements under the stage that `selector` names, cached per selector. */
   const targetsFor = (stage: HTMLElement, selector: string) => {
     const state = frame.current;
@@ -237,10 +230,11 @@ export function LandingHowItWorks() {
     }
   };
 
-  useFrameWhileVisible(trackRef, () => {
+  // Runs only while the story moves: on scroll, then until it has caught up and settled.
+  const requestFrame = useFrameWhileVisible(trackRef, () => {
     const track = trackRef.current;
     const stage = stageRef.current;
-    if (!track || !stage) return;
+    if (!track || !stage) return false;
     const state = frame.current;
 
     // All reads first, then writes, so a frame never forces a second layout.
@@ -286,7 +280,17 @@ export function LandingHowItWorks() {
       state.p = p;
       paint(p);
     }
+    // Still settling while the glide catches up, the pin moves, or a photo waits to fly.
+    return p !== target || pinMoved || state.flights.length > 0;
   });
+
+  // A change of preference repaints the current position in the new mode.
+  useEffect(() => {
+    frame.current.reduce = reduce;
+    frame.current.p = -1;
+    frame.current.written.clear();
+    requestFrame();
+  }, [reduce, requestFrame]);
 
   return (
     <section id="how" className="lp-sec lp-how" aria-labelledby="lp-how-title">
