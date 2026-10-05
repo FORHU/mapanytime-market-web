@@ -1,8 +1,14 @@
 /* eslint-disable @next/next/no-img-element -- next/image is stubbed with a plain img in tests */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { LandingHowItWorks } from "../LandingHowItWorks";
 import { HOW_STEPS } from "@/features/landing/landing.content";
+import {
+  PIN_ORIGIN_TARGETS,
+  STORY_VAR_TARGETS,
+} from "@/features/landing/howStory";
 
 vi.mock("next/image", () => ({
   default: ({ alt, src }: { alt: string; src: string }) => (
@@ -64,5 +70,41 @@ describe("LandingHowItWorks", () => {
     render(<LandingHowItWorks />);
 
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("writes each story value to every element whose CSS reads it", () => {
+    const { container } = render(<LandingHowItWorks />);
+    const css = readFileSync(
+      resolve("src/features/landing/landing.css"),
+      "utf8",
+    ).replace(/\/\*[\s\S]*?\*\//g, "");
+    const targets: Record<string, string> = {
+      ...STORY_VAR_TARGETS,
+      ox: PIN_ORIGIN_TARGETS,
+      oy: PIN_ORIGIN_TARGETS,
+    };
+
+    for (const [name, selector] of Object.entries(targets)) {
+      const written = Array.from(container.querySelectorAll(selector));
+      expect(written.length, `--${name} has no element`).toBeGreaterThan(0);
+
+      for (const [, selectors, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        if (!body.includes(`var(--${name})`)) continue;
+        for (const sel of selectors.split(",")) {
+          // The element the rule styles: its last compound, without a pseudo-element.
+          const subject = sel
+            .trim()
+            .split(/\s+|>/)
+            .at(-1)!
+            .replace(/::?(before|after)$/, "");
+          for (const el of container.querySelectorAll(subject)) {
+            expect(
+              written.some((target) => target.contains(el)),
+              `--${name} is not written where "${sel.trim()}" reads it`,
+            ).toBe(true);
+          }
+        }
+      }
+    }
   });
 });

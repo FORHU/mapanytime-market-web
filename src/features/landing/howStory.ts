@@ -80,6 +80,33 @@ export function storyVars(
   };
 }
 
+/*
+ * Where each value is written: the elements whose CSS reads it (their descendants inherit it).
+ * Writing a custom property on the stage itself would restyle the whole scene every frame, which
+ * costs a phone several milliseconds; written here it touches only the few elements that use it.
+ * A new `var(--x)` in landing.css needs its element listed here (a test checks this).
+ */
+export const STORY_VAR_TARGETS: Record<StoryVar, string> = {
+  tilt: ".lp-tilt, .lp-fog",
+  dim: ".lp-dim",
+  zoom: ".lp-mks, .lp-spin__chip, .lp-count",
+  zs: ".lp-smap, .lp-preview",
+  reveal: ".lp-shop, .lp-preview",
+  shop: ".lp-shop__shot, .lp-pcard",
+  cA: '.lp-pcard[data-card="1"]',
+  cB: '.lp-pcard[data-card="2"], .lp-shop__shade',
+  cC: '.lp-pcard[data-card="3"]',
+  sheet: ".lp-dim2, .lp-pcard, .lp-cartb, .lp-sheet",
+  fill: ".lp-place__fill",
+  exit: ".lp-sheet",
+  pickIn: ".lp-photo",
+  pick: ".lp-photo",
+  pass: ".lp-pass",
+};
+
+/** Where the pin's position in the frame (`--ox`, `--oy`) is written. */
+export const PIN_ORIGIN_TARGETS = ".lp-shop, .lp-preview";
+
 /** One-off moments, as `[class on the stage, progress where it switches on]`. */
 export const STORY_BEATS = [
   ["b-you", 0.012],
