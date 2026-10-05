@@ -124,12 +124,24 @@ export function LandingFeatures() {
     const root = rootRef.current;
     if (!root || reduce) return;
     const vh = window.innerHeight;
-    root.querySelectorAll<HTMLElement>("[data-par]").forEach((el) => {
-      const r = el.getBoundingClientRect();
-      if (r.bottom < -200 || r.top > vh + 200) return;
-      const offset = (r.top + r.height / 2 - vh / 2) * -Number(el.dataset.par);
-      el.style.setProperty("--par", offset.toFixed(1));
-    });
+    // Measure every block before writing any, so one write never forces the next read's layout.
+    const offsets = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-par]"),
+      (el) => {
+        const r = el.getBoundingClientRect();
+        if (r.bottom < -200 || r.top > vh + 200) return null;
+        const offset =
+          (r.top + r.height / 2 - vh / 2) * -Number(el.dataset.par);
+        return [el, offset.toFixed(1)] as const;
+      },
+    );
+    for (const entry of offsets) {
+      if (!entry) continue;
+      const [el, offset] = entry;
+      if (el.style.getPropertyValue("--par") !== offset) {
+        el.style.setProperty("--par", offset);
+      }
+    }
   });
 
   return (

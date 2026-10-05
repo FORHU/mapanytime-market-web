@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import clsx from "clsx";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
@@ -14,14 +14,28 @@ const WORDS = ["Shop", "the", "map,"];
  * Full-bleed hero over a slow cycle of photos. The progress bar under the active tab is a CSS
  * animation; its `animationend` advances the slide, so hovering the tabs (which pauses the bar)
  * pauses the cycle too. With reduced motion there is no autoplay, but the tabs still switch slides.
+ * Scrolled out of view, the cycle pauses the same way, so it costs nothing behind the sections below.
  */
 export function LandingHero() {
   const reduce = useReducedMotion();
   const [current, setCurrent] = useState(0);
   const next = () => setCurrent((c) => (c + 1) % HERO_SLIDES.length);
 
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    // An attribute rather than a class, so React's className never clears it.
+    const io = new IntersectionObserver(([entry]) =>
+      el.toggleAttribute("data-away", !entry.isIntersecting),
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
     <section
+      ref={ref}
       id="top"
       className={clsx("lp-hero", !reduce && "lp-autoplay")}
       aria-label="Introduction"
