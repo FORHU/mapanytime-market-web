@@ -62,10 +62,25 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref || github.ref_name }}
 
+      # An unset variable makes configure-aws-credentials omit role-to-assume
+      # entirely and fail with "Could not load credentials from any providers",
+      # which says nothing about the real cause. Fail here with the fix instead.
+      - name: Check the deploy role is configured
+        env:
+          ROLE: ${{ vars.AWS_DEV_DEPLOY_ROLE_ARN || secrets.AWS_DEV_DEPLOY_ROLE_ARN }}
+        run: |
+          if [ -z "${ROLE:-}" ]; then
+            echo "::error::AWS_DEV_DEPLOY_ROLE_ARN is not set for this repository."
+            echo "::error::Settings > Secrets and variables > Actions > the VARIABLES tab."
+            echo "::error::Value: arn:aws:iam::617163942417:role/forhu-deploy"
+            exit 1
+          fi
+          # An ARN is not a secret; printing it exposes a typo or stray space.
+          echo "deploy role: [$ROLE]"
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_DEV_DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ vars.AWS_DEV_DEPLOY_ROLE_ARN || secrets.AWS_DEV_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Check the build-time values are set
