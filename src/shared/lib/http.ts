@@ -221,10 +221,18 @@ export async function fetcher<T>(
         }
       }
 
+      const retryAfterHeader = res.headers.get("retry-after");
+      const retryAfterSeconds = retryAfterHeader
+        ? parseInt(retryAfterHeader, 10)
+        : undefined;
+
       throw new ApiError(message, category, {
         status: res.status,
         code: payload?.code,
         details: payload?.details,
+        retryAfter: !isNaN(retryAfterSeconds as number)
+          ? retryAfterSeconds
+          : undefined,
       });
     }
 

@@ -18,6 +18,7 @@ export class ApiError extends Error {
   status?: number;
   code?: string;
   details?: Record<string, string[]>;
+  retryAfter?: number;
 
   constructor(
     message: string,
@@ -26,6 +27,7 @@ export class ApiError extends Error {
       status?: number;
       code?: string;
       details?: Record<string, string[]>;
+      retryAfter?: number;
     },
   ) {
     super(message);
@@ -35,5 +37,6 @@ export class ApiError extends Error {
     this.status = opts?.status;
     this.code = opts?.code;
     this.details = opts?.details;
+    this.retryAfter = opts?.retryAfter;
   }
 }

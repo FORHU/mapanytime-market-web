@@ -9,6 +9,7 @@ import {
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ApiError } from "@/shared/errors/api-error";
 import { routeError } from "@/shared/errors/error-router";
 import { getRetryCount } from "@/shared/errors/retry-policy";
 import { logError } from "@/shared/errors/error-telemetry";
@@ -88,6 +89,16 @@ export default function QueryProvider({
           refetchOnWindowFocus: true,
           refetchOnMount: true,
           retry: (count, error) => count < getRetryCount(error),
+          retryDelay: (attemptIndex, error) => {
+            if (
+              error instanceof ApiError &&
+              error.status === 429 &&
+              error.retryAfter
+            ) {
+              return error.retryAfter * 1000;
+            }
+            return Math.min(1000 * 2 ** attemptIndex, 30000);
+          },
         },
       },
     });
