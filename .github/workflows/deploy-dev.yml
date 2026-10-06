@@ -50,7 +50,7 @@ jobs:
     # Native arm64: the host is Graviton. A Next.js build under QEMU takes
     # hours and looks hung, so never cross-build this one.
     runs-on: ubuntu-24.04-arm
-    environment: dev
+    environment: staging
 
     permissions:
       id-token: write
