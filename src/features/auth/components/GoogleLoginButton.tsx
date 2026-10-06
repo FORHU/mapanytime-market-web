@@ -138,5 +138,13 @@ export default function GoogleLoginButton({
 
   if (!env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) return null;
 
-  return <div ref={containerRef} className="flex justify-center mt-3" />;
+  // Google's button is an iframe whose page has no dark color scheme. Chrome paints an iframe
+  // whose scheme differs from its embedder's with an opaque white background, so in dark mode
+  // the button sat in a white box. Matching the iframe's light scheme keeps it transparent.
+  return (
+    <div
+      ref={containerRef}
+      className="flex justify-center mt-3 [color-scheme:light]"
+    />
+  );
 }

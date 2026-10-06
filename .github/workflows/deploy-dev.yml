@@ -1,0 +1,234 @@
+name: Deploy Dev
+
+# FORHU/mapanytime-market-web → the shared dev host (ap-southeast-1).
+#
+# This repo's default branch is `staging`, not `main`. workflow_dispatch only
+# appears in the Actions tab when the file is on the DEFAULT branch, so commit
+# this to `staging` or the "Run workflow" button never shows up.
+#
+# BEFORE THE FIRST RUN
+#   1. Repository variable:
+#        AWS_DEV_DEPLOY_ROLE_ARN = arn:aws:iam::617163942417:role/forhu-deploy
+#   2. Set NEXT_PUBLIC_API_URL and NEXT_PUBLIC_SITE_URL in the dev environment.
+#      Both are baked into the client bundle by `next build`, so changing one
+#      needs a rebuild, not a restart.
+#
+# The API is reached through Caddy on the same hostname — /api/* and
+# /socket.io/* route to the API container on 4001, everything else here on
+# 4000. So both URLs are just https://dev.mapanytime.com.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag or SHA to deploy"
+        required: true
+        default: staging
+
+concurrency:
+  group: forhu-dev-mapanytime-web
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-southeast-1
+  ACCOUNT_ID: "617163942417"
+  INSTANCE_ID: i-0f95a93145ea25e7a
+  ECR_REPOSITORY: mapanytime-web
+  CONTAINER: mapanytime-web
+  NETWORK: forhu-dev
+  HOST_PORT: "4000"
+  # The runtime stage sets PORT=3000 and runs Next's standalone server.js.
+  # This is NOT the 4000 in `next dev -p 4000` — that is the dev server only.
+  APP_PORT: "3000"
+  ENV_PARAM: /forhu-dev/mapanytime-web/env
+  SHARED_ENV: /opt/forhu-dev/credentials/mapanytime.env
+  MERGED_ENV: /opt/forhu-dev/mapanytime-web.env
+
+jobs:
+  deploy:
+    name: Build and deploy (mapanytime web dev)
+    # Native arm64: the host is Graviton. A Next.js build under QEMU takes
+    # hours and looks hung, so never cross-build this one.
+    runs-on: ubuntu-24.04-arm
+    environment: staging
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref_name }}
+
+      # An unset variable makes configure-aws-credentials omit role-to-assume
+      # entirely and fail with "Could not load credentials from any providers",
+      # which says nothing about the real cause. Fail here with the fix instead.
+      - name: Check the deploy role is configured
+        env:
+          ROLE: ${{ vars.AWS_DEV_DEPLOY_ROLE_ARN || secrets.AWS_DEV_DEPLOY_ROLE_ARN }}
+        run: |
+          if [ -z "${ROLE:-}" ]; then
+            echo "::error::AWS_DEV_DEPLOY_ROLE_ARN is not set for this repository."
+            echo "::error::Settings > Secrets and variables > Actions > the VARIABLES tab."
+            echo "::error::Value: arn:aws:iam::617163942417:role/forhu-deploy"
+            exit 1
+          fi
+          # An ARN is not a secret; printing it exposes a typo or stray space.
+          echo "deploy role: [$ROLE]"
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEV_DEPLOY_ROLE_ARN || secrets.AWS_DEV_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check the build-time values are set
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || secrets.NEXT_PUBLIC_SITE_URL }}
+        run: |
+          set -euo pipefail
+          # Both are zod-validated as URLs at runtime, so an empty value does
+          # not fail the build — it ships a bundle that throws on first use.
+          # Fail here instead.
+          fail=0
+          for k in NEXT_PUBLIC_API_URL NEXT_PUBLIC_SITE_URL; do
+            if [ -z "${!k:-}" ]; then
+              echo "::error::$k is empty. It is compiled into the client bundle at build time."
+              echo "::error::Set it as a dev-environment variable before deploying."
+              fail=1
+            fi
+          done
+          [ "$fail" = "0" ] || exit 1
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          # dev- prefix so a dev image can never be confused with, or expire
+          # alongside, the production-* tags in the same repository.
+          echo "tag=dev-$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "registry=${{ env.ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com" >> "$GITHUB_OUTPUT"
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region "${{ env.AWS_REGION }}" \
+            | docker login --username AWS --password-stdin "${{ steps.tag.outputs.registry }}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # NEXT_PUBLIC_* are build args, not runtime env: the builder stage turns
+      # them into ENV and `pnpm build` inlines them into the client bundle.
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/arm64
+          provenance: false
+          tags: ${{ steps.tag.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || secrets.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL || secrets.NEXT_PUBLIC_SITE_URL }}
+            NEXT_PUBLIC_APP_ENV=development
+            NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${{ vars.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }}
+            NEXT_PUBLIC_FACEBOOK_APP_ID=${{ vars.NEXT_PUBLIC_FACEBOOK_APP_ID || secrets.NEXT_PUBLIC_FACEBOOK_APP_ID }}
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID || secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+            NEXT_PUBLIC_SOCKET_SERVER_URL=${{ vars.NEXT_PUBLIC_SOCKET_SERVER_URL || secrets.NEXT_PUBLIC_SOCKET_SERVER_URL }}
+
+      # The same values again as runtime env, for the server-side renders that
+      # read them (sitemap.ts and the store pages fetch on the server).
+      - name: Publish project env to Parameter Store
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || secrets.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_SOCKET_SERVER_URL: ${{ vars.NEXT_PUBLIC_SOCKET_SERVER_URL || secrets.NEXT_PUBLIC_SOCKET_SERVER_URL }}
+          NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ vars.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }}
+          NEXT_PUBLIC_FACEBOOK_APP_ID: ${{ vars.NEXT_PUBLIC_FACEBOOK_APP_ID || secrets.NEXT_PUBLIC_FACEBOOK_APP_ID }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID || secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          umask 077
+          {
+            printf 'NODE_ENV=production\n'
+            printf 'PORT=%s\n' "${{ env.APP_PORT }}"
+            printf 'HOSTNAME=0.0.0.0\n'
+            printf 'NEXT_PUBLIC_APP_ENV=development\n'
+          } > env.tmp
+
+          for k in NEXT_PUBLIC_API_URL NEXT_PUBLIC_SITE_URL \
+                   NEXT_PUBLIC_SOCKET_SERVER_URL NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN \
+                   NEXT_PUBLIC_FACEBOOK_APP_ID NEXT_PUBLIC_GOOGLE_CLIENT_ID; do
+            v="${!k:-}"
+            if [ -n "$v" ]; then printf '%s=%s\n' "$k" "$v" >> env.tmp; fi
+          done
+
+          aws ssm put-parameter \
+            --name "${{ env.ENV_PARAM }}" \
+            --type SecureString --overwrite \
+            --value "file://env.tmp" \
+            --region "${{ env.AWS_REGION }}" > /dev/null
+          rm -f env.tmp
+
+      - name: Deploy via SSM
+        id: send
+        env:
+          REGISTRY: ${{ steps.tag.outputs.registry }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          IMAGE="${REGISTRY}/${{ env.ECR_REPOSITORY }}:${TAG}"
+
+          COMMANDS=(
+            "set -euo pipefail"
+            "cat ${{ env.SHARED_ENV }} > ${{ env.MERGED_ENV }}"
+            "aws ssm get-parameter --name ${{ env.ENV_PARAM }} --with-decryption --region ${{ env.AWS_REGION }} --query Parameter.Value --output text >> ${{ env.MERGED_ENV }}"
+            "chmod 600 ${{ env.MERGED_ENV }}"
+            "aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${REGISTRY}"
+            "docker container prune -f || true"
+            "docker image prune -af || true"
+            "docker pull --platform linux/arm64 ${IMAGE}"
+            "docker rm -f ${{ env.CONTAINER }} 2>/dev/null || true"
+            "docker run -d --name ${{ env.CONTAINER }} --restart unless-stopped --platform linux/arm64 --network ${{ env.NETWORK }} --env-file ${{ env.MERGED_ENV }} -p 127.0.0.1:${{ env.HOST_PORT }}:${{ env.APP_PORT }} --log-opt max-size=10m --log-opt max-file=3 ${IMAGE}"
+            "ok=0; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do if curl -sf -o /dev/null http://127.0.0.1:${{ env.HOST_PORT }}/; then ok=1; echo 'web healthy'; break; fi; sleep 3; done; if [ \$ok = 0 ]; then echo 'web did NOT come up'; docker logs --tail 60 ${{ env.CONTAINER }}; exit 1; fi"
+          )
+
+          # jq builds the JSON, so a quote inside any command cannot break it.
+          PARAMS=$(printf '%s\n' "${COMMANDS[@]}" | jq -R . | jq -sc '{commands: .}')
+
+          CMD_ID=$(aws ssm send-command \
+            --region "${{ env.AWS_REGION }}" \
+            --instance-ids "${{ env.INSTANCE_ID }}" \
+            --document-name AWS-RunShellScript \
+            --comment "deploy ${{ env.CONTAINER }} ${TAG}" \
+            --timeout-seconds 1200 \
+            --parameters "${PARAMS}" \
+            --query Command.CommandId --output text)
+
+          echo "command_id=$CMD_ID" >> "$GITHUB_OUTPUT"
+          echo "SSM command: $CMD_ID"
+
+      - name: Wait for the deploy
+        run: |
+          set -uo pipefail
+          STATUS=Pending
+          for i in $(seq 1 120); do
+            STATUS=$(aws ssm get-command-invocation \
+              --region "${{ env.AWS_REGION }}" \
+              --command-id "${{ steps.send.outputs.command_id }}" \
+              --instance-id "${{ env.INSTANCE_ID }}" \
+              --query Status --output text 2>/dev/null || echo Pending)
+            echo "status: $STATUS"
+            case "$STATUS" in Success|Failed|Cancelled|TimedOut) break ;; esac
+            sleep 10
+          done
+
+          aws ssm get-command-invocation \
+            --region "${{ env.AWS_REGION }}" \
+            --command-id "${{ steps.send.outputs.command_id }}" \
+            --instance-id "${{ env.INSTANCE_ID }}" \
+            --query '[StandardOutputContent,StandardErrorContent]' --output text
+
+          [ "$STATUS" = "Success" ] || { echo "::error::deploy $STATUS"; exit 1; }

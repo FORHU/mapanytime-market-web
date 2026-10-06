@@ -30,6 +30,8 @@
   --lp-on-carbon-2: #9cb0bd;
   --lp-carbon-hair: rgba(255, 255, 255, 0.09);
   --lp-glass: rgba(15, 26, 34, 0.72);
+  /* The glass without its blur, for phones: dense enough to read the same over a moving scene. */
+  --lp-glass-dense: rgba(15, 26, 34, 0.9);
   --lp-overlay: rgba(7, 13, 18, 0.9);
   --lp-inset: inset 0 1px 1px rgba(255, 255, 255, 0.06);
   --lp-soft:
@@ -634,7 +636,9 @@
   .lp-autoplay .lp-tabs [aria-selected="true"] .lp-tabs__bar b {
     animation: lp-fill 6500ms linear both;
   }
-  .lp-autoplay .lp-tabs:hover [aria-selected="true"] .lp-tabs__bar b {
+  .lp-autoplay .lp-tabs:hover [aria-selected="true"] .lp-tabs__bar b,
+  .lp-autoplay[data-away] .lp-tabs [aria-selected="true"] .lp-tabs__bar b,
+  .lp-hero[data-away] .lp-slide.is-on {
     animation-play-state: paused;
   }
   .lp-word > span {
@@ -1836,12 +1840,21 @@
     gap: 14px;
     padding: 16px 18px 20px;
     border-radius: 26px;
-    background: var(--lp-glass);
-    -webkit-backdrop-filter: blur(22px) saturate(160%);
-    backdrop-filter: blur(22px) saturate(160%);
+    background: var(--lp-glass-dense);
     box-shadow:
       0 0 0 1px var(--lp-hair),
       var(--lp-soft-lg);
+  }
+  /*
+   * No frosted glass over the story on phones and tablets. The scene behind these panels changes
+   * every frame, so a backdrop blur is redrawn every frame, and on mid-range phones that alone
+   * froze the story for a second or more. A denser tint reads the same.
+   */
+  .lp-island,
+  .lp-notif {
+    background: var(--lp-glass-dense);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
   .lp-scenes {
     min-height: 158px;

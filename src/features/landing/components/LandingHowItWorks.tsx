@@ -2,6 +2,7 @@
 
 import {
   Fragment,
+  memo,
   useEffect,
   useRef,
   useState,
@@ -34,7 +35,9 @@ import {
 import { useReducedMotion } from "../hooks/useReducedMotion";
 import { useFrameWhileVisible } from "../hooks/useFrameWhileVisible";
 import {
+  PIN_ORIGIN_TARGETS,
   STORY_BEATS,
+  STORY_VAR_TARGETS,
   follow,
   sceneAt,
   storyVars,
@@ -54,7 +57,8 @@ const clamp = (v: number) => Math.min(1, Math.max(0, v));
  * "How it works" as a scroll story. A tall track holds a sticky stage; scrolling through the track
  * plays five connected scenes (find, explore, choose, check out, pick up) as the section's full
  * background, with the matching headline over it. Timing lives in `howStory.ts`. Each frame writes custom
- * properties and classes straight onto the stage, so the only re-render is the scene change.
+ * properties onto the few elements that read them and beat classes onto the stage, so the only
+ * re-render is the scene change, and that re-renders only the headline copy.
  */
 export function LandingHowItWorks() {
   const reduce = useReducedMotion();
@@ -80,31 +84,68 @@ export function LandingHowItWorks() {
     beats: new Set<string>(),
     /** Last value written per style key, so unchanged values cost no style work. */
     written: new Map<string, string>(),
+    /** The elements each value is written to, looked up once (see `STORY_VAR_TARGETS`). */
+    targets: null as Map<string, HTMLElement[]> | null,
+    /** Cards whose photo flies to the cart at the start of the next frame, before any writes. */
+    flights: [] as number[],
   });
 
-  // A change of preference repaints the current position in the new mode.
-  useEffect(() => {
-    frame.current.reduce = reduce;
-    frame.current.p = -1;
-    frame.current.written.clear();
-  }, [reduce]);
-
-  /** Sets a style property only when its value changed; `id` names the slot in the cache. */
-  const write = (el: HTMLElement, prop: string, value: string, id = prop) => {
-    const written = frame.current.written;
-    if (written.get(id) === value) return;
-    written.set(id, value);
-    el.style.setProperty(prop, value);
+  /** The elements under the stage that `selector` names, cached per selector. */
+  const targetsFor = (stage: HTMLElement, selector: string) => {
+    const state = frame.current;
+    state.targets ??= new Map();
+    let els = state.targets.get(selector);
+    if (!els) {
+      els = Array.from(stage.querySelectorAll<HTMLElement>(selector));
+      state.targets.set(selector, els);
+    }
+    return els;
   };
 
-  /** A product photo leaves its card and drops into the cart bubble. */
-  const flyToCart = (index: number) => {
-    const card = cardRefs.current[index];
-    const crop = card?.querySelector<HTMLElement>(".lp-crop");
+  /** Sets a custom property on `selector`'s elements, only when its value changed. */
+  const write = (
+    stage: HTMLElement,
+    selector: string,
+    prop: string,
+    value: string,
+  ) => {
+    const written = frame.current.written;
+    if (written.get(prop) === value) return;
+    written.set(prop, value);
+    for (const el of targetsFor(stage, selector)) {
+      el.style.setProperty(prop, value);
+    }
+  };
+
+  /** Sets text only when it differs, so an unchanged count costs no layout. */
+  const setText = (el: HTMLElement | null, text: string) => {
+    if (el && el.textContent !== text) el.textContent = text;
+  };
+
+  /**
+   * Product photos leave their cards and drop into the cart bubble. Runs at the start of a frame:
+   * every position is measured first, then the ghosts are added, so nothing forces a layout.
+   */
+  const flyToCart = (indexes: number[]) => {
     const cart = cartRef.current;
-    if (!crop || !cart || typeof crop.animate !== "function") return;
-    const from = crop.getBoundingClientRect();
+    if (!cart) return;
+    const flights = indexes.flatMap((index) => {
+      const crop =
+        cardRefs.current[index]?.querySelector<HTMLElement>(".lp-crop");
+      if (!crop || typeof crop.animate !== "function") return [];
+      return [{ crop, from: crop.getBoundingClientRect() }];
+    });
+    if (!flights.length) return;
     const to = cart.getBoundingClientRect();
+    for (const { crop, from } of flights) launch(crop, from, to, cart);
+  };
+
+  const launch = (
+    crop: HTMLElement,
+    from: DOMRect,
+    to: DOMRect,
+    cart: HTMLElement,
+  ) => {
     const ghost = crop.cloneNode() as HTMLElement;
     ghost.classList.add("lp-ghost");
     Object.assign(ghost.style, {
@@ -158,7 +199,7 @@ export function LandingHowItWorks() {
 
     const vars = storyVars(p, state.reduce);
     for (const key of Object.keys(vars) as StoryVar[]) {
-      write(stage, `--${key}`, vars[key].toFixed(4));
+      write(stage, STORY_VAR_TARGETS[key], `--${key}`, vars[key].toFixed(4));
     }
     const layers = visibleLayers(p);
     stage.classList.toggle("show-map", layers.map);
@@ -172,18 +213,15 @@ export function LandingHowItWorks() {
       else state.beats.delete(beat);
       stage.classList.toggle(`lp-${beat}`, on);
       if (!on || state.reduce) continue;
-      if (beat.startsWith("b-add")) flyToCart(Number(beat.slice(5)) - 1);
+      if (beat.startsWith("b-add"))
+        state.flights.push(Number(beat.slice(5)) - 1);
       if (beat === "b-items") countUp();
     }
-    if (state.reduce && totalRef.current) {
-      totalRef.current.textContent = peso(ORDER_TOTAL);
-    }
-    if (cartCountRef.current) {
-      const added = STORY_PRODUCTS.filter((_, i) =>
-        state.beats.has(`b-add${i + 1}`),
-      ).length;
-      cartCountRef.current.textContent = String(1 + added);
-    }
+    if (state.reduce) setText(totalRef.current, peso(ORDER_TOTAL));
+    const added = STORY_PRODUCTS.filter((_, i) =>
+      state.beats.has(`b-add${i + 1}`),
+    ).length;
+    setText(cartCountRef.current, String(1 + added));
 
     const next = sceneAt(p);
     if (next !== state.scene) {
@@ -192,17 +230,20 @@ export function LandingHowItWorks() {
     }
   };
 
-  useFrameWhileVisible(trackRef, () => {
+  // Runs only while the story moves: on scroll, then until it has caught up and settled.
+  const requestFrame = useFrameWhileVisible(trackRef, () => {
     const track = trackRef.current;
     const stage = stageRef.current;
-    if (!track || !stage) return;
+    if (!track || !stage) return false;
     const state = frame.current;
 
     // All reads first, then writes, so a frame never forces a second layout.
     const now = performance.now();
     const dt = state.t ? Math.min(now - state.t, 100) : 16;
     state.t = now;
-    const vh = window.innerHeight;
+    // The stage's own height, not the window's: on phones the window grows when the address bar
+    // hides, while the stage stays at 100svh, so the story would jump.
+    const vh = stage.clientHeight;
     const box = track.getBoundingClientRect();
     const length = box.height - vh;
     const target = length > 0 ? clamp(-box.top / length) : 0;
@@ -225,15 +266,31 @@ export function LandingHowItWorks() {
       }
     }
 
+    // Last of the reads: photos for the beats the previous frame switched on.
+    if (state.flights.length) {
+      flyToCart(state.flights);
+      state.flights = [];
+    }
+
     if (pinMoved) {
-      stage.style.setProperty("--ox", `${state.pinX}px`);
-      stage.style.setProperty("--oy", `${state.pinY}px`);
+      write(stage, PIN_ORIGIN_TARGETS, "--ox", `${state.pinX}px`);
+      write(stage, PIN_ORIGIN_TARGETS, "--oy", `${state.pinY}px`);
     }
     if (p !== state.p || pinMoved) {
       state.p = p;
       paint(p);
     }
+    // Still settling while the glide catches up, the pin moves, or a photo waits to fly.
+    return p !== target || pinMoved || state.flights.length > 0;
   });
+
+  // A change of preference repaints the current position in the new mode.
+  useEffect(() => {
+    frame.current.reduce = reduce;
+    frame.current.p = -1;
+    frame.current.written.clear();
+    requestFrame();
+  }, [reduce, requestFrame]);
 
   return (
     <section id="how" className="lp-sec lp-how" aria-labelledby="lp-how-title">
@@ -275,78 +332,14 @@ export function LandingHowItWorks() {
             </div>
           </div>
 
-          <div className="lp-world" aria-hidden="true">
-            <div ref={coreRef} className="lp-world__core">
-              <MapScene pinRef={pinRef} />
-              <div className="lp-layer lp-fog" />
-              <div className="lp-layer lp-dim" />
-              <div className="lp-count">
-                <b>{MAP_STORES.length + 1} stores</b>
-                <span>within 2 km of you</span>
-              </div>
-
-              <div className="lp-layer lp-shop">
-                <div className="lp-shop__shot" />
-                <div className="lp-layer lp-shop__shade" />
-              </div>
-              <div className="lp-layer lp-dim2" />
-
-              <div className="lp-layer lp-photo">
-                <div className="lp-photo__ph">
-                  <Image
-                    src="/landing/pickup.jpg"
-                    alt=""
-                    fill
-                    sizes="(max-width: 767px) 100vw, 64vw"
-                  />
-                </div>
-              </div>
-
-              <div className="lp-layer lp-veil" />
-
-              <StorePreview />
-
-              <div className="lp-ui">
-                <div className="lp-deck">
-                  {STORY_PRODUCTS.map((prod, i) => (
-                    <div
-                      key={prod.name}
-                      ref={(el) => {
-                        cardRefs.current[i] = el;
-                      }}
-                      className="lp-pcard"
-                      data-card={i + 1}
-                    >
-                      <span className={`lp-crop lp-crop--${prod.crop}`} />
-                      <span className="lp-pcard__b">
-                        <b>{prod.name}</b>
-                        <small>{STORY_STORE.name}</small>
-                        <span className="lp-pcard__row">
-                          <span className="lp-mono lp-pcard__price">
-                            {peso(prod.price)}
-                          </span>
-                          <span className="lp-add">
-                            <Plus className="lp-no" />
-                            <Check className="lp-yes" />
-                            <span className="lp-no">Add</span>
-                            <span className="lp-yes">Added</span>
-                          </span>
-                        </span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <span ref={cartRef} className="lp-cartb">
-                  <ShoppingBag />
-                  <b ref={cartCountRef}>1</b>
-                </span>
-
-                <Checkout totalRef={totalRef} />
-                <Pickup />
-              </div>
-            </div>
-          </div>
+          <StoryWorld
+            coreRef={coreRef}
+            pinRef={pinRef}
+            cardRefs={cardRefs}
+            cartRef={cartRef}
+            cartCountRef={cartCountRef}
+            totalRef={totalRef}
+          />
         </div>
       </div>
     </section>
@@ -364,6 +357,103 @@ function Words({ text }: { text: string }) {
     </Fragment>
   ));
 }
+
+/*
+ * The scene behind the copy. It never re-renders: every change is written straight to the DOM by
+ * the frame loop, so the scene change re-renders only the headlines.
+ */
+const StoryWorld = memo(function StoryWorld({
+  coreRef,
+  pinRef,
+  cardRefs,
+  cartRef,
+  cartCountRef,
+  totalRef,
+}: {
+  coreRef: RefObject<HTMLDivElement | null>;
+  pinRef: RefObject<HTMLSpanElement | null>;
+  cardRefs: RefObject<(HTMLDivElement | null)[]>;
+  cartRef: RefObject<HTMLSpanElement | null>;
+  cartCountRef: RefObject<HTMLElement | null>;
+  totalRef: RefObject<HTMLElement | null>;
+}) {
+  return (
+    <div className="lp-world" aria-hidden="true">
+      <div ref={coreRef} className="lp-world__core">
+        <MapScene pinRef={pinRef} />
+        <div className="lp-layer lp-fog" />
+        <div className="lp-layer lp-dim" />
+        <div className="lp-count">
+          <b>{MAP_STORES.length + 1} stores</b>
+          <span>within 2 km of you</span>
+        </div>
+
+        <div className="lp-layer lp-shop">
+          <div className="lp-shop__shot" />
+          <div className="lp-layer lp-shop__shade" />
+        </div>
+        <div className="lp-layer lp-dim2" />
+
+        <div className="lp-layer lp-photo">
+          <div className="lp-photo__ph">
+            <Image
+              src="/landing/pickup.jpg"
+              alt=""
+              fill
+              sizes="(max-width: 767px) 100vw, 64vw"
+              loading="eager"
+              fetchPriority="low"
+            />
+          </div>
+        </div>
+
+        <div className="lp-layer lp-veil" />
+
+        <StorePreview />
+
+        <div className="lp-ui">
+          <div className="lp-deck">
+            {STORY_PRODUCTS.map((prod, i) => (
+              <div
+                key={prod.name}
+                ref={(el) => {
+                  cardRefs.current[i] = el;
+                }}
+                className="lp-pcard"
+                data-card={i + 1}
+              >
+                <span className={`lp-crop lp-crop--${prod.crop}`} />
+                <span className="lp-pcard__b">
+                  <b>{prod.name}</b>
+                  <small>{STORY_STORE.name}</small>
+                  <span className="lp-pcard__row">
+                    <span className="lp-mono lp-pcard__price">
+                      {peso(prod.price)}
+                    </span>
+                    <span className="lp-add">
+                      <Plus className="lp-no" />
+                      <Check className="lp-yes" />
+                      <span className="lp-no">Add</span>
+                      <span className="lp-yes">Added</span>
+                    </span>
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <span ref={cartRef} className="lp-cartb">
+            <ShoppingBag />
+            <b ref={cartCountRef}>1</b>
+          </span>
+
+          <Checkout totalRef={totalRef} />
+          <Pickup />
+        </div>
+      </div>
+    </div>
+  );
+});
 
 /* ── Scenes ─────────────────────────────────────────────────────────────── */
 
@@ -384,6 +474,9 @@ function MapScene({ pinRef }: { pinRef: RefObject<HTMLSpanElement | null> }) {
             width={1295}
             height={727}
             sizes="(max-width: 767px) 200vw, 110vw"
+            // Loaded with the page (after the hero), so a fast scroll never reaches a blank map.
+            loading="eager"
+            fetchPriority="low"
           />
           <div className="lp-mks">
             {MAP_STORES.map((m, i) => (
