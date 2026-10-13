@@ -1,71 +1,99 @@
-import clsx from "clsx";
-import { LogoIcon } from "./ui/LogoIcon";
+"use client";
+
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
+import clsx from "clsx";
+import { ArrowDownRight } from "lucide-react";
+import { LogoIcon } from "./ui/LogoIcon";
+import { PillButton } from "./ui/PillButton";
+import { NAV_LINKS } from "../landing.content";
 
 interface LandingNavProps {
-  scrolled: boolean;
+  /** Where a signed-in user's dashboard lives; when set, "Log in" becomes "Dashboard". */
   homeRoute?: string | null;
 }
 
-export function LandingNav({ scrolled, homeRoute }: LandingNavProps) {
-  return (
-    <header
-      className={clsx(
-        "fixed left-0 right-0 top-0 z-50 border-b border-transparent transition duration-300 ease-out",
-        scrolled &&
-          "border-white/[0.08] bg-[rgba(2,21,33,0.84)] backdrop-blur-[20px]",
-      )}
-    >
-      <div className="mx-auto flex h-[72px] w-full max-w-[1200px] items-center justify-between px-6 max-landing-sm:px-4">
-        <a
-          href="#"
-          className="flex items-center gap-[9px] text-[15px] font-extrabold tracking-[-0.03em] text-white"
-        >
-          <LogoIcon
-            iconSize={17}
-            className="h-[31px] w-[31px] rounded-[10px]"
-          />
-          <span>MapAnytime</span>
-        </a>
+/** Floating island nav. Below 900px the links move into a full-screen menu behind a morphing burger. */
+export function LandingNav({ homeRoute }: LandingNavProps) {
+  const [open, setOpen] = useState(false);
 
-        <nav className="ml-auto mr-[30px] hidden items-center gap-[30px] landing-lg:flex">
-          <a
-            href="#benefits"
-            className="text-[11px] font-semibold text-[#7693a1] transition duration-200 hover:text-white"
-          >
-            Why MapAnytime
-          </a>
-          <a
-            href="#story"
-            className="text-[11px] font-semibold text-[#7693a1] transition duration-200 hover:text-white"
-          >
-            Our vision
-          </a>
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const account = homeRoute
+    ? { label: "Dashboard", href: homeRoute }
+    : { label: "Log in", href: "/login" };
+  const close = () => setOpen(false);
+
+  return (
+    <div className={clsx(open && "lp-menu-open")}>
+      <header className="lp-island">
+        <a href="#top" aria-label="MapAnytime home" className="flex">
+          <LogoIcon height={34} priority />
+        </a>
+        <nav aria-label="Primary" className="lp-island__links">
+          {NAV_LINKS.map((link) => (
+            <a key={link.href} href={link.href} className="lp-island__link">
+              {link.label}
+            </a>
+          ))}
         </nav>
-        {homeRoute ? (
+        <div className="lp-island__right">
           <Link
-            href={homeRoute}
-            className="flex items-center gap-[7px] rounded-full border border-white/[0.13] bg-white/[0.06] px-4 py-[10px] text-[11px] font-bold text-white transition duration-[250ms] hover:-translate-y-0.5 hover:border-[rgba(34,211,238,0.4)] hover:bg-[rgba(34,211,238,0.1)] max-landing-sm:px-[11px] max-landing-sm:py-2 max-landing-sm:text-[9px]"
+            href={account.href}
+            className="lp-island__link lp-island__login"
           >
-            Dashboard
+            {account.label}
           </Link>
-        ) : (
-          <>
-            <Link
-              href="/register"
-              className="text-[11px] font-semibold text-[#7693a1] transition duration-200 hover:text-white mr-4"
-            >
-              Register
-            </Link>
-            <Link
-              href="/login"
-              className="flex items-center gap-[7px] rounded-full border border-white/[0.13] bg-white/[0.06] px-4 py-[10px] text-[11px] font-bold text-white transition duration-[250ms] hover:-translate-y-0.5 hover:border-[rgba(34,211,238,0.4)] hover:bg-[rgba(34,211,238,0.1)] max-landing-sm:px-[11px] max-landing-sm:py-2 max-landing-sm:text-[9px]"
-            >
-              Login
-            </Link>
-          </>
-        )}
+          <PillButton href="#install" size="sm" icon={ArrowDownRight}>
+            Install the App
+          </PillButton>
+          <button
+            type="button"
+            className="lp-burger"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="lp-menu"
+            onClick={() => setOpen((v) => !v)}
+          >
+            <span />
+            <span />
+          </button>
+        </div>
+      </header>
+
+      <div id="lp-menu" className="lp-overlay" aria-hidden={!open}>
+        {NAV_LINKS.map((link, i) => (
+          <a
+            key={link.href}
+            href={link.href}
+            onClick={close}
+            tabIndex={open ? 0 : -1}
+            style={{ "--i": i } as CSSProperties}
+          >
+            {link.label}
+          </a>
+        ))}
+        <Link
+          href={account.href}
+          onClick={close}
+          tabIndex={open ? 0 : -1}
+          style={{ "--i": NAV_LINKS.length } as CSSProperties}
+        >
+          {account.label}
+        </Link>
       </div>
-    </header>
+    </div>
   );
 }

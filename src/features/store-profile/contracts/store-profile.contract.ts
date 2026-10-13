@@ -44,7 +44,12 @@ export const StoreProfileSchema = z
     // Shown on the store's map marker (backed by Stores.bannerId).
     bannerUrl: z.string().nullable().optional(),
     isActive: z.boolean().default(true),
-    approvalStatus: z.enum(["PENDING", "ACTIVE", "REJECTED"]).optional(),
+    // Open string rather than an enum — see the note on the same field in
+    // `manage-stores.contract.ts`. Narrow with `normalizeStoreStatus`.
+    approvalStatus: z.string().optional(),
+    /** The admin's fix list while the store is NEEDS_REVISION. */
+    revisionNotes: z.string().nullable().optional(),
+    rejectionReason: z.string().nullable().optional(),
     createdAt: z.string().optional(),
     updatedAt: z.string().optional(),
     storeLocations: StoreProfileLocationSchema.optional(),

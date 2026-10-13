@@ -157,12 +157,10 @@ export const useProductsPipeline = (options: UseProductsPipelineOptions) => {
     mutationFn: async (newProduct: ProductItem): Promise<ProductItem> => {
       if (!storeId) throw new Error("No active store branch selected.");
 
-      // The form always picks a sub-category, so require a real category ID.
-      // Guessing a category on the client would silently mis-categorize.
       const categoryIdForCreate = newProduct.categoryId;
       if (!categoryIdForCreate) {
         throw new Error(
-          "A category is required. Select a sub-category and try again.",
+          "A category is required. Choose one for each level and try again.",
         );
       }
 

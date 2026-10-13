@@ -13,8 +13,19 @@ export function AuthListener() {
 
   useEffect(() => {
     const handleUnauthorized = () => {
+      // Safe to tear down unconditionally: the dispatch sites are latched, so
+      // this fires at most once per sign-out. Guarding on `getToken()` instead
+      // would be wrong — http.ts clears storage before it dispatches, so on a
+      // genuine session death the token is already gone here and the guard
+      // would swallow the one event that needed handling.
       clearAuthSession(setToken, queryClient);
-      router.push("/login");
+
+      // `replace`, not `push`: signing out should not leave the authenticated
+      // page on the back stack. The pathname check is belt-and-braces now that
+      // only one navigation can be issued per episode.
+      if (!window.location.pathname.startsWith("/login")) {
+        router.replace("/login");
+      }
     };
 
     window.addEventListener("auth:unauthorized", handleUnauthorized);

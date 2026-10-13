@@ -221,7 +221,7 @@ export default function SellerDetailModal({
                     <label className="text-sm text-[var(--text-secondary)]">
                       Reason
                     </label>
-                    <p className="font-medium text-[var(--md-sys-color-error)]">
+                    <p className="break-words font-medium text-[var(--md-sys-color-error)]">
                       {seller.rejectionReason}
                     </p>
                   </div>

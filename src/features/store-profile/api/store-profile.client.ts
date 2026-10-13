@@ -39,6 +39,19 @@ export const getStoreCategories =
   };
 
 /**
+ * Push a revised store back into the review queue.
+ */
+export const resubmitStoreForReview = async (
+  storeId: string,
+): Promise<StoreProfile> => {
+  const res = await fetcher<{ data: unknown }>(
+    `/api/v1/stores/${encodeURIComponent(storeId)}/resubmit`,
+    { method: "POST" },
+  );
+  return StoreProfileSchema.parse(res.data);
+};
+
+/**
  * Update store profile settings via `PATCH /v1/stores/:id`.
  */
 export const updateStoreProfile = async (

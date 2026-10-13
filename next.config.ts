@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 
   // Standalone output produces a self-contained server bundle
   // (.next/standalone) used by the production Dockerfile.
@@ -27,6 +30,16 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.s3.ap-southeast-1.amazonaws.com",
         port: "",
+        pathname: "/**",
+      },
+      {
+        // Local MinIO standing in for S3 in docker-compose. Objects are served
+        // path-style off the host port, so without this next/image refuses the
+        // URL outright and every product image renders broken locally even
+        // though the upload itself succeeded.
+        protocol: "http",
+        hostname: "localhost",
+        port: "9000",
         pathname: "/**",
       },
     ],

@@ -1,3 +1,5 @@
+import { endSignOut, publishSessionChange } from "@/shared/lib/session-state";
+
 const TOKEN_KEY = "token";
 const REFRESH_TOKEN_KEY = "refresh_token";
 const SESSION_COOKIE = "has_session";
@@ -56,6 +58,12 @@ export function setToken(token: string, refreshToken?: string): void {
   // gets to sessionStorage's lifetime, so the marker expires roughly when the
   // credential it stands for does. See docs/connection-audit.md §4.
   document.cookie = `${SESSION_COOKIE}=1; path=/; SameSite=Lax`;
+
+  // A new credential is the one thing that ends a sign-out, so the release lives
+  // here rather than at any call site — sign-in, a successful background refresh
+  // and set-password all route through setToken and none of them can forget.
+  endSignOut();
+  publishSessionChange();
 }
 
 export function clearToken(): void {
@@ -65,4 +73,19 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   document.cookie = `${SESSION_COOKIE}=; path=/; SameSite=Lax; Max-Age=0`;
+
+  // Notify, but do NOT endSignOut() — clearing is what a sign-out *is*. Only a
+  // new credential releases the latch.
+  publishSessionChange();
+}
+
+/**
+ * Marker cookie for the seller account-setup link. The admin's link lands on
+ * /set-password?email=...&code=...; setting `has_session` here keeps middleware
+ * from bouncing the user out of /seller after they set a password. Same
+ * session-scoped pattern as setToken (no Max-Age).
+ */
+export function setSetupSessionCookie(): void {
+  if (typeof window === "undefined") return;
+  document.cookie = `${SESSION_COOKIE}=1; path=/; SameSite=Lax`;
 }

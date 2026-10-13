@@ -3,18 +3,130 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { MapPin, Star, SaveIcon, ImagePlus } from "lucide-react";
+import {
+  MapPin,
+  Star,
+  SaveIcon,
+  ImagePlus,
+  Clock,
+  PencilLine,
+  ShieldAlert,
+} from "lucide-react";
 import {
   useStoreProfiles,
   useStoreCategories,
   useUpdateStoreProfile,
+  useResubmitStore,
 } from "../hooks/useStoreProfile";
+import {
+  isStoreEditable,
+  normalizeStoreStatus,
+  type StoreApprovalStatus,
+} from "@/shared/lib/storeApproval";
 import { useS3AssetUpload } from "@/shared/hooks/useS3AssetUpload";
 import type { UpdateStoreProfileInput } from "../contracts/store-profile.contract";
 
 interface StoreProfileSettingsProps {
   activeStoreId?: string | null;
   isHydrated?: boolean;
+}
+
+/**
+ * Where the store stands with the reviewer, and the one action that moves it.
+ */
+function StoreReviewBanner({
+  storeId,
+  status,
+  revisionNotes,
+  rejectionReason,
+}: {
+  storeId?: string;
+  status: StoreApprovalStatus;
+  revisionNotes?: string | null;
+  rejectionReason?: string | null;
+}) {
+  const resubmit = useResubmitStore({
+    onSuccess: () => toast.success("Sent back for review."),
+  });
+
+  if (status === "ACTIVE") return null;
+
+  if (status === "NEEDS_REVISION") {
+    return (
+      <div className="mb-8 rounded-2xl border border-orange-500/30 bg-orange-500/5 p-5">
+        <div className="flex items-start gap-3">
+          <PencilLine className="mt-0.5 h-5 w-5 shrink-0 text-orange-500" />
+          {/* min-w-0 so a long unbroken note cannot widen this column. */}
+          <div className="min-w-0 flex-1 space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+                Changes requested
+              </h2>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                An administrator has asked for the following before your store
+                can go live. Make the changes below, save, then resubmit.
+              </p>
+            </div>
+            {revisionNotes && (
+              <p className="break-words rounded-xl border border-[var(--border-light)] bg-[var(--background-primary)] p-3 text-sm text-[var(--text-primary)]">
+                {revisionNotes}
+              </p>
+            )}
+            <button
+              type="button"
+              disabled={!storeId || resubmit.isPending}
+              onClick={() => storeId && resubmit.mutate({ storeId })}
+              className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ background: "var(--brand-core)" }}
+            >
+              {resubmit.isPending ? "Resubmitting…" : "Resubmit for review"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "REJECTED") {
+    return (
+      <div className="mb-8 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-5">
+        <div className="flex items-start gap-3">
+          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+              Application not approved
+            </h2>
+            <p className="mt-1 break-words text-sm text-[var(--text-secondary)]">
+              {rejectionReason ??
+                "This store's application was not approved. Contact support if you believe this was a mistake."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // PENDING or UNDER_REVIEW: nothing for the seller to do, and the form below
+  // is read-only on the server regardless — saying so beats letting them type
+  // into fields that will be refused.
+  return (
+    <div className="mb-8 rounded-2xl border border-[var(--border-light)] bg-[var(--background-secondary)] p-5">
+      <div className="flex items-start gap-3">
+        <Clock className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+        <div>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+            {status === "UNDER_REVIEW"
+              ? "An administrator is reviewing your store"
+              : "Waiting for review"}
+          </h2>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Your details are locked while this is with our team. We&apos;ll let
+            you know as soon as there is a decision.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function formatDate(value?: string | Date) {
@@ -57,6 +169,11 @@ export function StoreProfileSettings({
   } = useStoreCategories();
 
   const store = stores?.find((s) => s.id === activeStoreId);
+  const reviewStatus = normalizeStoreStatus(
+    store?.approvalStatus,
+    store?.isActive,
+  );
+  const canEdit = isStoreEditable(reviewStatus);
   const location = store?.storeLocations;
 
   const [closedDays, setClosedDays] = useState<Record<string, boolean>>({
@@ -198,7 +315,11 @@ export function StoreProfileSettings({
         </div>
         <button
           type="submit"
-          disabled={isSubmitting || bannerUpload.isPending}
+          // Mirrors the API's review lock. Without this the seller can fill in
+          // the whole form while their store sits with a reviewer and collect a
+          // 409 on save — the same shape of dead end the banner exists to
+          // prevent, one screen further in.
+          disabled={isSubmitting || bannerUpload.isPending || !canEdit}
           className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
           style={{
             background: "var(--brand-core)",
@@ -210,9 +331,18 @@ export function StoreProfileSettings({
             ? "Uploading photo…"
             : isSubmitting
               ? "Saving…"
-              : "Save Profile"}
+              : !canEdit
+                ? "Locked for review"
+                : "Save Profile"}
         </button>
       </div>
+
+      <StoreReviewBanner
+        storeId={store?.id}
+        status={reviewStatus}
+        revisionNotes={store?.revisionNotes}
+        rejectionReason={store?.rejectionReason}
+      />
 
       <div className="space-y-8">
         {/* SECTION 1: General */}

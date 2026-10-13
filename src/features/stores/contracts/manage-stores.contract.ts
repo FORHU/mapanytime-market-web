@@ -15,9 +15,19 @@ export const StoreSchema = z
     storeName: z.string(),
     description: z.string().nullable(),
     isActive: z.boolean(),
-    approvalStatus: z.enum(["PENDING", "ACTIVE", "REJECTED"]).optional(),
+    approvalStatus: z.string().optional(),
     primaryCategoryId: z.string().nullable().optional(),
     rejectionReason: z.string().nullable().optional(),
+    revisionNotes: z.string().nullable().optional(),
+    /** When the store was rejected. Null unless `approvalStatus` is REJECTED. */
+    rejectedAt: z.string().nullable().optional(),
+    /**
+     * When the backend will delete this store, computed server-side from
+     * `rejectedAt`. The countdown reads this rather than adding 24 hours to
+     * `rejectedAt` itself: the window belongs to the sweep that enforces it, and
+     * a copy of its length here could disagree with it.
+     */
+    scheduledDeletionAt: z.string().nullable().optional(),
     createdAt: z.string(),
     updatedAt: z.string(),
     storeLocations: StoreLocationSchema.optional(),

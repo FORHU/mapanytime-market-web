@@ -1,261 +1,608 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import {
+  Fragment,
+  memo,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from "react";
 import Image from "next/image";
-import { Store, ShoppingBag, Users, Globe } from "lucide-react";
+import clsx from "clsx";
+import {
+  BellRing,
+  Check,
+  Clock,
+  Coffee,
+  MapPin,
+  Plus,
+  ShoppingBag,
+  Store,
+  Ticket,
+} from "lucide-react";
+import { Reveal } from "./ui/Reveal";
+import {
+  HOW_STEPS,
+  MAP_STORES,
+  STORY_EXTRA_ITEM,
+  STORY_ORDER_CODE,
+  STORY_PRODUCTS,
+  STORY_STORE,
+  STORY_YOU,
+} from "../landing.content";
+import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useFrameWhileVisible } from "../hooks/useFrameWhileVisible";
+import {
+  PIN_ORIGIN_TARGETS,
+  STORY_BEATS,
+  STORY_VAR_TARGETS,
+  follow,
+  sceneAt,
+  storyVars,
+  visibleLayers,
+  type StoryVar,
+} from "../howStory";
 
-const CATEGORIES = [
-  {
-    id: "owners",
-    label: "Store Owners",
-    stop: "Stop 01",
-    tagline: "List in seconds, sell without shipping.",
-    accent: "var(--brand-core, var(--md-sys-color-primary, #00658d))",
-    tabIcon: Store,
-    items: [
-      {
-        title: "Easy listing",
-        desc: "Turn one photo into a complete product listing in about 30 seconds using AI.",
-      },
-      {
-        title: "No logistics",
-        desc: "Pickup-only means no couriers, delivery costs, or complex fulfillment.",
-      },
-      {
-        title: "Instant visibility",
-        desc: "Products immediately appear on the map for nearby shoppers.",
-      },
-    ],
-    images: [
-      {
-        src: "/placeholders/uploading-girl.jpg",
-        alt: "Shop owner preparing products",
-      },
-      {
-        src: "/placeholders/landing-benefits/pickup.jpg",
-        alt: "Small shop counter",
-      },
-      {
-        src: "https://images.unsplash.com/photo-1556740758-90de374c12ad?w=500&q=80&auto=format&fit=crop",
-        alt: "Vendor arranging fresh goods",
-      },
-      {
-        src: "/placeholders/landing-benefits/taking photo.jpg",
-        alt: "Storefront on a neighborhood street",
-      },
-    ],
-  },
-  {
-    id: "shoppers",
-    label: "Shoppers",
-    stop: "Stop 02",
-    tagline: "Check what's in stock before you go.",
-    accent: "var(--md-sys-color-secondary, #4f6170)",
-    tabIcon: ShoppingBag,
-    items: [
-      {
-        title: "Live inventory",
-        desc: "See what products are actually available before visiting.",
-      },
-      {
-        title: "Grab & go",
-        desc: "Browse and pay ahead, then pick up without waiting in line.",
-      },
-      {
-        title: "Local discovery",
-        desc: "Find unique, handmade, seasonal, and hard-to-find products.",
-      },
-      { title: "Save money", desc: "Pickup eliminates delivery fees." },
-    ],
-    images: [
-      {
-        src: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500&q=80&auto=format&fit=crop",
-        alt: "Shopper browsing a market",
-      },
-      {
-        src: "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=500&q=80&auto=format&fit=crop",
-        alt: "Person browsing a clothing rack",
-      },
-      {
-        src: "https://images.unsplash.com/photo-1591085686350-798c0f9faa7f?w=500&q=80&auto=format&fit=crop",
-        alt: "Shopping bags",
-      },
-      {
-        src: "https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?w=500&q=80&auto=format&fit=crop",
-        alt: "Shopper picking fresh produce",
-      },
-    ],
-  },
-  {
-    id: "community",
-    label: "Communities",
-    stop: "Stop 03",
-    tagline: "Every purchase stays in the neighborhood.",
-    accent: "var(--md-sys-color-tertiary, #5e5e5f)",
-    tabIcon: Users,
-    items: [
-      {
-        title: "Brings stores online",
-        desc: "Gives small businesses digital visibility without needing their own website or app.",
-      },
-      {
-        title: "Supports local businesses",
-        desc: "Keeps more consumer spending within the community.",
-      },
-      {
-        title: "Inclusive commerce",
-        desc: "Helps small vendors, artisans, and market sellers participate in digital commerce.",
-      },
-    ],
-    images: [
-      {
-        src: "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=500&q=80&auto=format&fit=crop",
-        alt: "Neighborhood street of shops",
-      },
-      {
-        src: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=500&q=80&auto=format&fit=crop",
-        alt: "Farmers market stall",
-      },
-      {
-        src: "https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=500&q=80&auto=format&fit=crop",
-        alt: "Artisan shaping pottery",
-      },
-      {
-        src: "https://images.unsplash.com/photo-1509099836639-18ba1795216d?w=500&q=80&auto=format&fit=crop",
-        alt: "Community members at a street fair",
-      },
-    ],
-  },
-  {
-    id: "platform",
-    label: "MapAnytime",
-    stop: "Stop 04",
-    tagline: "Built to grow one pin at a time.",
-    accent:
-      "var(--brand-vibrant, var(--md-sys-color-inverse-primary, #82cfff))",
-    tabIcon: Globe,
-    items: [
-      {
-        title: "Easy global scaling",
-        desc: "Pickup-only operations make expansion to new markets faster and simpler.",
-      },
-      {
-        title: "Network effect",
-        desc: "More stores create a stronger local marketplace and more valuable data.",
-      },
-      {
-        title: "Simpler regulation",
-        desc: "Avoids many of the licensing and regulatory challenges associated with delivery services.",
-      },
-    ],
-    images: [
-      {
-        src: "https://images.unsplash.com/photo-1524661135-423995f22d0b?w=500&q=80&auto=format&fit=crop",
-        alt: "Map with a location pin",
-      },
-      {
-        src: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=500&q=80&auto=format&fit=crop",
-        alt: "Aerial view of a city",
-      },
-      {
-        src: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=500&q=80&auto=format&fit=crop",
-        alt: "World map",
-      },
-      {
-        src: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=500&q=80&auto=format&fit=crop",
-        alt: "City skyline lit up at dusk",
-      },
-    ],
-  },
-];
+/* The cart already holds the coffee from another store when the story starts. */
+const ORDER_TOTAL =
+  STORY_PRODUCTS.reduce((sum, p) => sum + p.price, 0) + STORY_EXTRA_ITEM.price;
+const ITEM_COUNT = STORY_PRODUCTS.length + 1;
 
-const PIN_SLOTS = [
-  {
-    cls: "matb-pos-0",
-    size: 315,
-    rot: -6,
-    delay: 0,
-    style: { top: "-9%", left: "-9%" },
-  },
-  {
-    cls: "matb-pos-2",
-    size: 265,
-    rot: 5,
-    delay: 180,
-    style: { top: "-4%", right: "-9%" },
-  },
-  {
-    cls: "matb-pos-3",
-    size: 365,
-    rot: -5,
-    delay: 270,
-    style: { bottom: "-12%", left: "-10%" },
-  },
-  {
-    cls: "matb-pos-4",
-    size: 350,
-    rot: 4,
-    delay: 360,
-    style: { bottom: "-8%", right: "-6%" },
-  },
-];
+const peso = (n: number) => `₱${n}`;
+const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
-type PinPhotoProps = {
-  image: { src: string; alt: string };
-  icon: React.ComponentType<{
-    size: number;
-    color: string;
-    strokeWidth: number;
-  }>;
-  accent: string;
-  slot: {
-    cls: string;
-    size: number;
-    rot: number;
-    delay: number;
-    style: React.CSSProperties;
+/**
+ * "How it works" as a scroll story. A tall track holds a sticky stage; scrolling through the track
+ * plays five connected scenes (find, explore, choose, check out, pick up) as the section's full
+ * background, with the matching headline over it. Timing lives in `howStory.ts`. Each frame writes custom
+ * properties onto the few elements that read them and beat classes onto the stage, so the only
+ * re-render is the scene change, and that re-renders only the headline copy.
+ */
+export function LandingHowItWorks() {
+  const reduce = useReducedMotion();
+  const [scene, setScene] = useState(0);
+
+  const trackRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const coreRef = useRef<HTMLDivElement>(null);
+  const pinRef = useRef<HTMLSpanElement>(null);
+  const cartRef = useRef<HTMLSpanElement>(null);
+  const cartCountRef = useRef<HTMLElement>(null);
+  const totalRef = useRef<HTMLElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const frame = useRef({
+    /** Progress as painted, chasing the scroll position (see `follow`). */
+    p: -1,
+    /** Time of the last frame, for frame-rate independent smoothing. */
+    t: 0,
+    pinX: -1,
+    pinY: -1,
+    scene: 0,
+    reduce,
+    beats: new Set<string>(),
+    /** Last value written per style key, so unchanged values cost no style work. */
+    written: new Map<string, string>(),
+    /** The elements each value is written to, looked up once (see `STORY_VAR_TARGETS`). */
+    targets: null as Map<string, HTMLElement[]> | null,
+    /** Cards whose photo flies to the cart at the start of the next frame, before any writes. */
+    flights: [] as number[],
+  });
+
+  /** The elements under the stage that `selector` names, cached per selector. */
+  const targetsFor = (stage: HTMLElement, selector: string) => {
+    const state = frame.current;
+    state.targets ??= new Map();
+    let els = state.targets.get(selector);
+    if (!els) {
+      els = Array.from(stage.querySelectorAll<HTMLElement>(selector));
+      state.targets.set(selector, els);
+    }
+    return els;
   };
-};
 
-function PinPhoto({ image, icon: Icon, accent, slot }: PinPhotoProps) {
-  const [errored, setErrored] = useState(false);
-  return (
-    <div
-      className={`matb-pin-wrap ${slot.cls}`}
-      style={
+  /** Sets a custom property on `selector`'s elements, only when its value changed. */
+  const write = (
+    stage: HTMLElement,
+    selector: string,
+    prop: string,
+    value: string,
+  ) => {
+    const written = frame.current.written;
+    if (written.get(prop) === value) return;
+    written.set(prop, value);
+    for (const el of targetsFor(stage, selector)) {
+      el.style.setProperty(prop, value);
+    }
+  };
+
+  /** Sets text only when it differs, so an unchanged count costs no layout. */
+  const setText = (el: HTMLElement | null, text: string) => {
+    if (el && el.textContent !== text) el.textContent = text;
+  };
+
+  /**
+   * Product photos leave their cards and drop into the cart bubble. Runs at the start of a frame:
+   * every position is measured first, then the ghosts are added, so nothing forces a layout.
+   */
+  const flyToCart = (indexes: number[]) => {
+    const cart = cartRef.current;
+    if (!cart) return;
+    const flights = indexes.flatMap((index) => {
+      const crop =
+        cardRefs.current[index]?.querySelector<HTMLElement>(".lp-crop");
+      if (!crop || typeof crop.animate !== "function") return [];
+      return [{ crop, from: crop.getBoundingClientRect() }];
+    });
+    if (!flights.length) return;
+    const to = cart.getBoundingClientRect();
+    for (const { crop, from } of flights) launch(crop, from, to, cart);
+  };
+
+  const launch = (
+    crop: HTMLElement,
+    from: DOMRect,
+    to: DOMRect,
+    cart: HTMLElement,
+  ) => {
+    const ghost = crop.cloneNode() as HTMLElement;
+    ghost.classList.add("lp-ghost");
+    Object.assign(ghost.style, {
+      left: `${from.left}px`,
+      top: `${from.top}px`,
+      width: `${from.width}px`,
+    });
+    document.body.appendChild(ghost);
+    const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+    const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+    const flight = ghost.animate(
+      [
+        { transform: "none", opacity: 1 },
         {
-          ...slot.style,
-          width: slot.size,
-          height: slot.size,
-          "--rot": `${slot.rot}deg`,
-        } as React.CSSProperties
+          transform: `translate(${dx * 0.45}px, ${dy * 0.45 - 90}px) scale(0.6) rotate(-8deg)`,
+          opacity: 1,
+          offset: 0.5,
+        },
+        {
+          transform: `translate(${dx}px, ${dy}px) scale(0.12)`,
+          opacity: 0.2,
+        },
+      ],
+      { duration: 720, easing: "cubic-bezier(0.5, 0, 0.3, 1)" },
+    );
+    flight.onfinish = () => {
+      ghost.remove();
+      cart.classList.remove("lp-bump");
+      void cart.offsetWidth; // restart the bump animation
+      cart.classList.add("lp-bump");
+    };
+  };
+
+  /** The order total ticks up as the items land in the checkout sheet. */
+  const countUp = () => {
+    const el = totalRef.current;
+    if (!el) return;
+    const start = performance.now();
+    const step = (now: number) => {
+      const k = clamp((now - start) / 900);
+      el.textContent = peso(Math.round(ORDER_TOTAL * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+
+  const paint = (p: number) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const state = frame.current;
+
+    const vars = storyVars(p, state.reduce);
+    for (const key of Object.keys(vars) as StoryVar[]) {
+      write(stage, STORY_VAR_TARGETS[key], `--${key}`, vars[key].toFixed(4));
+    }
+    const layers = visibleLayers(p);
+    stage.classList.toggle("show-map", layers.map);
+    stage.classList.toggle("show-store", layers.store);
+    stage.classList.toggle("show-photo", layers.photo);
+
+    for (const [beat, at] of STORY_BEATS) {
+      const on = p >= at;
+      if (on === state.beats.has(beat)) continue;
+      if (on) state.beats.add(beat);
+      else state.beats.delete(beat);
+      stage.classList.toggle(`lp-${beat}`, on);
+      if (!on || state.reduce) continue;
+      if (beat.startsWith("b-add"))
+        state.flights.push(Number(beat.slice(5)) - 1);
+      if (beat === "b-items") countUp();
+    }
+    if (state.reduce) setText(totalRef.current, peso(ORDER_TOTAL));
+    const added = STORY_PRODUCTS.filter((_, i) =>
+      state.beats.has(`b-add${i + 1}`),
+    ).length;
+    setText(cartCountRef.current, String(1 + added));
+
+    const next = sceneAt(p);
+    if (next !== state.scene) {
+      state.scene = next;
+      setScene(next);
+    }
+  };
+
+  // Runs only while the story moves: on scroll, then until it has caught up and settled.
+  const requestFrame = useFrameWhileVisible(trackRef, () => {
+    const track = trackRef.current;
+    const stage = stageRef.current;
+    if (!track || !stage) return false;
+    const state = frame.current;
+
+    // All reads first, then writes, so a frame never forces a second layout.
+    const now = performance.now();
+    const dt = state.t ? Math.min(now - state.t, 100) : 16;
+    state.t = now;
+    // The stage's own height, not the window's: on phones the window grows when the address bar
+    // hides, while the stage stays at 100svh, so the story would jump.
+    const vh = stage.clientHeight;
+    const box = track.getBoundingClientRect();
+    const length = box.height - vh;
+    const target = length > 0 ? clamp(-box.top / length) : 0;
+    // The story glides after the scroll position instead of stepping with each wheel notch.
+    const p = state.reduce ? target : follow(state.p, target, dt);
+
+    // The store opens out of its pin, so the reveal circle needs the pin's spot in the frame.
+    let pinMoved = false;
+    const core = coreRef.current;
+    const pin = pinRef.current;
+    if (p < 0.42 && core && pin) {
+      const c = core.getBoundingClientRect();
+      const h = pin.getBoundingClientRect();
+      const x = h.left + h.width / 2 - c.left;
+      const y = h.top + h.height / 2 - c.top;
+      if (Math.abs(x - state.pinX) > 0.5 || Math.abs(y - state.pinY) > 0.5) {
+        state.pinX = x;
+        state.pinY = y;
+        pinMoved = true;
       }
-    >
-      <div
-        className="matb-pin-float"
-        style={{ animationDelay: `${slot.delay}ms` }}
-      >
-        <div className="matb-pin-shape">
-          <div className="matb-pin-content">
-            {!errored ? (
-              <Image
-                fill
-                src={image.src}
-                alt={image.alt}
-                onError={() => setErrored(true)}
-                draggable={false}
-                className="object-cover"
-              />
-            ) : (
+    }
+
+    // Last of the reads: photos for the beats the previous frame switched on.
+    if (state.flights.length) {
+      flyToCart(state.flights);
+      state.flights = [];
+    }
+
+    if (pinMoved) {
+      write(stage, PIN_ORIGIN_TARGETS, "--ox", `${state.pinX}px`);
+      write(stage, PIN_ORIGIN_TARGETS, "--oy", `${state.pinY}px`);
+    }
+    if (p !== state.p || pinMoved) {
+      state.p = p;
+      paint(p);
+    }
+    // Still settling while the glide catches up, the pin moves, or a photo waits to fly.
+    return p !== target || pinMoved || state.flights.length > 0;
+  });
+
+  // A change of preference repaints the current position in the new mode.
+  useEffect(() => {
+    frame.current.reduce = reduce;
+    frame.current.p = -1;
+    frame.current.written.clear();
+    requestFrame();
+  }, [reduce, requestFrame]);
+
+  return (
+    <section id="how" className="lp-sec lp-how" aria-labelledby="lp-how-title">
+      <div className="lp-wrap">
+        <Reveal className="lp-head">
+          <h2 id="lp-how-title" className="lp-h2">
+            How it works.
+          </h2>
+          <p className="lp-lede">
+            From a pin on the map to a bag in your hand, in five steps.
+          </p>
+        </Reveal>
+      </div>
+
+      <div ref={trackRef} className="lp-track">
+        <div
+          ref={stageRef}
+          className="lp-stage"
+          data-scene={scene}
+          style={{ "--ox": "50%", "--oy": "45%" } as CSSProperties}
+        >
+          <div className="lp-copy">
+            <div className="lp-scenes">
+              {HOW_STEPS.map((s, i) => (
+                <div
+                  key={s.heading}
+                  className={clsx(
+                    "lp-sc",
+                    i === scene && "is-on",
+                    i < scene && "is-past",
+                  )}
+                >
+                  <h3>
+                    <Words text={s.heading} />
+                  </h3>
+                  <p>{s.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <StoryWorld
+            coreRef={coreRef}
+            pinRef={pinRef}
+            cardRefs={cardRefs}
+            cartRef={cartRef}
+            cartCountRef={cartCountRef}
+            totalRef={totalRef}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Splits a headline into masked words that rise in one after another. */
+function Words({ text }: { text: string }) {
+  return text.split(" ").map((word, i) => (
+    <Fragment key={i}>
+      {i > 0 && " "}
+      <span className="lp-w">
+        <span style={{ "--i": i } as CSSProperties}>{word}</span>
+      </span>
+    </Fragment>
+  ));
+}
+
+/*
+ * The scene behind the copy. It never re-renders: every change is written straight to the DOM by
+ * the frame loop, so the scene change re-renders only the headlines.
+ */
+const StoryWorld = memo(function StoryWorld({
+  coreRef,
+  pinRef,
+  cardRefs,
+  cartRef,
+  cartCountRef,
+  totalRef,
+}: {
+  coreRef: RefObject<HTMLDivElement | null>;
+  pinRef: RefObject<HTMLSpanElement | null>;
+  cardRefs: RefObject<(HTMLDivElement | null)[]>;
+  cartRef: RefObject<HTMLSpanElement | null>;
+  cartCountRef: RefObject<HTMLElement | null>;
+  totalRef: RefObject<HTMLElement | null>;
+}) {
+  return (
+    <div className="lp-world" aria-hidden="true">
+      <div ref={coreRef} className="lp-world__core">
+        <MapScene pinRef={pinRef} />
+        <div className="lp-layer lp-fog" />
+        <div className="lp-layer lp-dim" />
+        <div className="lp-count">
+          <b>{MAP_STORES.length + 1} stores</b>
+          <span>within 2 km of you</span>
+        </div>
+
+        <div className="lp-layer lp-shop">
+          <div className="lp-shop__shot" />
+          <div className="lp-layer lp-shop__shade" />
+        </div>
+        <div className="lp-layer lp-dim2" />
+
+        <div className="lp-layer lp-photo">
+          <div className="lp-photo__ph">
+            <Image
+              src="/landing/pickup.jpg"
+              alt=""
+              fill
+              sizes="(max-width: 767px) 100vw, 64vw"
+              loading="eager"
+              fetchPriority="low"
+            />
+          </div>
+        </div>
+
+        <div className="lp-layer lp-veil" />
+
+        <StorePreview />
+
+        <div className="lp-ui">
+          <div className="lp-deck">
+            {STORY_PRODUCTS.map((prod, i) => (
               <div
-                className="matb-pin-fallback"
-                style={{
-                  background: `linear-gradient(135deg, ${accent}, var(--ink))`,
+                key={prod.name}
+                ref={(el) => {
+                  cardRefs.current[i] = el;
                 }}
+                className="lp-pcard"
+                data-card={i + 1}
               >
-                <Icon size={26} color="#fff" strokeWidth={1.75} />
+                <span className={`lp-crop lp-crop--${prod.crop}`} />
+                <span className="lp-pcard__b">
+                  <b>{prod.name}</b>
+                  <small>{STORY_STORE.name}</small>
+                  <span className="lp-pcard__row">
+                    <span className="lp-mono lp-pcard__price">
+                      {peso(prod.price)}
+                    </span>
+                    <span className="lp-add">
+                      <Plus className="lp-no" />
+                      <Check className="lp-yes" />
+                      <span className="lp-no">Add</span>
+                      <span className="lp-yes">Added</span>
+                    </span>
+                  </span>
+                </span>
               </div>
-            )}
+            ))}
+          </div>
+
+          <span ref={cartRef} className="lp-cartb">
+            <ShoppingBag />
+            <b ref={cartCountRef}>1</b>
+          </span>
+
+          <Checkout totalRef={totalRef} />
+          <Pickup />
+        </div>
+      </div>
+    </div>
+  );
+});
+
+/* ── Scenes ─────────────────────────────────────────────────────────────── */
+
+const at = (x: number, y: number): CSSProperties => ({
+  left: `${x}%`,
+  top: `${y}%`,
+});
+
+/** Find and Explore: the app's map of Baguio, the shopper, nearby stores, and the store's pin. */
+function MapScene({ pinRef }: { pinRef: RefObject<HTMLSpanElement | null> }) {
+  return (
+    <div className="lp-layer lp-cam">
+      <div className="lp-layer lp-tilt">
+        <div className="lp-smap">
+          <Image
+            src="/landing/app-map.jpg"
+            alt=""
+            width={1295}
+            height={727}
+            sizes="(max-width: 767px) 200vw, 110vw"
+            // Loaded with the page (after the hero), so a fast scroll never reaches a blank map.
+            loading="eager"
+            fetchPriority="low"
+          />
+          <div className="lp-mks">
+            {MAP_STORES.map((m, i) => (
+              <span
+                key={m.initials}
+                className="lp-mk"
+                data-mk={i + 1}
+                style={at(m.x, m.y)}
+              >
+                <span className="lp-chip">
+                  {m.name}
+                  <span className="lp-mono">
+                    {m.distance.replace(" away", "")}
+                  </span>
+                </span>
+              </span>
+            ))}
+          </div>
+          <span className="lp-you" style={at(STORY_YOU.x, STORY_YOU.y)} />
+          <span className="lp-spin" style={at(STORY_STORE.x, STORY_STORE.y)}>
+            <span className="lp-spin__shadow" />
+            <span className="lp-spin__body">
+              <span ref={pinRef} className="lp-spin__head" />
+              <span className="lp-spin__ini">{STORY_STORE.initials}</span>
+            </span>
+            <span className="lp-spin__tap" />
+            <span className="lp-chip lp-spin__chip">
+              {STORY_STORE.name}
+              <span className="lp-mono">{STORY_STORE.distance}</span>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The store card that pops out of the tapped pin. */
+function StorePreview() {
+  return (
+    <div className="lp-preview">
+      <div className="lp-preview__in">
+        <div className="lp-preview__top">
+          <span className="lp-preview__ava">{STORY_STORE.initials}</span>
+          <span>
+            <b>{STORY_STORE.name}</b>
+            <small>{STORY_STORE.area}</small>
+          </span>
+        </div>
+        <div className="lp-preview__meta">
+          <span className="lp-tag">
+            <Clock />
+            {STORY_STORE.hours}
+          </span>
+          <span className="lp-tag">
+            <MapPin />
+            {STORY_STORE.distance}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Check out: the cart bubble grows into one checkout sheet for both stores. */
+function Checkout({ totalRef }: { totalRef: RefObject<HTMLElement | null> }) {
+  return (
+    <div className="lp-sheet-pos">
+      <div className="lp-sheet">
+        <div className="lp-sheet__core">
+          <div className="lp-sheet__head">
+            <b>Your cart</b>
+            <span>2 stores, {ITEM_COUNT} items</span>
+          </div>
+          <div className="lp-grp">
+            <span className="lp-grp__name">
+              <Store />
+              {STORY_STORE.name}
+            </span>
+            {STORY_PRODUCTS.map((prod, i) => (
+              <div
+                key={prod.name}
+                className="lp-line"
+                style={{ "--i": i } as CSSProperties}
+              >
+                <span className={`lp-crop lp-crop--${prod.crop}`} />
+                <span>
+                  <b>{prod.name}</b>
+                  <small>{prod.size}</small>
+                </span>
+                <span className="lp-mono">{peso(prod.price)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="lp-grp">
+            <span className="lp-grp__name">
+              <Store />
+              {STORY_EXTRA_ITEM.store}
+            </span>
+            <div
+              className="lp-line"
+              style={{ "--i": STORY_PRODUCTS.length } as CSSProperties}
+            >
+              <span className="lp-line__thumb">
+                <Coffee />
+              </span>
+              <span>
+                <b>{STORY_EXTRA_ITEM.name}</b>
+                <small>{STORY_EXTRA_ITEM.size}</small>
+              </span>
+              <span className="lp-mono">{peso(STORY_EXTRA_ITEM.price)}</span>
+            </div>
+          </div>
+          <div className="lp-sum">
+            <span>Total</span>
+            <b ref={totalRef} className="lp-mono">
+              {peso(ORDER_TOTAL)}
+            </b>
+          </div>
+          <div className="lp-place">
+            <span className="lp-place__fill" />
+            <span className="lp-no">Place order</span>
+            <span className="lp-yes">
+              <Check />
+              Order placed
+            </span>
           </div>
         </div>
       </div>
@@ -263,301 +610,91 @@ function PinPhoto({ image, icon: Icon, accent, slot }: PinPhotoProps) {
   );
 }
 
-export function LandingHowItWorks() {
-  const [active, setActive] = useState(0);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 60);
-    return () => clearTimeout(t);
-  }, []);
-
-  const category = CATEGORIES[active];
-
+/** Pick up: the ready notification, then the pickup pass is scanned at the counter. */
+function Pickup() {
   return (
-    <section
-      className={`matb-root ${mounted ? "matb-mounted" : ""}`}
-      style={{ "--accent": category.accent } as React.CSSProperties}
-    >
-      <style>{`
-        .matb-root, .matb-root *, .matb-root *::before, .matb-root *::after { box-sizing: border-box; }
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-
-        .matb-root {
-          --paper: var(--background-secondary, #f1f5f9);
-          --ink: var(--text-primary, #021521);
-          --line: var(--border-default, #c3c7cb);
-          --line-light: var(--border-light, #dfe3e7);
-          --card: var(--md-sys-color-surface-container-lowest, #ffffff);
-          --accent: var(--brand-core, #00658d);
-          position: relative;
-          overflow: hidden;
-          background: var(--paper);
-          color: var(--ink);
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          padding: 96px 24px 112px;
-          isolation: isolate;
-        }
-
-        .matb-root ul, .matb-root li, .matb-root h1, .matb-root h2, .matb-root h3, .matb-root p { margin: 0; padding: 0; }
-        .matb-root button { font: inherit; }
-
-        .matb-grid {
-          position: absolute; inset: 0;
-          background-image: radial-gradient(circle, rgba(130, 207, 255, 0.1) 1px, transparent 1px);
-          background-size: 40px 40px;
-          pointer-events: none;
-        }
-
-        .matb-glow {
-          position: absolute; width: 480px; height: 480px; border-radius: 50%;
-          background: var(--accent); filter: blur(90px); opacity: 0.16;
-          transition: background 0.6s ease; pointer-events: none;
-          animation: matb-drift 16s ease-in-out infinite alternate;
-        }
-        .matb-glow-a { top: -140px; left: -120px; }
-        .matb-glow-b { bottom: -160px; right: -100px; animation-duration: 20s; animation-direction: alternate-reverse; }
-        @keyframes matb-drift {
-          from { transform: translate(0,0) scale(1); }
-          to { transform: translate(40px, 30px) scale(1.15); }
-        }
-
-        .matb-container { position: relative; z-index: 1; max-width: 1040px; margin: 0 auto; }
-
-        .matb-header {
-          text-align: center; max-width: 620px; margin: 0 auto 56px;
-          opacity: 0; transform: translateY(16px);
-          transition: opacity .7s ease, transform .7s ease;
-        }
-        .matb-mounted .matb-header { opacity: 1; transform: translateY(0); }
-
-        .matb-kicker {
-          display: inline-flex; align-items: center; gap: 8px;
-          font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: .16em;
-          text-transform: uppercase; color: color-mix(in srgb, var(--ink) 60%, transparent);
-          margin-bottom: 18px;
-        }
-        .matb-kicker-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); transition: background .5s ease; }
-
-        .matb-h1 {
-          font-family: 'Fraunces', serif; font-weight: 700; font-size: clamp(32px, 4.6vw, 48px);
-          line-height: 1.08; letter-spacing: -0.01em; margin-bottom: 16px;
-        }
-        .matb-sub { font-size: 16px; line-height: 1.6; color: color-mix(in srgb, var(--ink) 62%, transparent); }
-
-        .matb-tabs {
-          position: relative; display: flex; justify-content: center; gap: clamp(10px, 4vw, 44px);
-          margin-bottom: 64px;
-          opacity: 0; transform: translateY(16px);
-          transition: opacity .7s ease .1s, transform .7s ease .1s;
-        }
-        .matb-mounted .matb-tabs { opacity: 1; transform: translateY(0); }
-
-        .matb-route-track { position: absolute; top: 20px; left: 12%; right: 12%; height: 2px; background: var(--line); z-index: 0; }
-        .matb-route-fill { position: absolute; top: 0; left: 0; height: 2px; background: var(--accent); transition: width .6s cubic-bezier(.65,0,.35,1), background .5s ease; }
-
-        .matb-tab {
-          position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;
-          background: none; border: none; cursor: pointer;
-          font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
-          color: color-mix(in srgb, var(--ink) 55%, transparent);
-        }
-        .matb-tab-dot {
-          position: relative; display: flex; align-items: center; justify-content: center;
-          width: 40px; height: 40px; border-radius: 50%;
-          background: var(--card); border: 1.5px solid var(--line); color: var(--ink);
-          transition: all .3s ease;
-        }
-        .matb-tab:hover .matb-tab-dot { transform: translateY(-3px); border-color: var(--accent); }
-        .matb-tab-active .matb-tab-dot { background: color-mix(in srgb, var(--accent) 14%, var(--card)); border-color: var(--accent); color: var(--accent); box-shadow: 0 8px 20px -8px var(--accent); }
-        .matb-tab-ping { position: absolute; inset: -6px; border-radius: 50%; background: var(--accent); opacity: .4; animation: matb-ping 2.2s cubic-bezier(0,0,.2,1) infinite; }
-        @keyframes matb-ping { 0% { transform: scale(.7); opacity: .5; } 75%, 100% { transform: scale(1.9); opacity: 0; } }
-
-        .matb-tab:focus-visible .matb-tab-dot,
-        .matb-btn-ghost:focus-visible,
-        .matb-btn-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-
-        @media (max-width: 560px) {
-          .matb-tab-label { display: none; }
-          .matb-route-track { left: 8%; right: 8%; }
-        }
-
-        .matb-stage { position: relative; display: flex; align-items: center; justify-content: center; min-height: 700px; }
-        .matb-pins-layer { position: absolute; inset: 0; pointer-events: none; }
-
-        .matb-pin-wrap { position: absolute; pointer-events: auto; transform: rotate(var(--rot)); transition: transform .35s cubic-bezier(.34,1.56,.64,1); }
-        .matb-pin-wrap:hover { transform: rotate(0deg) scale(1.08); z-index: 5; }
-
-        .matb-pin-float {
-          width: 100%; height: 100%;
-          animation: matb-drop .6s cubic-bezier(.34,1.56,.64,1) both, matb-float 5s ease-in-out .6s infinite;
-        }
-        @keyframes matb-drop { from { opacity: 0; transform: translateY(-36px) scale(.6); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        @keyframes matb-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-
-        .matb-pin-shape {
-          position: relative; width: 100%; height: 100%;
-          border-radius: 20px; overflow: hidden;
-          box-shadow: 0 18px 34px -12px rgba(0,0,0,.4);
-          border: 5px solid var(--card); background: var(--card);
-        }
-        .matb-pin-content { position: absolute; inset: 0; }
-        .matb-pin-content img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .matb-pin-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-
-        /* Center content: no card, no icons — just floating type */
-        .matb-card {
-          position: relative; z-index: 2; width: min(440px, 88vw);
-          text-align: center;
-        }
-
-        .matb-card-inner { animation: matb-card-in .6s cubic-bezier(.22,1,.36,1) both; }
-        @keyframes matb-card-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-
-        .matb-card-eyebrow {
-          display: flex; justify-content: center; align-items: center; gap: 12px;
-          font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
-          color: var(--accent); margin-bottom: 20px; transition: color .5s ease;
-        }
-        .matb-eyebrow-line { width: 22px; height: 1px; background: currentColor; opacity: .45; }
-
-        .matb-card-title { font-family: 'Fraunces', serif; font-size: clamp(28px, 3.4vw, 34px); font-weight: 700; margin-bottom: 12px; letter-spacing: -0.01em; }
-        .matb-card-tagline {
-          font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 17px;
-          color: color-mix(in srgb, var(--ink) 62%, transparent); margin-bottom: 28px; line-height: 1.5;
-        }
-
-        .matb-divider { width: 44px; height: 2px; margin: 0 auto 34px; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); transition: background .5s ease; }
-
-        .matb-list { list-style: none; display: flex; flex-direction: column; align-items: center; gap: 26px; margin: 0 auto 36px; max-width: 380px; }
-        .matb-list-item { display: flex; flex-direction: column; align-items: center; opacity: 0; animation: matb-item-in .55s ease both; }
-        @keyframes matb-item-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .matb-item-marker { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); margin-bottom: 10px; transition: background .5s ease; }
-        .matb-item-title { font-weight: 600; font-size: 15.5px; margin-bottom: 4px; letter-spacing: -0.01em; }
-        .matb-item-desc { font-size: 13.5px; line-height: 1.6; color: color-mix(in srgb, var(--ink) 58%, transparent); }
-
-        .matb-card-footer { display: flex; align-items: center; justify-content: center; gap: 30px; }
-        .matb-btn-ghost {
-          background: none; border: none; padding: 0; cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          color: color-mix(in srgb, var(--ink) 50%, transparent);
-          transition: color .25s ease, transform .25s ease;
-        }
-        .matb-btn-ghost:hover { color: var(--accent); transform: translateX(-3px); }
-
-        .matb-btn-primary {
-          position: relative; display: inline-flex; align-items: center; gap: 8px;
-          background: none; border: none; padding: 0 0 4px; cursor: pointer;
-          font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; font-weight: 500;
-          color: var(--ink); transition: color .25s ease;
-        }
-        .matb-btn-primary::after {
-          content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px; background: var(--accent);
-          transform: scaleX(0); transform-origin: right; transition: transform .35s cubic-bezier(.65,0,.35,1);
-        }
-        .matb-btn-primary:hover { color: var(--accent); }
-        .matb-btn-primary:hover::after { transform: scaleX(1); transform-origin: left; }
-        .matb-btn-primary:active { transform: scale(.97); }
-        .matb-btn-arrow { transition: transform .25s ease; }
-        .matb-btn-primary:hover .matb-btn-arrow { transform: translateX(4px); }
-
-        .matb-here { display: flex; justify-content: center; margin-top: 30px; }
-        .matb-here-dot { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transition: background .5s ease; }
-        .matb-here-dot::after {
-          content: ''; position: absolute; inset: -7px; border-radius: 50%;
-          background: var(--accent); opacity: .35; animation: matb-ping 2.2s cubic-bezier(0,0,.2,1) infinite;
-        }
-
-        @media (max-width: 860px) {
-          .matb-stage { min-height: auto; flex-direction: column; gap: 28px; }
-          .matb-pins-layer { position: static; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; order: 2; }
-          .matb-pin-wrap { position: static !important; width: 130px !important; height: 130px !important; transform: none !important; }
-          .matb-pin-float { animation: matb-drop .6s cubic-bezier(.34,1.56,.64,1) both; }
-          .matb-card { order: 1; width: 100%; }
-        }
-
-        @media (max-width: 480px) {
-          .matb-root { padding: 72px 16px 88px; }
-          .matb-h1 { font-size: 28px; }
-          .matb-card-title { font-size: 24px; }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .matb-root *, .matb-root *::before, .matb-root *::after {
-            animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important;
-          }
-        }
-      `}</style>
-
-      <div className="matb-glow matb-glow-a" />
-      <div className="matb-glow matb-glow-b" />
-      <div className="matb-grid" />
-
-      <div className="matb-container">
-        <header className="matb-header">
-          <span className="matb-kicker">
-            <span className="matb-kicker-dot" /> MapAnytime
+    <>
+      <div className="lp-notif">
+        <span className="lp-notif__ico">
+          <BellRing />
+        </span>
+        <span>
+          <span className="lp-notif__top">
+            <span>MapAnytime</span>
+            <span>now</span>
           </span>
-          <h2 className="matb-h1">One map. Four reasons it works.</h2>
-          <p className="matb-sub">
-            Every pin connects a store, a shopper, and the neighborhood around
-            them — with nothing to deliver.
-          </p>
-        </header>
+          <span className="lp-notif__ready">
+            <b>Your order is ready for pickup</b>
+            <small>
+              {STORY_STORE.name}, {STORY_PRODUCTS.length} items
+            </small>
+          </span>
+          <span className="lp-notif__done">
+            <b>Order picked up</b>
+            <small>Thanks for shopping at {STORY_STORE.name}.</small>
+          </span>
+        </span>
+      </div>
 
-        <nav className="matb-tabs" aria-label="Benefit categories">
-          <div className="matb-route-track">
-            <div
-              className="matb-route-fill"
-              style={{ width: `${(active / (CATEGORIES.length - 1)) * 100}%` }}
-            />
-          </div>
-          {CATEGORIES.map((cat, i) => {
-            const TabIcon = cat.tabIcon;
-            const isActive = i === active;
-            return (
-              <button
-                key={cat.id}
-                className={`matb-tab ${isActive ? "matb-tab-active" : ""}`}
-                onClick={() => setActive(i)}
-                aria-pressed={isActive}
-                aria-label={cat.label}
-              >
-                <span className="matb-tab-dot">
-                  {isActive && <span className="matb-tab-ping" />}
-                  <TabIcon size={17} strokeWidth={2} />
-                </span>
-                <span className="matb-tab-label">{cat.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="matb-stage">
-          <div className="matb-pins-layer">
-            {PIN_SLOTS.map((slot, i) => (
-              <PinPhoto
-                key={`${active}-${i}`}
-                image={category.images[i]}
-                icon={category.tabIcon}
-                accent={category.accent}
-                slot={slot}
-              />
-            ))}
-          </div>
-
-          <div className="matb-card">
-            <div className="matb-card-inner" key={active}>
-              <h3 className="matb-card-title">For {category.label}</h3>
-              <p className="matb-card-tagline">{category.tagline}</p>
-              <div className="matb-divider" />
-            </div>
-          </div>
+      <div className="lp-pass">
+        <div className="lp-pass__core">
+          <span className="lp-pass__label">
+            <Ticket />
+            Pickup pass
+          </span>
+          <span className="lp-qr">
+            <PassCode />
+            <span className="lp-qr__scan" />
+          </span>
+          <span className="lp-mono lp-pass__code">#{STORY_ORDER_CODE}</span>
+          <small>
+            Show this at the counter.
+            <br />
+            {STORY_STORE.address}
+          </small>
+          <span className="lp-stamp">
+            <Check />
+            Picked up
+          </span>
         </div>
       </div>
-    </section>
+    </>
   );
 }
 
-export default LandingHowItWorks;
+/*
+ * A stand-in for the pass's scan code: a fixed pseudo-random grid with the three corner finder
+ * squares, drawn on a 25x25 canvas and scaled up with crisp pixels. It is illustration only and
+ * encodes nothing.
+ */
+function PassCode() {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const ctx = ref.current?.getContext("2d");
+    if (!ctx) return;
+    const n = 25;
+    let seed = 4820;
+    const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, n, n);
+    ctx.fillStyle = "#0b1620";
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) if (rnd() > 0.52) ctx.fillRect(x, y, 1, 1);
+    }
+    for (const [x, y] of [
+      [0, 0],
+      [n - 7, 0],
+      [0, n - 7],
+    ]) {
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(Math.max(0, x - 1), Math.max(0, y - 1), 8, 8);
+      ctx.fillStyle = "#0b1620";
+      ctx.fillRect(x, y, 7, 7);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(x + 1, y + 1, 5, 5);
+      ctx.fillStyle = "#0b1620";
+      ctx.fillRect(x + 2, y + 2, 3, 3);
+    }
+  }, []);
+  return <canvas ref={ref} width={25} height={25} />;
+}

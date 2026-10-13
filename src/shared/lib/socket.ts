@@ -17,6 +17,22 @@ import { env } from "@/shared/lib/env";
 let socket: Socket | null = null;
 let refCount = 0;
 
+function getSocketUrl(): string {
+  const configured = env.NEXT_PUBLIC_SOCKET_SERVER_URL;
+  if (typeof window !== "undefined") {
+    // If the browser is on mapanytime.com or www.mapanytime.com, use current window.location.origin
+    // so the socket connection is strictly same-origin (avoids CORS preflight and 308 redirect issues).
+    const currentHost = window.location.hostname;
+    if (
+      configured.includes("mapanytime.com") &&
+      currentHost.includes("mapanytime.com")
+    ) {
+      return window.location.origin;
+    }
+  }
+  return configured;
+}
+
 export function acquireSocket(): Socket {
   // A re-acquire cancels any teardown queued by the release that just ran (see releaseSocket).
   if (teardownTimer) {
@@ -25,7 +41,8 @@ export function acquireSocket(): Socket {
   }
 
   if (!socket) {
-    socket = io(env.NEXT_PUBLIC_SOCKET_SERVER_URL, {
+    const targetUrl = getSocketUrl();
+    socket = io(targetUrl, {
       autoConnect: true,
       // Bounded backoff. The default retries forever with no ceiling on attempts, which turns a
       // misconfigured host into a permanent reconnect loop hammering the server.
@@ -36,7 +53,7 @@ export function acquireSocket(): Socket {
 
     socket.on("connect_error", (err) => {
       console.error(
-        `[socket] connection to ${env.NEXT_PUBLIC_SOCKET_SERVER_URL} failed: ${err.message}`,
+        `[socket] connection to ${targetUrl} failed: ${err.message}`,
       );
     });
   }

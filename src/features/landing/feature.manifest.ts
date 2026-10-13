@@ -10,11 +10,9 @@ export const featureManifest = {
   exposes: [
     "LandingNav",
     "LandingHero",
-    "LandingStats",
     "LandingHowItWorks",
-    "LandingBenefits",
-    "LandingStory",
-    "LandingTestimonial",
+    "LandingFeatures",
+    "LandingSellers",
     "LandingCTA",
     "LandingFooter",
   ] as const,

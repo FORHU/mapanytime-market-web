@@ -3,15 +3,30 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SellerLayout } from "@/shared/components/layout/SellerLayout";
+import type { SellerAccessSummary } from "@/shared/components/layout/Sidebar";
 import { useAuthStore } from "../stores/auth.store";
 import { useAuth } from "../hooks/useAuth";
 
 export function SellerAuthGate({
   children,
   stores,
+  access,
+  navLocked,
+  onOpenTutorial,
 }: {
   children: React.ReactNode;
   stores?: any[];
+  /**
+   * Reuses the layout's own type rather than restating it. The local shape here
+   * omitted `status`, which survived only because the object is forwarded as a
+   * variable — rebuilding it from these fields would silently drop `status` and
+   * hide every permission-gated nav item.
+   */
+  access?: SellerAccessSummary;
+  /** Grey out the nav while still rendering the page — see `SellerLayout`. */
+  navLocked?: boolean;
+  /** Forwarded to the header's Help button; composed in `app/`, like `access`. */
+  onOpenTutorial?: () => void;
 }) {
   const token = useAuthStore((state) => state.token);
   const { logout } = useAuth();
@@ -59,6 +74,9 @@ export function SellerAuthGate({
       isAuthenticated={!!token}
       onSignOut={handleSignOut}
       stores={stores}
+      access={access}
+      navLocked={navLocked}
+      onOpenTutorial={onOpenTutorial}
     >
       {children}
     </SellerLayout>

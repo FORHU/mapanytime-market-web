@@ -69,14 +69,17 @@ function Field({
   required,
   children,
   error,
+  tourId,
 }: {
   label: string;
   required?: boolean;
   children: React.ReactNode;
   error?: string;
+  /** Tutorial anchor; explicit because Field has no `...rest` to pass `data-tour` through. */
+  tourId?: string;
 }) {
   return (
-    <div>
+    <div data-tour={tourId}>
       <label
         className="mb-1.5 block text-sm font-medium"
         style={{ color: "var(--text-primary)" }}
@@ -380,7 +383,7 @@ export function PromotionForm({
         </p>
       </div>
 
-      <Field label="Type" required>
+      <Field label="Type" required tourId="promo-type">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {KIND_OPTIONS.map(({ value, label, icon: Icon }) => (
             <button
@@ -406,7 +409,7 @@ export function PromotionForm({
         </div>
       </Field>
 
-      <Field label="Title" required error={errors.title}>
+      <Field label="Title" required error={errors.title} tourId="promo-title">
         <input
           className={inputClass()}
           style={inputStyle()}
@@ -416,7 +419,12 @@ export function PromotionForm({
         />
       </Field>
 
-      <Field label="Description" required error={errors.description}>
+      <Field
+        label="Description"
+        required
+        error={errors.description}
+        tourId="promo-description"
+      >
         <textarea
           className={inputClass()}
           style={inputStyle()}
@@ -480,7 +488,7 @@ export function PromotionForm({
       </div>
 
       {kind === "JOB" && (
-        <Field label="Salary">
+        <Field label="Salary" tourId="promo-salary">
           <input
             className={inputClass()}
             style={inputStyle()}
@@ -492,7 +500,7 @@ export function PromotionForm({
       )}
 
       {kind === "PROMO" && (
-        <Field label="Discount type">
+        <Field label="Discount type" tourId="promo-discount-type">
           <select
             className={inputClass()}
             style={inputStyle()}
@@ -558,6 +566,7 @@ export function PromotionForm({
         )}
 
       <fieldset
+        data-tour="promo-schedule"
         className="rounded-xl border p-4"
         style={{ borderColor: "var(--border-light)" }}
       >
@@ -758,7 +767,7 @@ export function PromotionForm({
       </div>
 
       {requiresProducts && (
-        <div>
+        <div data-tour="promo-products">
           <ProductPickerField
             storeId={storeId}
             selectedProductIds={productIds}
@@ -786,6 +795,7 @@ export function PromotionForm({
         </button>
         <button
           type="submit"
+          data-tour="promo-submit"
           disabled={isSubmitting}
           className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-opacity disabled:opacity-60"
           style={{ background: "var(--brand-core)" }}

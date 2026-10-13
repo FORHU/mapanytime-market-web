@@ -3,6 +3,17 @@
 import { useEffect, useState } from "react";
 import { env } from "@/shared/lib/env";
 
+/** How a store's map pin is drawn. Mirrors the MARKERDISPLAYMODE enum in the API schema. */
+export type MarkerDisplayMode = "PHOTO_CARD" | "PRICE_CARD" | "LABEL_CARD";
+
+/**
+ * One store as returned by `GET /api/v1/stores/nearby`.
+ *
+ * Mirrors the `NearbyStore` interface in the API's `store.repository.ts`. Keep
+ * the two in step: this type being incomplete is what let the buyer panel read
+ * `store.name` and `store.categories` — neither of which exists — without `tsc`
+ * ever objecting, because the map consumed stores as `any`.
+ */
 export interface NearbyStore {
   id: string;
   storeName: string;
@@ -11,6 +22,19 @@ export interface NearbyStore {
   distanceKm: number;
   coordinates: { lat: number; lng: number };
   logoUrl: string | null;
+  /** The store's banner image, used as the photo pin's fill. */
+  markerPhotoUrl: string | null;
+  rating: number;
+  ratingCount: number;
+  categoryId: string | null;
+  categoryName: string | null;
+  /** Derived server-side from today's StoreHours row; defaults to open when no row exists. */
+  isOpen: boolean;
+  markerDisplayMode: MarkerDisplayMode;
+  /** PRICE_CARD only. */
+  markerPrice: number | null;
+  /** LABEL_CARD only. */
+  markerSubtitle: string | null;
   address: {
     currentAddress: string;
     city: string;

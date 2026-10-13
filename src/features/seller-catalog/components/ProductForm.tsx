@@ -28,6 +28,7 @@ import {
   X,
   ChevronDown,
   Save,
+  RefreshCw,
   UploadCloud,
   Boxes,
   AlignLeft,
@@ -35,6 +36,10 @@ import {
   Trash2,
   AlertTriangle,
 } from "lucide-react";
+import CategoryCascadePicker, {
+  type CascadeCategory,
+  type SelectedCategoryNode,
+} from "./CategoryCascadePicker";
 
 // Shared with the edit form and mirrored from the API, so a product created
 // here can always be saved there. These used to be per-form constants that
@@ -111,9 +116,12 @@ interface ProductFormProps {
   mainCategory: ProductFormCategoryOption | null;
   storeCategoriesLoading: boolean;
   storeCategoriesError: boolean;
-  subCategories: ProductFormCategoryOption[];
-  subCategoriesLoading: boolean;
-  subCategoriesError: boolean;
+  /**
+   * Supplied by the app layer. The category API lives in the `stores` feature, and
+   * feature-to-feature imports are barred, so the fetcher is injected rather than
+   * imported here.
+   */
+  loadCategoryChildren: (parentId: string) => Promise<CascadeCategory[]>;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -518,9 +526,7 @@ export default function ProductForm({
   mainCategory,
   storeCategoriesLoading,
   storeCategoriesError,
-  subCategories,
-  subCategoriesLoading,
-  subCategoriesError,
+  loadCategoryChildren,
 }: ProductFormProps) {
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
@@ -533,31 +539,20 @@ export default function ProductForm({
 
   const primaryCategoryId = mainCategory?.id ?? null;
 
-  const subCategoryOptions = subCategories ?? [];
-  const subCategoriesDisabled =
-    !primaryCategoryId ||
-    subCategoriesLoading ||
-    subCategoriesError ||
-    subCategoryOptions.length === 0;
+  // The deepest node the cascade has reached. `hasChildren` is what gates submit:
+  // stopping on a branch would file the product above the specific facets buyers
+  // browse by, which is the whole reason the cascade exists.
+  const [selectedCategory, setSelectedCategory] =
+    useState<SelectedCategoryNode | null>(null);
 
-  const subCategoryPlaceholder = storeCategoriesError
-    ? "Couldn't load store categories"
-    : storeCategoriesLoading
-      ? "Loading categories…"
-      : !primaryCategoryId
-        ? "No sub-categories available"
-        : subCategoriesLoading
-          ? "Loading sub-categories…"
-          : subCategoriesError
-            ? "Couldn't load sub-categories"
-            : subCategoryOptions.length === 0
-              ? "No sub-categories available"
-              : "Select a sub-category";
-
-  const handleCategoryChange = (value: string) => {
-    setCategoryId(value);
-    setErrors((prev) => ({ ...prev, category: "" }));
-  };
+  const handleCategoryChange = useCallback(
+    (node: SelectedCategoryNode | null) => {
+      setSelectedCategory(node);
+      setCategoryId(node?.id ?? "");
+      setErrors((prev) => ({ ...prev, category: "" }));
+    },
+    [],
+  );
 
   const [price, setPrice] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -638,10 +633,17 @@ export default function ProductForm({
     const newErrors: Record<string, string> = {};
     if (!name) newErrors.name = "Product name is required";
     if (!brand) newErrors.brand = "Brand name is required";
-    if (!categoryId)
-      newErrors.category = subCategoriesDisabled
-        ? "No sub-category is available for your store's category yet"
-        : "Category is required";
+    if (!primaryCategoryId) {
+      newErrors.category = storeCategoriesError
+        ? "Couldn't load your store's categories. Reload and try again."
+        : "No category is available for your store yet";
+    } else if (!selectedCategory) {
+      newErrors.category = "Category is required";
+    } else if (selectedCategory.hasChildren) {
+      // Stopping on a branch is the failure this form previously couldn't even
+      // express — name the node so it's obvious which dropdown still needs an answer.
+      newErrors.category = `Select a more specific category under "${selectedCategory.name}"`;
+    }
 
     // A named option with no values would be silently dropped by the payload
     // builder. Say so instead — invisible data loss is worse than a blocked save.
@@ -676,16 +678,15 @@ export default function ProductForm({
         }
       }
 
-      const selectedSubCategory = subCategoryOptions.find(
-        (c) => c.id === categoryId,
-      );
-
       await onSuccess({
         name,
         brand,
         price: price.toString(),
-        category: selectedSubCategory?.name ?? "",
-        categoryId: selectedSubCategory?.id,
+        // Taken straight from the cascade's deepest selection. The old lookup
+        // resolved against a single flat level and silently yielded `undefined`
+        // for anything deeper than that.
+        category: selectedCategory?.name ?? "",
+        categoryId: selectedCategory?.id,
         description,
         stock: inventory ? Number(inventory) : 0,
         tags: tags.length > 0 ? tags : undefined,
@@ -696,7 +697,9 @@ export default function ProductForm({
 
       setName("");
       setBrand("");
+      // Clearing categoryId also collapses the cascade back to its first level.
       setCategoryId("");
+      setSelectedCategory(null);
       setDescription("");
       setTags([]);
       setPrice("");
@@ -815,36 +818,15 @@ export default function ProductForm({
           >
             Category
           </FieldLabel>
-          <div className="relative">
-            <select
-              required
-              value={categoryId}
-              onChange={(e) => handleCategoryChange(e.target.value)}
-              disabled={subCategoriesDisabled}
-              aria-busy={subCategoriesLoading || storeCategoriesLoading}
-              className="h-[42px] w-full appearance-none rounded-full px-[18px] pr-11 text-sm outline-none transition-all duration-200 focus:glow-primary disabled:cursor-not-allowed disabled:opacity-60"
-              style={{
-                background: "var(--background-secondary)",
-                border: "1px solid var(--border-default)",
-                color: categoryId
-                  ? "var(--text-primary)"
-                  : "var(--text-secondary)",
-              }}
-            >
-              <option value="" disabled>
-                {subCategoryPlaceholder}
-              </option>
-              {subCategoryOptions.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-[18px] top-1/2 h-4 w-4 -translate-y-1/2"
-              style={{ color: "var(--text-secondary)" }}
-            />
-          </div>
+          <CategoryCascadePicker
+            rootId={primaryCategoryId}
+            rootName={mainCategory?.name}
+            rootLoading={storeCategoriesLoading}
+            rootError={storeCategoriesError}
+            value={categoryId}
+            onChange={handleCategoryChange}
+            loadChildren={loadCategoryChildren}
+          />
           {errors.category && (
             <p className="mt-1 text-xs text-rose-500">{errors.category}</p>
           )}
@@ -996,38 +978,40 @@ export default function ProductForm({
         <ImageDropzone images={images} setImages={setImages} />
       </SectionCard>
 
-      {/* Floating save bar */}
+      {/* Save action */}
       <div className="flex justify-center px-4 pb-5">
-        <div
-          className="flex w-full max-w-md items-center justify-between rounded-2xl px-5 py-3.5 sm:w-auto"
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex w-full max-w-md items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-[var(--shadow-border)] transition-[transform,box-shadow,opacity] duration-150 ease-out hover:shadow-[var(--shadow-border-hover)] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none sm:w-auto"
           style={{
-            background: "var(--md-sys-color-surface-container-high)",
-            border: "1px solid var(--border-default)",
+            background: "var(--md-sys-color-primary)",
+            color: "var(--md-sys-color-on-primary)",
           }}
         >
-          <div className="hidden sm:block">
-            <p
-              className="text-xs font-medium"
-              style={{ color: "var(--text-secondary)" }}
-            ></p>
-            <p
-              className="text-sm font-semibold"
-              style={{ color: "var(--text-primary)" }}
-            ></p>
-          </div>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="animate-pulse-glow glow-primary flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-transform duration-150 hover:scale-[1.02] disabled:opacity-60"
-            style={{
-              background: "var(--brand-core)",
-              color: "var(--background-primary)",
-            }}
-          >
-            <Save className="h-4 w-4" />
-            {isSubmitting ? "Saving…" : "Save Product"}
-          </button>
-        </div>
+          {/* Icons cross-fade in separate wrappers, since `animate-spin` would override a scale on the same node. */}
+          <span className="relative inline-flex h-4 w-4 shrink-0">
+            <span
+              className={`absolute inset-0 transition-[transform,opacity,filter] duration-150 ease-[cubic-bezier(0.2,0,0,1)] ${
+                isSubmitting
+                  ? "scale-[0.25] opacity-0 blur-[4px]"
+                  : "scale-100 opacity-100 blur-0"
+              }`}
+            >
+              <Save className="h-4 w-4" />
+            </span>
+            <span
+              className={`absolute inset-0 transition-[transform,opacity,filter] duration-150 ease-[cubic-bezier(0.2,0,0,1)] ${
+                isSubmitting
+                  ? "scale-100 opacity-100 blur-0"
+                  : "scale-[0.25] opacity-0 blur-[4px]"
+              }`}
+            >
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            </span>
+          </span>
+          {isSubmitting ? "Saving…" : "Save product"}
+        </button>
       </div>
     </form>
   );
