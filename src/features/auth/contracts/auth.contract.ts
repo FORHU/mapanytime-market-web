@@ -40,7 +40,6 @@ export const OrgContextSchema = z
 export const LoginResponseEnvelopeSchema = z.object({
   data: z.object({
     accessToken: z.string(),
-    refreshToken: z.string().optional(),
     user: AuthUserSchema.optional(),
     stores: z.array(z.unknown()).optional(),
     orgContext: OrgContextSchema,
@@ -59,7 +58,6 @@ export const LoginResponseEnvelopeSchema = z.object({
 
 export const AuthResultSchema = z.object({
   accessToken: z.string(),
-  refreshToken: z.string().optional(),
   hasStores: z.boolean(),
   orgContext: OrgContextSchema,
   user: AuthUserSchema.optional(),

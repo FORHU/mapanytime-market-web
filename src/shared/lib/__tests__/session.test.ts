@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { clearClientSession } from "../session";
-import { setToken, getToken, getRefreshToken } from "../token";
+import { setToken, getToken } from "../token";
 import { getSessionId } from "../analytics";
 
 const ANALYTICS_SESSION_KEY = "mapanytime_analytics_session_id";
@@ -16,19 +16,18 @@ describe("clearClientSession", () => {
 
   /** Signs in and populates every key a live session accumulates. */
   function seedSession() {
-    setToken("access-1", "refresh-1");
+    setToken("access-1");
     localStorage.setItem(STORE_CONTEXT_KEY, "store-1");
     localStorage.setItem(PROPERTY_CONTEXT_KEY, "property-1");
     getSessionId(); // mints the analytics id the way a tracked event would
   }
 
-  it("clears both tokens and the has_session marker cookie", () => {
+  it("clears the token and the has_session marker cookie", () => {
     seedSession();
 
     clearClientSession();
 
     expect(getToken()).toBeNull();
-    expect(getRefreshToken()).toBeNull();
     expect(document.cookie).not.toContain("has_session=1");
   });
 
