@@ -62,14 +62,14 @@ export function useAuth() {
    * leaves them in memory, so the incoming user could be shown the previous user's
    * cached data for the moment before each refetch lands.
    */
-  const adoptSession = (accessToken: string, refreshToken?: string) => {
+  const adoptSession = (accessToken: string) => {
     // Before setToken, not after — clearClientSession() clears the credential too,
     // so the reverse order would wipe the token just written. Signing in has to
     // tear down first because a tab whose session expired without an explicit
     // logout arrives at /login still holding the previous user's analytics id and
     // seller context.
     clearClientSession();
-    setToken(accessToken, refreshToken);
+    setToken(accessToken);
     // getQueryCache().clear() rather than queryClient.clear(): this runs inside
     // the login mutation's own onSuccess, and clear() would wipe the mutation
     // cache out from under it.
@@ -83,7 +83,7 @@ export function useAuth() {
     // global handler would sign the user out and redirect mid-login. The form renders
     // the error itself.
     meta: { skipGlobalErrorHandling: true },
-    onSuccess: (data) => adoptSession(data.accessToken, data.refreshToken),
+    onSuccess: (data) => adoptSession(data.accessToken),
   });
 
   const facebookLoginMutation = useSafeMutation({
@@ -91,13 +91,13 @@ export function useAuth() {
     // Same reasoning as loginMutation: a rejection here is a form-level
     // sign-in failure, not a session expiring mid-app.
     meta: { skipGlobalErrorHandling: true },
-    onSuccess: (data) => adoptSession(data.accessToken, data.refreshToken),
+    onSuccess: (data) => adoptSession(data.accessToken),
   });
 
   const googleLoginMutation = useSafeMutation({
     mutationFn: (idToken: string) => loginWithGoogle(idToken),
     meta: { skipGlobalErrorHandling: true },
-    onSuccess: (data) => adoptSession(data.accessToken, data.refreshToken),
+    onSuccess: (data) => adoptSession(data.accessToken),
   });
 
   const registerMutation = useSafeMutation({
@@ -113,12 +113,7 @@ export function useAuth() {
     meta: { skipGlobalErrorHandling: true },
     onSuccess: (data) => {
       if (!data.accessToken) return;
-      // `register` and the login fallback return different shapes; only one carries a
-      // refresh token. Narrowing beats the `as any` this replaced — a missing refresh
-      // token is legitimate here, an untyped one hides the day the shape changes.
-      const refreshToken =
-        "refreshToken" in data ? data.refreshToken : undefined;
-      adoptSession(data.accessToken, refreshToken);
+      adoptSession(data.accessToken);
     },
   });
 

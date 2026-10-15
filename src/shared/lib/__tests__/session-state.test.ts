@@ -44,7 +44,7 @@ describe("session-state", () => {
       claimSignOut();
       expect(isSigningOut()).toBe(true);
 
-      setToken("fresh-access-token", "fresh-refresh-token");
+      setToken("fresh-access-token");
 
       expect(isSigningOut()).toBe(false);
     });

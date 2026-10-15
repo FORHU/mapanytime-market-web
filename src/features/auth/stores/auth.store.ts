@@ -1,37 +1,33 @@
 import { create } from "zustand";
 import {
   getToken,
-  getRefreshToken,
   setToken as setStorageToken,
   clearToken as clearStorageToken,
 } from "@/shared/lib/token";
+import { setOnTokenClear } from "@/shared/lib/http";
 
+/**
+ * The signed-in session's bearer token. One token, no refresh token: the API
+ * issues Better Auth sessions that slide forward with use (API #122).
+ */
 interface AuthState {
   token: string | null;
-  refreshToken: string | null;
-  setToken: (token: string | null, refreshToken?: string | null) => void;
+  setToken: (token: string | null) => void;
   clearToken: () => void;
 }
 
-import { setOnTokenRefresh, setOnTokenClear } from "@/shared/lib/http";
-
 export const useAuthStore = create<AuthState>((set) => ({
   token: getToken(),
-  refreshToken: getRefreshToken(),
-  setToken: (token, refreshToken) => {
-    if (token) setStorageToken(token, refreshToken || undefined);
+  setToken: (token) => {
+    if (token) setStorageToken(token);
     else clearStorageToken();
-    set({ token, refreshToken: refreshToken || null });
+    set({ token });
   },
   clearToken: () => {
     clearStorageToken();
-    set({ token: null, refreshToken: null });
+    set({ token: null });
   },
 }));
-
-setOnTokenRefresh((token, refreshToken) => {
-  useAuthStore.getState().setToken(token, refreshToken);
-});
 
 setOnTokenClear(() => {
   useAuthStore.getState().clearToken();

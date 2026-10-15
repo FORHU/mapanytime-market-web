@@ -1,6 +1,5 @@
 // src/features/auth/api/login.api.ts
 import { fetcher } from "@/shared/lib/http";
-import { getRefreshToken } from "@/shared/lib/token";
 import {
   LoginResponseEnvelopeSchema,
   AuthResultSchema,
@@ -34,7 +33,6 @@ export const login = async (
   const envelope = LoginResponseEnvelopeSchema.parse(raw);
   return AuthResultSchema.parse({
     accessToken: envelope.data.accessToken,
-    refreshToken: envelope.data.refreshToken,
     // Stores owned outright. Org staff own none — `orgContext` is what tells
     // us whether they nonetheless have stores to work in.
     hasStores: Array.isArray(envelope.data.stores)
@@ -64,7 +62,6 @@ export const loginWithFacebook = async (
   const envelope = LoginResponseEnvelopeSchema.parse(raw);
   return AuthResultSchema.parse({
     accessToken: envelope.data.accessToken,
-    refreshToken: envelope.data.refreshToken,
     hasStores: Array.isArray(envelope.data.stores)
       ? envelope.data.stores.length > 0
       : false,
@@ -90,7 +87,6 @@ export const loginWithGoogle = async (idToken: string): Promise<AuthResult> => {
   const envelope = LoginResponseEnvelopeSchema.parse(raw);
   return AuthResultSchema.parse({
     accessToken: envelope.data.accessToken,
-    refreshToken: envelope.data.refreshToken,
     hasStores: Array.isArray(envelope.data.stores)
       ? envelope.data.stores.length > 0
       : false,
@@ -144,19 +140,11 @@ export const setPassword = async (input: {
 /**
  * Universal Global Logout Handler
  *
- * Sends the stored refresh token so the server can delete the matching session row.
- * Without it the server only clears `activeSessionId` — which does kill the access
- * token — but the refresh row survives to its own expiry, and the refresh endpoint
- * does not check `activeSessionId`. A refresh token kept from before logout could
- * therefore mint a brand-new live session afterwards.
- *
- * The endpoint is idempotent, so sending nothing (no token stored) is still a 200.
+ * Ends the session the bearer token identifies — under Better Auth (API #122)
+ * there is no refresh token to send. Idempotent: an already-ended session is a 200.
  */
-export const logout = async () => {
-  const refreshToken = getRefreshToken();
-
-  return fetcher("/api/v1/auth/logout", {
+export const logout = async () =>
+  fetcher("/api/v1/auth/logout", {
     method: "POST",
-    body: JSON.stringify(refreshToken ? { refreshToken } : {}),
+    body: JSON.stringify({}),
   });
-};
