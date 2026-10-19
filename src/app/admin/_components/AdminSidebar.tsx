@@ -19,6 +19,7 @@ import {
   LogOut,
   CheckCircle,
   Smartphone,
+  Calculator,
 } from "lucide-react";
 
 interface AdminNavChild {
@@ -66,6 +67,12 @@ const navItems: AdminNavItem[] = [
         name: "Categories",
         href: "/admin/categories",
         icon: Grid,
+        roles: ["ADMIN"],
+      },
+      {
+        name: "Pricing Engine",
+        href: "/admin/pricing",
+        icon: Calculator,
         roles: ["ADMIN"],
       },
       {
