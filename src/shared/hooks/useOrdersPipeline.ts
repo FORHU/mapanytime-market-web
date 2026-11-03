@@ -252,8 +252,10 @@ export const useOrdersPipeline = (params: OrdersPipelineParams) => {
 
     const socket: Socket = acquireSocket();
 
+    // The server joins the channel of the user the token belongs to. Read at emit time, not
+    // from the closure: a reconnect can happen long after a refresh replaced the token.
     const handleConnect = () => {
-      socket.emit("subscribe_notifications", { userId });
+      socket.emit("subscribe_notifications", { token: getToken() });
     };
 
     const handleNotification = (notification: any) => {

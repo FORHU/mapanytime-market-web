@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { getToken, getRefreshToken, setToken, clearToken } from "../token";
+import { getToken, setToken, clearToken } from "../token";
 
 const TOKEN_KEY = "token";
-const REFRESH_TOKEN_KEY = "refresh_token";
+/** Older builds kept a JWT refresh token here; the API no longer issues one. */
+const LEGACY_REFRESH_TOKEN_KEY = "refresh_token";
 
 describe("token storage", () => {
   beforeEach(() => {
@@ -11,11 +12,10 @@ describe("token storage", () => {
     document.cookie = "has_session=; path=/; Max-Age=0";
   });
 
-  it("writes both tokens to sessionStorage", () => {
-    setToken("access-1", "refresh-1");
+  it("writes the token to sessionStorage", () => {
+    setToken("access-1");
 
     expect(sessionStorage.getItem(TOKEN_KEY)).toBe("access-1");
-    expect(sessionStorage.getItem(REFRESH_TOKEN_KEY)).toBe("refresh-1");
   });
 
   /**
@@ -23,41 +23,30 @@ describe("token storage", () => {
    * localStorage write, the token outlives the tab again and this fails.
    */
   it("never writes a token to localStorage", () => {
-    setToken("access-1", "refresh-1");
+    setToken("access-1");
 
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
-    expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
   });
 
   it("reads back what it wrote", () => {
-    setToken("access-1", "refresh-1");
+    setToken("access-1");
 
     expect(getToken()).toBe("access-1");
-    expect(getRefreshToken()).toBe("refresh-1");
-  });
-
-  it("leaves an existing refresh token alone when only the access token rotates", () => {
-    setToken("access-1", "refresh-1");
-    setToken("access-2");
-
-    expect(getToken()).toBe("access-2");
-    expect(getRefreshToken()).toBe("refresh-1");
   });
 
   it("sets the has_session marker cookie on write and drops it on clear", () => {
-    setToken("access-1", "refresh-1");
+    setToken("access-1");
     expect(document.cookie).toContain("has_session=1");
 
     clearToken();
     expect(document.cookie).not.toContain("has_session=1");
   });
 
-  it("clears both tokens from sessionStorage", () => {
-    setToken("access-1", "refresh-1");
+  it("clears the token from sessionStorage", () => {
+    setToken("access-1");
     clearToken();
 
     expect(getToken()).toBeNull();
-    expect(getRefreshToken()).toBeNull();
   });
 
   /**
@@ -66,21 +55,36 @@ describe("token storage", () => {
    */
   it("purges a legacy localStorage token instead of migrating it", () => {
     localStorage.setItem(TOKEN_KEY, "stale-access");
-    localStorage.setItem(REFRESH_TOKEN_KEY, "stale-refresh");
 
     expect(getToken()).toBeNull();
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
-    expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
     expect(sessionStorage.getItem(TOKEN_KEY)).toBeNull();
   });
 
-  it("clearToken also removes legacy localStorage entries", () => {
+  /**
+   * Since the move to Better Auth sessions (API #122) nothing reads a refresh
+   * token, so one left by an earlier build is a dead credential — removed on the
+   * next read, from either store.
+   */
+  it("purges a refresh token left by an earlier build", () => {
+    localStorage.setItem(LEGACY_REFRESH_TOKEN_KEY, "stale-refresh");
+    sessionStorage.setItem(LEGACY_REFRESH_TOKEN_KEY, "stale-refresh");
+
+    getToken();
+
+    expect(localStorage.getItem(LEGACY_REFRESH_TOKEN_KEY)).toBeNull();
+    expect(sessionStorage.getItem(LEGACY_REFRESH_TOKEN_KEY)).toBeNull();
+  });
+
+  it("clearToken also removes legacy entries", () => {
     localStorage.setItem(TOKEN_KEY, "stale-access");
-    localStorage.setItem(REFRESH_TOKEN_KEY, "stale-refresh");
+    localStorage.setItem(LEGACY_REFRESH_TOKEN_KEY, "stale-refresh");
+    sessionStorage.setItem(LEGACY_REFRESH_TOKEN_KEY, "stale-refresh");
 
     clearToken();
 
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
-    expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
+    expect(localStorage.getItem(LEGACY_REFRESH_TOKEN_KEY)).toBeNull();
+    expect(sessionStorage.getItem(LEGACY_REFRESH_TOKEN_KEY)).toBeNull();
   });
 });

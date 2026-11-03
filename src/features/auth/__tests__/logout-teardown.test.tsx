@@ -107,7 +107,7 @@ describe("sign-out teardown", () => {
   }
 
   it("terminates: an unguarded query stops after at most one tokenless round", async () => {
-    setToken("valid-access-token", "valid-refresh-token");
+    setToken("valid-access-token");
     const queryClient = makeClient();
 
     render(
@@ -140,7 +140,7 @@ describe("sign-out teardown", () => {
   });
 
   it("fires nothing at all when the query declares requiresAuth", async () => {
-    setToken("valid-access-token", "valid-refresh-token");
+    setToken("valid-access-token");
     const queryClient = makeClient();
 
     render(
@@ -165,7 +165,7 @@ describe("sign-out teardown", () => {
   });
 
   it("dispatches no auth:unauthorized event during an explicit sign-out", async () => {
-    setToken("valid-access-token", "valid-refresh-token");
+    setToken("valid-access-token");
     const queryClient = makeClient();
 
     render(
@@ -214,7 +214,7 @@ describe("sign-out teardown", () => {
   // fetch, which is why login?_rsc sat pending forever.
   describe("with AuthListener mounted (the full cycle)", () => {
     it("settles after an explicit sign-out: bounded requests, one navigation", async () => {
-      setToken("valid-access-token", "valid-refresh-token");
+      setToken("valid-access-token");
       const queryClient = makeClient();
 
       render(

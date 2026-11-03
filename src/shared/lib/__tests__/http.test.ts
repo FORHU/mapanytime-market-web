@@ -134,7 +134,7 @@ describe("fetcher", () => {
   // AuthListener also navigated via the router. A document navigation racing an
   // RSC navigation cancelled each other every turn, which is what left the
   // login?_rsc requests pending forever. It reports now; it does not route.
-  describe("401 with no refresh token", () => {
+  describe("401 ends the session", () => {
     function listenForUnauthorized() {
       const handler = vi.fn();
       window.addEventListener("auth:unauthorized", handler);
@@ -143,6 +143,21 @@ describe("fetcher", () => {
         stop: () => window.removeEventListener("auth:unauthorized", handler),
       };
     }
+
+    /**
+     * Better Auth sessions (API #122) have no refresh token, and the API's
+     * /refresh-token always answers 401. A 401 is therefore final: one request,
+     * no refresh call, no retry.
+     */
+    it("makes no refresh call and no retry", async () => {
+      mockFetch(401, { message: "Session expired" });
+      const fetchSpy = global.fetch as unknown as ReturnType<typeof vi.fn>;
+
+      await fetcher("/api/protected").catch(() => {});
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(String(fetchSpy.mock.calls[0][0])).not.toContain("refresh-token");
+    });
 
     it("dispatches auth:unauthorized exactly once", async () => {
       const { handler, stop } = listenForUnauthorized();

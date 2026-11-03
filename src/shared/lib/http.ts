@@ -1,6 +1,6 @@
 import { ApiError } from "@/shared/errors/api-error";
 import { env } from "@/shared/lib/env";
-import { getToken, getRefreshToken, setToken } from "@/shared/lib/token";
+import { getToken } from "@/shared/lib/token";
 import { clearClientSession } from "@/shared/lib/session";
 import { claimSignOut } from "@/shared/lib/session-state";
 
@@ -22,92 +22,23 @@ function classify(
   return "UNKNOWN";
 }
 
-let isRefreshing = false;
-let refreshSubscribers: ((newToken: string) => void)[] = [];
-// Parallel to `refreshSubscribers`: a queued request must be failed, not left
-// pending, when the refresh it is waiting on turns out to fail.
-let refreshRejecters: ((reason: unknown) => void)[] = [];
-
-let onTokenRefreshCallback:
-  ((token: string, refreshToken?: string) => void) | null = null;
-export function setOnTokenRefresh(
-  cb: (token: string, refreshToken?: string) => void,
-) {
-  onTokenRefreshCallback = cb;
-}
-
 let onTokenClearCallback: (() => void) | null = null;
 export function setOnTokenClear(cb: () => void) {
   onTokenClearCallback = cb;
 }
 
-function onRefreshed(newToken: string) {
-  refreshSubscribers.forEach((cb) => cb(newToken));
-  refreshSubscribers = [];
-  refreshRejecters = [];
-}
-
 /**
- * Fail everything queued behind a refresh that did not produce a token.
+ * Calls the API with the stored bearer token.
  *
- * Without this the subscribers were simply dropped: `onRefreshed` never ran, so
- * every queued promise stayed pending forever and the queries behind them span
- * on a skeleton with no error and no timeout.
- */
-function onRefreshFailed(reason: unknown) {
-  refreshRejecters.forEach((reject) => reject(reason));
-  refreshSubscribers = [];
-  refreshRejecters = [];
-}
-
-async function tryRefreshToken(): Promise<string | null> {
-  const existingRefreshToken = getRefreshToken();
-  if (!existingRefreshToken) return null;
-
-  try {
-    const res = await fetch(
-      `${env.NEXT_PUBLIC_API_URL}/api/v1/auth/refresh-token`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ refreshToken: existingRefreshToken }),
-      },
-    );
-
-    if (!res.ok) return null;
-    const json = await res.json();
-    const data = json?.data;
-    const newAccessToken = data?.accessToken;
-    const newRefreshToken = data?.refreshToken || existingRefreshToken;
-
-    if (newAccessToken) {
-      setToken(newAccessToken, newRefreshToken);
-      if (onTokenRefreshCallback) {
-        onTokenRefreshCallback(newAccessToken, newRefreshToken);
-      }
-      return newAccessToken;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * `attempt` is internal bookkeeping, not part of the calling contract: it is how
- * the post-refresh retry below tells itself apart from the original request.
- * Only attempt 0 may refresh, so a request can be retried at most once.
- *
- * It exists because the retry used to be unguarded self-recursion. Any response
- * that kept failing after a SUCCESSFUL refresh — an authorization error, say —
- * looped forever: refresh, retry, fail, refresh, with no backoff and no ceiling.
+ * There is no refresh step. The API moved from JWT access/refresh tokens to
+ * Better Auth sessions (API #122): a session lasts 30 days and slides forward
+ * with use, so a 401 means the session is over — signed out, superseded by a
+ * sign-in on another device, or expired — and the only answer is signing in
+ * again. The refresh-and-retry queue that used to live here is gone with it.
  */
 export async function fetcher<T>(
   url: string,
   options?: RequestInit,
-  attempt = 0,
 ): Promise<T> {
   try {
     const token = getToken();
@@ -141,80 +72,26 @@ export async function fetcher<T>(
       // 404. auth.middleware.ts now makes every authentication rejection a 401
       // deliberately, so the heuristic is obsolete — and "unauthorized" collides
       // with authorization: a 403 like "Unauthorized store access." was read as
-      // a dead session, refreshed (successfully, the session was fine), retried,
-      // and 403'd again, forever.
+      // a dead session.
       //
       // A 403 must fall through to the ApiError throw so callers see it.
       const isAuthError = res.status === 401;
 
-      // Attempt automatic JWT refresh token rotation before forcing a logout.
-      // Only on the first attempt: a retry that still fails is not a token
-      // problem, and refreshing again would just restart the cycle.
-      if (
-        isAuthError &&
-        attempt === 0 &&
-        !url.includes("/auth/refresh-token") &&
-        !url.includes("/auth/login")
-      ) {
-        const storedRefreshToken = getRefreshToken();
-        if (storedRefreshToken) {
-          if (!isRefreshing) {
-            isRefreshing = true;
-            const newToken = await tryRefreshToken();
-            isRefreshing = false;
-
-            if (newToken) {
-              onRefreshed(newToken);
-              return fetcher<T>(url, options, attempt + 1);
-            }
-
-            // Release the queue before falling through to the logout below,
-            // so waiters fail with this error instead of hanging.
-            onRefreshFailed(
-              new ApiError(message, category, { status: res.status }),
-            );
-          } else {
-            // Queue concurrent requests while token refresh is in flight
-            return new Promise((resolve, reject) => {
-              refreshRejecters.push(reject);
-              refreshSubscribers.push((newToken: string) => {
-                fetcher<T>(
-                  url,
-                  {
-                    ...options,
-                    headers: {
-                      ...options?.headers,
-                      Authorization: `Bearer ${newToken}`,
-                    },
-                  },
-                  attempt + 1,
-                )
-                  .then(resolve)
-                  .catch(reject);
-              });
-            });
-          }
-        }
-
-        // Refresh failed or no refresh token exists -> clear the session and redirect.
-        // Was clearToken() plus a hand-written removeItem for the store context only,
-        // which left active_property_context_id and the analytics session id behind
-        // for whoever signed in next. clearClientSession owns the full list now.
+      // A 401 ends the session — except from /auth/login itself, where it is just
+      // a wrong password and the form shows the message.
+      if (isAuthError && !url.includes("/auth/login")) {
+        // Clear the session and report. clearClientSession owns the full list
+        // of what a sign-out removes (token, store context, analytics session id).
         if (typeof window !== "undefined") {
           clearClientSession();
           if (onTokenClearCallback) {
             onTokenClearCallback();
           }
 
-          // Was `window.location.href = "/login"`, guarded on
-          // window.location.pathname. Two layers owned the redirect — this one
-          // and AuthListener — and a document navigation racing an RSC
-          // navigation cancelled each other on every turn, which is why the
-          // login?_rsc requests sat pending forever. The guard could not be made
-          // correct here either: during an uncommitted App Router navigation
-          // window.location still reports the old path.
-          //
-          // This layer now only reports. AuthListener owns clearing and routing.
+          // This layer only reports; AuthListener owns clearing and routing.
+          // Two layers redirecting at once (a document navigation racing an RSC
+          // navigation) cancelled each other, which is why login?_rsc requests
+          // used to sit pending forever.
           if (claimSignOut()) {
             window.dispatchEvent(new CustomEvent("auth:unauthorized"));
           }
