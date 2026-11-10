@@ -2,7 +2,15 @@
 
 import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Shield, Search, CheckCircle2, Pencil } from "lucide-react";
+import {
+  Shield,
+  Search,
+  CheckCircle2,
+  Pencil,
+  UserPlus,
+  Users,
+  Mail,
+} from "lucide-react";
 import {
   getUsers,
   getRoles,
@@ -14,8 +22,14 @@ import {
   CatalogRole,
 } from "@/features/users/contracts/users.contract";
 import { ApiError } from "@/shared/errors/api-error";
+import { InviteAdminModal } from "@/features/adminInvites/components/InviteAdminModal";
+import { AdminInvitesTable } from "@/features/adminInvites/components/AdminInvitesTable";
 
 export default function AdminUsersPage() {
+  const [activeTab, setActiveTab] = useState<"users" | "invites">("users");
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [invitesRefreshTrigger, setInvitesRefreshTrigger] = useState(0);
+
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [showChangeRoleModal, setShowChangeRoleModal] = useState(false);
@@ -160,148 +174,209 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--text-primary)] flex items-center gap-3">
-          <Shield className="w-7 h-7 text-[var(--brand-core)]" />
-          User Accounts
-        </h1>
-        <p className="text-sm font-medium text-[var(--text-secondary)] mt-1">
-          Assign user roles and manage account access across the platform.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--text-primary)] flex items-center gap-3">
+            <Shield className="w-7 h-7 text-[var(--brand-core)]" />
+            User Accounts & Access
+          </h1>
+          <p className="text-sm font-medium text-[var(--text-secondary)] mt-1">
+            Assign user roles, manage account access, and invite administrative staff.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowInviteModal(true)}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[var(--brand-core)] text-white text-xs font-bold shadow-md shadow-sky-500/20 hover:bg-sky-400 transition-all self-start sm:self-auto shrink-0"
+        >
+          <UserPlus className="w-4 h-4" />
+          Invite Admin
+        </button>
       </div>
 
-      {/* USER ACCOUNTS */}
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl border border-[var(--border-default)] bg-[var(--background-secondary)]/50 backdrop-blur-md">
-          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
-            <button
-              onClick={() => setRoleFilter("ALL")}
-              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
-                roleFilter === "ALL"
-                  ? "bg-[var(--brand-core)] text-white shadow-sm"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
-              }`}
-            >
-              All Users ({users.length})
-            </button>
-            {roleCatalog.map((catalogRole) => (
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-[var(--border-light)] pb-2 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab("users")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === "users"
+              ? "bg-[var(--brand-core)] text-white shadow-sm"
+              : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Active Users ({users.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("invites")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === "invites"
+              ? "bg-[var(--brand-core)] text-white shadow-sm"
+              : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
+          }`}
+        >
+          <Mail className="w-4 h-4" />
+          Staff Invitations
+        </button>
+      </div>
+
+      {/* Tab: Invitations */}
+      {activeTab === "invites" && (
+        <AdminInvitesTable
+          refreshTrigger={invitesRefreshTrigger}
+        />
+      )}
+
+      {/* Tab: User Accounts */}
+      {activeTab === "users" && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl border border-[var(--border-default)] bg-[var(--background-secondary)]/50 backdrop-blur-md">
+            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
               <button
-                key={catalogRole.roleName}
-                onClick={() => setRoleFilter(catalogRole.roleName)}
+                onClick={() => setRoleFilter("ALL")}
                 className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
-                  roleFilter === catalogRole.roleName
+                  roleFilter === "ALL"
                     ? "bg-[var(--brand-core)] text-white shadow-sm"
                     : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
                 }`}
               >
-                {catalogRole.roleName} (
-                {
-                  users.filter((u) =>
-                    (u.roles ?? []).some(
-                      (userRole) => userRole.roleName === catalogRole.roleName,
-                    ),
-                  ).length
-                }
-                )
+                All Users ({users.length})
               </button>
-            ))}
+              {roleCatalog.map((catalogRole) => (
+                <button
+                  key={catalogRole.roleName}
+                  onClick={() => setRoleFilter(catalogRole.roleName)}
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap ${
+                    roleFilter === catalogRole.roleName
+                      ? "bg-[var(--brand-core)] text-white shadow-sm"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--background-tertiary)]"
+                  }`}
+                >
+                  {catalogRole.roleName} (
+                  {
+                    users.filter((u) =>
+                      (u.roles ?? []).some(
+                        (userRole) => userRole.roleName === catalogRole.roleName,
+                      ),
+                    ).length
+                  }
+                  )
+                </button>
+              ))}
+            </div>
+
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+              <input
+                type="text"
+                placeholder="Search name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-[var(--border-default)] bg-[var(--background-primary)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)]"
+              />
+            </div>
           </div>
 
-          <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
-            <input
-              type="text"
-              placeholder="Search name or email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-xl border border-[var(--border-default)] bg-[var(--background-primary)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-core)]"
-            />
-          </div>
-        </div>
-
-        <div className="p-6 rounded-3xl border border-[var(--border-default)] bg-[var(--background-secondary)]/50 backdrop-blur-md overflow-x-auto">
-          {isLoading ? (
-            <div className="text-center py-12">
-              <p className="text-sm font-bold text-[var(--text-tertiary)]">
-                Loading users...
-              </p>
-            </div>
-          ) : isError ? (
-            <div className="text-center py-12">
-              <p className="text-sm font-bold text-red-400">
-                Failed to load users. Please try again later.
-              </p>
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[var(--border-light)] text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-                  <th className="pb-3 px-4">User</th>
-                  <th className="pb-3 px-4">Email</th>
-                  <th className="pb-3 px-4">Assigned Role</th>
-                  <th className="pb-3 px-4">Active Permissions</th>
-                  <th className="pb-3 px-4">Status</th>
-                  <th className="pb-3 px-4 text-right">Joined</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-light)] text-sm">
-                {filteredUsers.map((usr) => (
-                  <tr
-                    key={usr.id}
-                    className="hover:bg-[var(--background-tertiary)]/40 transition-colors"
-                  >
-                    <td className="py-4 px-4 font-bold text-[var(--text-primary)] flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center text-white text-xs font-black shadow-sm">
-                        {((usr.firstName || "") + " " + (usr.lastName || ""))
-                          .trim()
-                          .charAt(0) || "U"}
-                      </div>
-                      {(
-                        (usr.firstName || "") +
-                        " " +
-                        (usr.lastName || "")
-                      ).trim() || usr.email}
-                    </td>
-                    <td className="py-4 px-4 text-[var(--text-secondary)] text-xs">
-                      {usr.email}
-                    </td>
-                    <td className="py-4 px-4 text-xs font-semibold text-[var(--text-secondary)]">
-                      {(usr.roles ?? [])
-                        .map((role) => role.roleName)
-                        .join(", ") || "—"}
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                        {roleCatalog.find(
-                          (r) => r.roleName === (usr.roles ?? [])[0]?.roleName,
-                        )?.permissionCodes?.length ?? 0}{" "}
-                        Granted
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Active
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-right text-xs text-[var(--text-tertiary)]">
-                      {usr.createdAt}
-                    </td>
-                    <td className="py-4 px-4 text-right text-xs text-[var(--text-tertiary)]">
-                      <button
-                        onClick={() => openChangeRoleModal(usr)}
-                        title="Change Roles"
-                        className="group"
-                      >
-                        <Pencil className="w-4 h-4 text-slate-400 hover:text-sky-400 transition-colors" />
-                      </button>
-                    </td>
+          <div className="p-6 rounded-3xl border border-[var(--border-default)] bg-[var(--background-secondary)]/50 backdrop-blur-md overflow-x-auto">
+            {isLoading ? (
+              <div className="text-center py-12">
+                <p className="text-sm font-bold text-[var(--text-tertiary)]">
+                  Loading users...
+                </p>
+              </div>
+            ) : isError ? (
+              <div className="text-center py-12">
+                <p className="text-sm font-bold text-red-400">
+                  Failed to load users. Please try again later.
+                </p>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[var(--border-light)] text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+                    <th className="pb-3 px-4">User</th>
+                    <th className="pb-3 px-4">Email</th>
+                    <th className="pb-3 px-4">Assigned Role</th>
+                    <th className="pb-3 px-4">Active Permissions</th>
+                    <th className="pb-3 px-4">Status</th>
+                    <th className="pb-3 px-4 text-right">Joined</th>
+                    <th className="pb-3 px-4 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody className="divide-y divide-[var(--border-light)] text-sm">
+                  {filteredUsers.map((usr) => (
+                    <tr
+                      key={usr.id}
+                      className="hover:bg-[var(--background-tertiary)]/40 transition-colors"
+                    >
+                      <td className="py-4 px-4 font-bold text-[var(--text-primary)] flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center text-white text-xs font-black shadow-sm shrink-0">
+                          {((usr.firstName || "") + " " + (usr.lastName || ""))
+                            .trim()
+                            .charAt(0) || "U"}
+                        </div>
+                        <span className="truncate max-w-xs">
+                          {(
+                            (usr.firstName || "") +
+                            " " +
+                            (usr.lastName || "")
+                          ).trim() || usr.email}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-[var(--text-secondary)] text-xs">
+                        {usr.email}
+                      </td>
+                      <td className="py-4 px-4 text-xs font-semibold text-[var(--text-secondary)]">
+                        {(usr.roles ?? [])
+                          .map((role) => role.roleName)
+                          .join(", ") || "—"}
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                          {roleCatalog.find(
+                            (r) => r.roleName === (usr.roles ?? [])[0]?.roleName,
+                          )?.permissionCodes?.length ?? 0}{" "}
+                          Granted
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Active
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-right text-xs text-[var(--text-tertiary)]">
+                        {usr.createdAt}
+                      </td>
+                      <td className="py-4 px-4 text-right text-xs text-[var(--text-tertiary)]">
+                        <button
+                          onClick={() => openChangeRoleModal(usr)}
+                          title="Change Roles"
+                          className="group"
+                        >
+                          <Pencil className="w-4 h-4 text-slate-400 hover:text-sky-400 transition-colors" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Invite Admin Modal */}
+      <InviteAdminModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onSuccess={() => {
+          setInvitesRefreshTrigger((prev) => prev + 1);
+          setActiveTab("invites");
+        }}
+      />
+
       {/* Modal to Change User Roles */}
       {showChangeRoleModal &&
         selectedUser &&
