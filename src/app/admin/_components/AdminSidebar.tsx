@@ -21,6 +21,7 @@ import {
   Smartphone,
   Calculator,
   Banknote,
+  ShieldAlert,
 } from "lucide-react";
 
 interface AdminNavChild {
@@ -99,6 +100,12 @@ const navItems: AdminNavItem[] = [
         name: "Permissions Matrix",
         href: "/admin/permissions",
         icon: Key,
+        roles: ["ADMIN"],
+      },
+      {
+        name: "Audit Logs",
+        href: "/admin/audit-logs",
+        icon: ShieldAlert,
         roles: ["ADMIN"],
       },
     ],
