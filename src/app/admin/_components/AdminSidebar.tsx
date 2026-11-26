@@ -22,6 +22,7 @@ import {
   Calculator,
   Banknote,
   ShieldAlert,
+  Compass,
 } from "lucide-react";
 
 interface AdminNavChild {
@@ -53,6 +54,12 @@ const navItems: AdminNavItem[] = [
     icon: Store,
     roles: ["ADMIN"],
     children: [
+      {
+        name: "Fleet God's Eye",
+        href: "/admin/fleet",
+        icon: Compass,
+        roles: ["ADMIN"],
+      },
       {
         name: "Store Approvals",
         href: "/admin/stores",
