@@ -20,6 +20,9 @@ import {
   CheckCircle,
   Smartphone,
   Calculator,
+  Banknote,
+  ShieldAlert,
+  Compass,
 } from "lucide-react";
 
 interface AdminNavChild {
@@ -51,6 +54,12 @@ const navItems: AdminNavItem[] = [
     icon: Store,
     roles: ["ADMIN"],
     children: [
+      {
+        name: "Fleet God's Eye",
+        href: "/admin/fleet",
+        icon: Compass,
+        roles: ["ADMIN"],
+      },
       {
         name: "Store Approvals",
         href: "/admin/stores",
@@ -100,6 +109,12 @@ const navItems: AdminNavItem[] = [
         icon: Key,
         roles: ["ADMIN"],
       },
+      {
+        name: "Audit Logs",
+        href: "/admin/audit-logs",
+        icon: ShieldAlert,
+        roles: ["ADMIN"],
+      },
     ],
   },
   {
@@ -107,6 +122,12 @@ const navItems: AdminNavItem[] = [
     href: "/admin/orders",
     icon: ShoppingBag,
     roles: ["ADMIN", "SUPPORT_AGENT"],
+  },
+  {
+    name: "Financial Oversight",
+    href: "/admin/finance",
+    icon: Banknote,
+    roles: ["ADMIN"],
   },
 ];
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { AdminAuthGate } from "@/features/auth/components/AdminAuthGate";
 import { AdminSidebar } from "./_components/AdminSidebar";
 import { AdminHeader } from "./_components/AdminHeader";
@@ -11,6 +12,13 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
+  // Public onboarding routes within the admin namespace should bypass auth gate and admin shell
+  if (pathname?.startsWith("/admin/accept-invite")) {
+    return <>{children}</>;
+  }
+
   return (
     <AdminAuthGate>
       <AdminLayoutContent>{children}</AdminLayoutContent>
