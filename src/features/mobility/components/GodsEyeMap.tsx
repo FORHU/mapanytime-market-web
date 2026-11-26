@@ -35,12 +35,13 @@ export function GodsEyeMap() {
   } = useGodsEye();
 
   const [mapLoaded, setMapLoaded] = useState(false);
+  const mapboxToken = env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
   // Initialize Mapbox map
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
+    if (!mapContainerRef.current || mapRef.current || !mapboxToken) return;
 
-    mapboxgl.accessToken = env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+    mapboxgl.accessToken = mapboxToken;
 
     const style =
       resolvedTheme === "dark"
@@ -123,7 +124,7 @@ export function GodsEyeMap() {
       map.remove();
       mapRef.current = null;
     };
-  }, [resolvedTheme, updateBounds]);
+  }, [resolvedTheme, updateBounds, mapboxToken]);
 
   // Synchronize Vehicle Markers
   useEffect(() => {
@@ -300,6 +301,29 @@ export function GodsEyeMap() {
           </div>
         </div>
       </div>
+
+      {/* Mapbox Token Missing Warning Banner */}
+      {!mapboxToken && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-6 text-center">
+          <div className="max-w-md bg-slate-900 border border-amber-500/30 rounded-xl p-6 shadow-2xl space-y-3">
+            <div className="inline-flex p-3 rounded-full bg-amber-500/10 text-amber-400 mb-2">
+              <Compass className="w-8 h-8 animate-spin" />
+            </div>
+            <h3 className="text-lg font-semibold text-white">
+              Mapbox Access Token Required
+            </h3>
+            <p className="text-sm text-slate-300">
+              Fleet God&apos;s Eye map requires a valid Mapbox GL token. Please
+              set{" "}
+              <code className="text-amber-300 font-mono text-xs bg-slate-800 px-1 py-0.5 rounded">
+                NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
+              </code>{" "}
+              in your environment configuration to enable real-time map
+              surveillance.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Vehicle Inspector Drawer */}
       <VehicleInspector
