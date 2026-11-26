@@ -139,6 +139,7 @@ export function pinIconIdFor(store: NearbyStore, isSelected = false): string {
     store.markerDisplayMode,
     store.markerPrice?.toString() ?? "",
     store.markerSubtitle ?? "",
+    Boolean(store.isSponsored) ? "sponsored" : "",
     isSelected ? "selected" : "",
   ].join("|");
 }
