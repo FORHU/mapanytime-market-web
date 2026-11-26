@@ -35,6 +35,10 @@ export interface NearbyStore {
   markerPrice: number | null;
   /** LABEL_CARD only. */
   markerSubtitle: string | null;
+  /** True when the store has an active merchant advertising campaign running. */
+  isSponsored?: boolean;
+  /** Custom promo badge label if set by the seller. */
+  sponsoredBadge?: string | null;
   address: {
     currentAddress: string;
     city: string;
