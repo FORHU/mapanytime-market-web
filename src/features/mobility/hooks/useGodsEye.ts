@@ -60,9 +60,15 @@ export function useGodsEye(initialBounds?: ViewportBounds) {
     });
   }, [initialVehicles]);
 
-  // Connect to Socket.IO real-time stream
+  // Connect to Socket.IO real-time stream and subscribe to viewport cells
   useEffect(() => {
     const socket = acquireSocket();
+
+    const sendSubscription = () => {
+      if (bounds) {
+        socket.emit("subscribe", bounds);
+      }
+    };
 
     const handleVehicleMoved = (data: VehicleMovedPayload) => {
       setLiveVehicles((prev) => {
@@ -81,15 +87,22 @@ export function useGodsEye(initialBounds?: ViewportBounds) {
       });
     };
 
+    socket.on("connect", sendSubscription);
     socket.on("vehicle:moved", handleVehicleMoved);
     socket.on("vehicle:removed", handleVehicleRemoved);
 
+    // If socket is already connected when bounds change or component mounts, send subscription immediately
+    if (socket.connected) {
+      sendSubscription();
+    }
+
     return () => {
+      socket.off("connect", sendSubscription);
       socket.off("vehicle:moved", handleVehicleMoved);
       socket.off("vehicle:removed", handleVehicleRemoved);
       releaseSocket();
     };
-  }, []);
+  }, [bounds]);
 
   // Fetch selected vehicle trail (24h history)
   const { data: trailData, isLoading: isLoadingTrail } = useQuery({
